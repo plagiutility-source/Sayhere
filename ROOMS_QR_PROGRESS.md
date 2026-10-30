@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 7 parity walk, wording and hotel pass done; flows and screenshots open)
+Last updated: 2026-10-30 (three main flows run once; second reviewer and golden screenshots open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -298,8 +298,10 @@ reviewer pass done.
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
 - [ ] Run through the demo's three main flows twice (first order and reorder; join with code;
-  bill and payment), once with each model reviewing. Not run yet; needs a second reviewer
-  model plus an interactive browser pass.
+  bill and payment), once with each model reviewing. First pass done 2026-10-30 in Firefox on the
+  production build: order #1043 placed, reorder joined the same bill as round 2 (₹340), a guest
+  joined after host approval and code `595240`, the owner sent the bill, and exact payment of
+  ₹180 closed it. The second model's review pass is still outstanding.
 - [x] Hotel mode full pass. Switched the outlet on both demo and app and compared all seven
   routes; fixed the Orders banner to keep the demo's literal "table arrow" in hotel mode.
 - [x] `npm run typecheck`, `npm run build` and the rules check pass.
@@ -331,6 +333,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 interactive flows, first pass** (branch `audit/rooms-latest`). Ran the
+  three main flows in Firefox against the production build at 390 px. First order placed on Table
+  4 (#1043, Cold brew ₹180); "Order something else" added Cappuccino to the same bill as round 2
+  (₹340, no new bill); a second tab requested to join, the host approved, read the 6-digit code,
+  and the guest joined; the owner opened the invoice, sent the bill to the phone, and verified the
+  exact ₹180 payment (paid bill showed the 5-minute download window). No flow broke. Checklist A/B
+  action rows and the second reviewer/model pass remain open, as does the golden screenshot set.
 - 2026-10-30 — **Phase 7 parity walk, wording and hotel pass** (branch `audit/rooms-latest`,
   continuing `feat/rooms-standalone`). Ran the demo and app side by side in Firefox at 390, 768
   and 1280. Fixed the customer View bill/service-sent lines and home bill-sent line, shell
