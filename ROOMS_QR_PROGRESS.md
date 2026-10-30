@@ -206,7 +206,12 @@ S54–S60 match; reviewer pass done.
   the bell panel lists live calls (Send bill / Done, demo toasts), new orders link to `/orders`
   with the red unread dot, the sidebar Orders item links to `/orders` and shows the waiting badge
   (white on red while orders wait), and `AppShell` sets the demo's `updateDocumentTitle` text.
-- [ ] Live alert card, ring timing, bell, sound toggle, `handleExternalState` rules (checklist D).
+- [x] Live alert card, ring timing, bell, sound toggle, `handleExternalState` rules (checklist D).
+  Built 2026-10-30: `owner/LiveAlert.tsx` (unseen rounds and calls only, New order vs New round,
+  ring start/stop, dismiss, View table/room opening that group), `lib/rooms/detect.ts` with 6 new
+  checks (132 now), the group call chip and "Mark handled" button, and a `hydrated` flag so stored
+  state never rings on load. The editor-dirty and scan-page guards wait for Phases 5–6, where
+  those screens exist.
 - [ ] `simulate-order` (DEV-ONLY).
 
 Done when: checklist A rows 10–37 relevant to Orders pass; section D passes for incoming orders and
@@ -269,6 +274,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 4 task 6 done** (branch `feat/rooms-standalone`). Live events: the
+  storage/poll subscription now feeds `freshRounds` / `freshServiceCalls` (new `lib/rooms/detect.ts`,
+  +6 checks), the alert card shows New order vs New round, starts the 10 s ring, stops on dismiss or
+  when the order is no longer active/new, and "View table/room" opens `/orders` with that group
+  expanded. Group headers show the call chip and a Mark handled button; the provider exposes
+  `hydrated` so the first stored load does not ring. `npm run typecheck` ✅, `npm run build` ✅,
+  rules check 132 ✅. Next: task 7 (`simulate-order`, DEV-ONLY), then the Phase 4 review.
 - 2026-10-30 — **Phase 4 task 5 done** (branch `feat/rooms-standalone`). The live-requests panel
   now shows up to three calls with Send bill / Done (the demo's `sendBillToPhone` and
   `resolveServiceCall` paths and their toasts), new orders link to `/orders` with the red unread

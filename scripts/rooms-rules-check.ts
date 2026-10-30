@@ -37,6 +37,7 @@ import {
   previousPeriodWindow,
 } from "../lib/rooms/rules";
 import { displaySpotName, parseMenuPrice, spotWord } from "../lib/rooms/format";
+import { freshRounds, freshServiceCalls } from "../lib/rooms/detect";
 import { configTemplate } from "../lib/rooms/seed";
 import { seedOrStored, stateFromRaw } from "../lib/rooms/store";
 import type {
@@ -635,6 +636,33 @@ eq("O1 parse free text", parseMenuPrice("from Rs 1500"), 1500);
 eq("O1 parse thousands separator", parseMenuPrice("Rs 1,200"), 1200);
 eq("O1 unparseable price", parseMenuPrice("Ask staff"), null);
 eq("O1 empty price", parseMenuPrice(""), null);
+
+/* D (checklist) — live detection ------------------------------------ */
+const dRounds = new Set<string>();
+const dState = baseState({ orders: [makeOrder({ id: "detect1", code: "qr1" })] });
+eq("D fresh round count", freshRounds(dState, dRounds).length, 1);
+eq("D known round count", dRounds.size, 1);
+eq("D repeated detection", freshRounds(dState, dRounds).length, 0);
+const dCalls = new Set<string>();
+const dCallState = baseState();
+dCallState.serviceCalls = [
+  {
+    id: "call1",
+    locId: "loc1",
+    code: "qr1",
+    kind: "waiter",
+    status: "open",
+    customerName: "Ananya",
+    createdAt: iso(NOW),
+  } as (typeof dCallState.serviceCalls)[number],
+];
+eq("D fresh call count", freshServiceCalls(dCallState, dCalls).length, 1);
+eq("D known call count", dCalls.size, 1);
+const doneCallState = baseState();
+doneCallState.serviceCalls = [
+  { ...dCallState.serviceCalls[0], status: "done" } as (typeof doneCallState.serviceCalls)[number],
+];
+eq("D done call ignored", freshServiceCalls(doneCallState, new Set()).length, 0);
 
 /* ------------------------------------------------------------------ */
 check("all 28 checklist groups are covered", groups.size === 28);

@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { DemoBar } from "./DemoBar";
 import { SpotDialogs } from "../modals/SpotDialogs";
+import { LiveAlerts } from "../LiveAlert";
 
 /** The demo's `updateDocumentTitle`: the count covers new orders and live calls. */
 function DocumentTitle() {
@@ -40,6 +41,7 @@ function ShellFrame({ children }: { children: ReactNode }) {
         </main>
       </div>
       <SpotDialogs />
+      <LiveAlerts />
     </div>
   );
 }

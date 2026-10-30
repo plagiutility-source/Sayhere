@@ -41,6 +41,8 @@ type OwnerContextValue = {
   origin: string;
   resetToken: number;
   businessType: SpotBusinessType;
+  /** True once the stored state has been adopted after mount. */
+  hydrated: boolean;
 };
 
 const OwnerContext = createContext<OwnerContextValue | null>(null);
@@ -91,6 +93,9 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<OwnerDialog>(null);
   const [origin, setOrigin] = useState("");
   const [resetToken, setResetToken] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -153,6 +158,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
       origin,
       resetToken,
       businessType: state.businessType,
+      hydrated,
     }),
     [
       state,
@@ -170,6 +176,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
       setBusinessType,
       origin,
       resetToken,
+      hydrated,
     ],
   );
 

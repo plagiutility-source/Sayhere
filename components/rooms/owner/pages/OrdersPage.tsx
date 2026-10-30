@@ -25,6 +25,7 @@ import {
   money,
   orderSpotName,
   periodRangeLabel,
+  serviceKindTitle,
   spotWord,
   statusLabel,
 } from "@/lib/rooms/format";
@@ -37,6 +38,7 @@ import {
   ordersBetween,
   periodWindow,
   previousPeriodWindow,
+  resolveServiceCall,
   sendBillToPhone,
   serviceCallSpotName,
   serviceCallsForSpot,
@@ -62,6 +64,7 @@ export function OrdersPage() {
   const { state } = useOwner();
   const params = useSearchParams();
   const locId = params.get("loc");
+  const open = params.get("open");
   const location = state.locations.find((item) => item.id === locId) ?? state.locations[0];
 
   if (!location) {
@@ -73,14 +76,27 @@ export function OrdersPage() {
     );
   }
 
-  return <OrdersContent location={location} />;
+  return (
+    <OrdersContent
+      location={location}
+      initialOpen={open ? `${location.id}:${open}` : null}
+    />
+  );
 }
 
-function OrdersContent({ location }: { location: SpotLocation }) {
+function OrdersContent({
+  location,
+  initialOpen,
+}: {
+  location: SpotLocation;
+  initialOpen: string | null;
+}) {
   const { state, save, toast, businessType } = useOwner();
   const [period, setPeriod] = useState<PeriodKey>("today");
   const [filter, setFilter] = useState<OrderFilter>("all");
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string[]>(() =>
+    initialOpen ? [initialOpen] : [],
+  );
   const [addWaiterOpen, setAddWaiterOpen] = useState(false);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
   const [punchCode, setPunchCode] = useState<string | null>(null);
@@ -392,7 +408,7 @@ function OrderGroup({
   onSendBill: (order: Order) => void;
   onPunch: (code: string) => void;
 }) {
-  const { state, businessType } = useOwner();
+  const { state, save, toast, businessType } = useOwner();
   const direct = !room;
   const key = `${location.id}:${direct ? "direct" : room.code}`;
   const isOpen = expanded.indexOf(key) !== -1;
@@ -410,6 +426,15 @@ function OrderGroup({
   const canSendBill = Boolean(
     billOrder && activeStatus(billOrder.status) && !billOrder.billSentAt,
   );
+
+  const markHandled = (id: string) => {
+    const result = resolveServiceCall(state, id);
+    if (!result.call) return;
+    save(result.state);
+    toast(
+      `${serviceCallSpotName(state, result.call)} — ${serviceKindTitle(result.call.kind).toLowerCase()} handled.`,
+    );
+  };
 
   return (
     <section
@@ -438,6 +463,12 @@ function OrderGroup({
               {spotLabel}{" "}
               {direct ? <CodePill>NO TABLE</CodePill> : <CodePill>{room.code.toUpperCase()}</CodePill>}
               {newCount ? <Badge tone="new">{newCount} new</Badge> : null}
+              {calls.length ? (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-amber-100 px-1.5 py-0.5 text-[9.5px] text-amber-800">
+                  <Icon name={calls[0].kind === "bill" ? "receipt" : "bell"} size={10} />
+                  {calls[0].kind === "bill" ? "Bill requested" : "Call waiter"}
+                </span>
+              ) : null}
             </p>
             <p className="mt-1 text-[11px] leading-[1.5] text-ink-muted">
               {direct
@@ -459,6 +490,15 @@ function OrderGroup({
               onClick={() => onSendBill(billOrder)}
             >
               <Icon name="receipt" size={12} /> Send bill
+            </button>
+          ) : null}
+          {calls.length ? (
+            <button
+              type="button"
+              className={cx(canSendBill ? btnOutline : btnPrimary, btnXs)}
+              onClick={() => markHandled(calls[0].id)}
+            >
+              <Icon name="check" size={12} /> Mark handled
             </button>
           ) : null}
           <button
