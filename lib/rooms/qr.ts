@@ -42,7 +42,7 @@ export function qrSvg(url: string): string {
     const size = count + 4;
     return `<svg xmlns="${SVG_NS}" viewBox="-2 -2 ${size} ${size}" role="img" aria-label="QR code" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${size}" height="${size}" fill="${QR_LIGHT}"/><path d="${path}" fill="${QR_DARK}"/></svg>`;
   } catch {
-    return `<svg xmlns="${SVG_NS}" viewBox="0 0 100 100" role="img" aria-label="QR preview"><rect width="100" height="100" fill="${QR_LIGHT}"/><text x="50" y="52" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#6b7280">QR preview</text></svg>`;
+    return `<svg xmlns="${SVG_NS}" viewBox="0 0 100 100" role="img" aria-label="QR preview"><rect width="100" height="100" fill="${QR_LIGHT}"/><text x="50" y="52" text-anchor="middle" font-family="sans-serif" font-size="9" fill="${QR_DARK}">QR preview</text></svg>`;
   }
 }
 

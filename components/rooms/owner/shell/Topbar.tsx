@@ -11,8 +11,15 @@ import {
   newOrders,
   serviceCallSpotName,
 } from "@/lib/rooms/rules";
+import type { Order } from "@/lib/rooms/types";
 import { DEMO_BUSINESS } from "@/lib/rooms/seed";
 import { useOwner } from "../OwnerProvider";
+
+/** The demo's notification row names the order's location after the bill number. */
+function orderLocationName(state: { locations: Array<{ id: string; name: string }> }, order: Order) {
+  const location = state.locations.find((item) => item.id === order.locId);
+  return location ? location.name : "";
+}
 
 export function Topbar() {
   const { state, setNavOpen, soundOn, toggleSound, businessType, resetToken } = useOwner();
@@ -132,9 +139,11 @@ export function Topbar() {
                         {orderSpotName(state, order)} · {money(order.total)}
                       </span>
                       <span className="block text-[11px] text-ink-muted">
-                        {order.customerName} · order #{order.number}
+                        {order.customerName} · order #{order.number} ·{" "}
+                        {orderLocationName(state, order)}
                       </span>
                     </span>
+                    <Icon name="arrowRight" size={14} className="mt-0.5 shrink-0 text-ink-muted" />
                   </Link>
                 ))
               ) : (
