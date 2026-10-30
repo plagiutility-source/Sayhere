@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 4 code complete; screenshots blocked)
+Last updated: 2026-10-30 (Phase 5 code complete; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -239,8 +239,16 @@ service calls; screenshots S06–S08, S17–S22 match; reviewer pass done.
   total and paid line), the 5-minute window on the tick, Download bill through the new
   `lib/rooms/bill-pdf.ts` (the demo's hand-built PDF port), the home paid-bill card and the Bill /
   Paid bill tiles, and the demo's 1.2 s move to the review after download.
-- [ ] Wi-Fi screen and the unlock rule; Wi-Fi tile on home and on order-done.
-- [ ] `detectJoinEvents`, `detectBillSent`, `detectPaidBill` and the scan-signature re-render.
+- [x] Wi-Fi screen and the unlock rule; Wi-Fi tile on home and on order-done. Built in Phase 3
+  and verified 2026-10-30 against the demo's `screen === "wifi"`: same title, subtitle, SSID,
+  password, Copy password and lock note; the tile only shows when `wifiUnlockedForOrder` and the
+  order-done button uses the live bill. Added the demo's guard so a locked screen falls back home.
+- [x] `detectJoinEvents`, `detectBillSent`, `detectPaidBill` and the scan-signature re-render.
+  Built 2026-10-30: a ref-backed detector effect in `ScanPage` seeds the current state, then bells
+  and toasts host join requests, guest approved/denied/expired/locked, bill sent (moving home /
+  service-sent / order-done to the bill) and payment (moving to the bill); the customer title is
+  `${business} · ${spot}`. React re-renders on every newer saved state, so the demo's separate
+  scan-signature guard is unnecessary and has no visible difference.
 
 Done when: checklist B rows for join, bill, wifi pass; section D passes for join, bill and paid;
 screenshots S42–S53 and S61 match; reviewer pass done.
@@ -291,6 +299,15 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 5 code complete** (branch `feat/rooms-standalone`). Tasks 5–6: verified the
+  Wi-Fi screen/tiles against the demo (and made a locked screen fall back home), then added the
+  ref-backed join/bill/paid detectors — host request bell + toast, guest approved/denied/expired/
+  locked toasts, bill-sent and payment bells that switch home/service-sent/order-done to the bill —
+  plus the customer title `${business} · ${spot}`; countdowns ride the existing 1 s tick.
+  Reviewer pass (checklist B join/bill/wifi and section D): no further mismatches; the demo's
+  scan-signature guard is not needed because React re-renders on newer state. `npm run typecheck` ✅,
+  `npm run build` ✅ (`/r/[slug]/[code]` 136 kB first load), rules check 139 ✅. Screenshots S42–S53
+  and S61 remain [BLOCKED: owner must capture]. Next: Phase 6 after approval.
 - 2026-10-30 — **Phase 5 task 4 done** (branch `feat/rooms-standalone`). The customer bill screen
   now covers unpaid and paid bills with the demo's banner copy, rounds paper, paid line and
   5-minute window; the home page gains the paid-bill card plus Bill/Paid bill tiles, and Download

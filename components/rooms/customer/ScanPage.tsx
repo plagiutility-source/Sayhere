@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { copyText } from "@/components/rooms/shared/clipboard";
 import { Icon } from "@/components/rooms/shared/icons";
 import { HostPanel } from "./HostPanel";
@@ -50,7 +50,8 @@ import {
 } from "@/lib/rooms/seed";
 import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
-import { currentDeviceId, useRoomsState } from "@/lib/rooms/store";
+import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
+import { playBell } from "@/lib/rooms/sound";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
 
 type ScanPageProps = { slug: string; code: string };
@@ -99,6 +100,11 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const [joinName, setJoinName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinCodeError, setJoinCodeError] = useState("");
+  const knownJoinRequestIds = useRef<Set<string>>(new Set());
+  const knownJoinStatuses = useRef<Record<string, string>>({});
+  const knownBillSentKeys = useRef<Set<string>>(new Set());
+  const knownPaidBillIds = useRef<Set<string>>(new Set());
+  const detectorsReady = useRef(false);
   const [feedback, setFeedback] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
@@ -157,6 +163,77 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     if (screen !== "bill" || !bill || bill.status !== "completed") return;
     if (paidBillRemaining(bill) <= 0) setScreen("chooser");
   }, [screen, bill, tick]);
+
+  useEffect(() => {
+    if (!location) return;
+    document.title = `${DEMO_BUSINESS.name} · ${displaySpot}`;
+  }, [location, displaySpot]);
+
+  /* Products of the demo's detectJoinEvents / detectBillSent / detectPaidBill.
+     The page re-renders on every newer saved state, so unlike the demo there is
+     no separate scan-signature guard; these refs only stop repeated toasts. */
+  useEffect(() => {
+    if (!deviceId || !location) return;
+    const requests = openBill
+      ? state.joinRequests.filter((request) => request.orderId === openBill.id)
+      : [];
+    const mine = openBill ? latestJoinRequestForDevice(state, openBill, deviceId) : null;
+    const mineStatus = effectiveJoinStatus(mine);
+    const billKey =
+      openBill && openBill.billSentAt ? `${openBill.id}:${openBill.billSentAt}` : null;
+
+    if (!detectorsReady.current) {
+      requests.forEach((request) => knownJoinRequestIds.current.add(request.id));
+      if (mine) knownJoinStatuses.current[mine.id] = mineStatus || "";
+      if (billKey) knownBillSentKeys.current.add(billKey);
+      if (paidBill) knownPaidBillIds.current.add(paidBill.id);
+      detectorsReady.current = true;
+      return;
+    }
+
+    if (openBill && participant?.role === "host") {
+      requests.forEach((request) => {
+        if (
+          effectiveJoinStatus(request) === "pending" &&
+          !knownJoinRequestIds.current.has(request.id)
+        ) {
+          knownJoinRequestIds.current.add(request.id);
+          playBell(readSoundOn());
+          setToast(`${request.name} wants to join ${displaySpot}.`);
+        }
+      });
+    }
+
+    if (mine && mineStatus) {
+      const previous = knownJoinStatuses.current[mine.id];
+      if (previous && previous !== mineStatus) {
+        if (mineStatus === "approved") {
+          setToast("Approved — enter the 6-digit code shown on the host's phone.");
+        } else if (mineStatus === "denied") {
+          setToast("The host declined this join request.");
+        } else if (mineStatus === "expired") {
+          setToast("That join code expired — ask the host for a new one.");
+        } else if (mineStatus === "locked") {
+          setToast("Too many wrong codes — ask the host for a new one.");
+        }
+      }
+      knownJoinStatuses.current[mine.id] = mineStatus;
+    }
+
+    if (billKey && !knownBillSentKeys.current.has(billKey)) {
+      knownBillSentKeys.current.add(billKey);
+      playBell(readSoundOn());
+      setToast("Your bill is ready — pay at the counter. Download unlocks after payment.");
+      if (["home", "service-sent", "order-done"].indexOf(screen) !== -1) setScreen("bill");
+    }
+
+    if (paidBill && !knownPaidBillIds.current.has(paidBill.id)) {
+      knownPaidBillIds.current.add(paidBill.id);
+      playBell(readSoundOn());
+      setToast("Payment received — thanks! Your bill is ready to download.");
+      if (["home", "order-done", "service-sent"].indexOf(screen) !== -1) setScreen("bill");
+    }
+  }, [state, deviceId, location, openBill, participant, paidBill, screen, displaySpot]);
 
   const cartLines = useMemo(
     () =>
@@ -1093,7 +1170,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         </div>
       </Panel>
     );
-  } else if (screen === "wifi") {
+  } else if (screen === "wifi" && wifiReady) {
     body = (
       <Panel>
         <ScreenHead
