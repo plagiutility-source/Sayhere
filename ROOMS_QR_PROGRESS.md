@@ -155,13 +155,21 @@ Phase 3 notes so far:
   the owner `OwnerProvider` host.
 - Unknown location slugs get the same “isn't linked to a table” card, with Back to Tables pointing
   at `/rooms` (the demo cannot route an unknown location; this is defensive only).
-- The card body currently renders the customer home header; the interactive screens follow.
-- [ ] Home, menu (with service strip), cart bar and cart pill, cart, checkout (new and
+- `ScanPage.tsx` holds the frame plus every customer screen; the cart is local state and resets
+  when the QR changes (the demo's `ensureCart`).
+- E1 is implemented as an effect: the first phone to open a staff-created bill becomes its host
+  and the updated order is persisted before other screens read it.
+- The Wi-Fi screen is implemented now because the seed's accepted bill on QR1 unlocks it; the
+  Bill screen and the join gate stay in Phase 5, so their tiles/buttons are not rendered yet.
+- Google's “Write it for me” has no standalone writer flow; it shows the same concept-demo toast
+  used elsewhere. Phase 8 replaces it with the SaaS review writer (checklist C).
+- [x] Home, menu (with service strip), cart bar and cart pill, cart, checkout (new and
   continuing), order done.
-- [ ] Waiter picker with Available, At capacity and Paused states.
-- [ ] `placeOrder` wired to the rules; new bill and reorder both work.
-- [ ] Service screens: panel, chooser, sent; `requestService` wired.
-- [ ] Chooser, Google, Feedback, Thanks, Hours screens. Reuse the SaaS components at merge; in
+- [x] Waiter picker with Available, At capacity and Paused states.
+- [x] `placeOrder` wired to the rules; new bill and reorder both work (continuing only when this
+  device is a participant; the join gate is Phase 5).
+- [x] Service screens: panel, chooser, sent; `requestService` wired.
+- [x] Chooser, Google, Feedback, Thanks, Hours screens. Reuse the SaaS components at merge; in
   standalone build them to match the demo.
 - [ ] Per-spot scan counter (open item O4), display only.
 
@@ -267,3 +275,9 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   dynamic routes), rules check 124 ✅; HTTP: a valid QR, an unknown code, the reception page and an
   unknown slug all return 200 with the expected copy. Next: customer screens (home, menu, cart,
   checkout, order done).
+- 2026-10-30 — Phase 3 tasks 3–7 done. The customer flow now runs home → menu (service strip) →
+  cart → checkout (new and continuing, waiter picker) → order done, plus the service chooser/sent
+  screens, Wi-Fi and chooser/Google/feedback/thanks/hours. `npm run typecheck` ✅, `npm run build`
+  ✅, rules check 124 ✅; SSR checks: QR home, reception (no “Ordering for”) and an unknown code all
+  200 with the expected copy. Click-through and screenshots remain owner-verified (no browser
+  automation here). Next: task 8 (per-spot scan counter), then the Phase 3 review.
