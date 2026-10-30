@@ -4,6 +4,9 @@ Companion to `ROOMS_QR_SPEC.md`. Every line below must be true in the standalone
 Phase 7 (parity audit) can be ticked. Tick `[x]` only after you have run the demo and the build
 side by side and seen it match.
 
+**Status 2026-10-30:** Phase 7 was closed by explicit owner decision. A40, the three unreachable
+B controls and the unavailable second-review pass are recorded as accepted exceptions below.
+
 Legend: **DEV** = exists in the standalone build only and is deleted at merge. **REPLACE** = the
 demo shows a placeholder; build the real behaviour. **SIM** = simulated in Stage 1 (no real
 sending). Bracketed names are functions in the demo's `app.js`.
@@ -69,6 +72,10 @@ the menu.") [ ] · `checkout` (empty → "Add something from the menu first.") [
 "Wi-Fi password copied.") [x] · `call` **REPLACE** with `tel:` [x] · `directions` **REPLACE** with
 Google Maps [x] · `custom` **REPLACE** with the https link [x] · `write` **REPLACE** with the
 existing review-writer flow [BLOCKED: Phase 8 review-writer].
+
+Phase 7 exception accepted 2026-10-30: the empty-cart, empty-checkout and locked-Wi-Fi controls
+are not reachable in the demo UI. Their guards remain source-verified, and no untested row is
+claimed as passed.
 
 Editor preview rule: inside the phone preview, links toast "This is the live preview. Open the
 live page to follow links." and customer actions toast "Live preview — open “View live page” to

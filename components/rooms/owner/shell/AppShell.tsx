@@ -22,7 +22,23 @@ function DocumentTitle() {
 }
 
 function ShellFrame({ children }: { children: ReactNode }) {
-  const { navOpen, setNavOpen } = useOwner();
+  const { navOpen, setNavOpen, hydrated } = useOwner();
+
+  /* The owner UI depends on browser-local dates and localStorage, neither of
+     which exists on the server. Keep the first server and client paint
+     identical, then render the live shell after hydration. */
+  if (!hydrated) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="grid min-h-screen place-items-center bg-surface-muted text-xs text-ink-muted"
+      >
+        Loading dashboard…
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <DocumentTitle />

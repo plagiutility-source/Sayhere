@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (A/B/C/D/G done; A40, three unreachable B controls and second reviewer open)
+Last updated: 2026-10-30 (Phase 7 complete; Phase 8 awaiting approval)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -285,7 +285,7 @@ Done when: checklist A rows 11–14, 22, 33–34 pass; screenshots S01–S02, S0
 reviewer pass done.
 
 ## Phase 7 — Parity audit
-- [ ] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
+- [x] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
   and 1280. Fix every mismatch.  A and B rows are complete except A40 (Phase 8) and three
   unreachable customer guards; C, D and G are complete.
   Audit progress 2026-10-30: the full route-level visual walk now runs in Firefox against the
@@ -311,6 +311,8 @@ reviewer pass done.
   scan-signature gate; React preserves the visible screen and cart. The G golden screenshot set is
   captured: 57 states at 390, 768 and 1280 (171 PNGs). A40 waits for Phase 8, three B guards have
   no reachable control, and the second reviewer remains blocked.
+  **Phase 7 complete 2026-10-30 — the owner accepted A40, the three unreachable B controls and
+  the unavailable second-review pass as documented exceptions.**
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
@@ -319,12 +321,14 @@ reviewer pass done.
   once with each model reviewing. First pass done 2026-10-30 in Firefox on the production build:
   order #1043 placed, reorder joined the same bill as round 2 (₹340), a guest joined after host
   approval and code `595240`, the owner sent the bill, and exact payment of ₹180 closed it. The
-  second model's review pass is still outstanding.
+  second model's review pass is still outstanding; the owner accepted it as a documented Phase 7
+  exception on 2026-10-30.
 - [x] Hotel mode full pass. Switched the outlet on both demo and app and compared all seven
   routes; fixed the Orders banner to keep the demo's literal "table arrow" in hotel mode.
 - [x] `npm run typecheck`, `npm run build` and the rules check pass.
 
 Done when: every row in the checklist is ticked and the reviewer reports zero mismatches.
+Phase 7 was closed by explicit owner decision on 2026-10-30 with the exceptions recorded above.
 
 ## Phase 8 — Merge into the SaaS repo
 - [ ] Create branch `feat/rooms-qr-stage1` from latest `main` of `Review-SaaS-main`.
@@ -351,6 +355,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 complete** (branch `audit/rooms-latest`). Owner accepted the three
+  remaining exceptions (A40 waits for this merge, the three unreachable B controls, and the
+  unavailable second reviewer), so Phase 7 is closed. Also fixed the preview hydration error at
+  the UTC/IST date boundary by gating the owner shell on the existing `hydrated` flag: the server
+  and first client paint now show the same loading state before browser-local dates and
+  localStorage render. IST sweep is clean on all six routes; `npm run typecheck` ✅ and
+  `npm run build` ✅ after the fix. Phase 8 has not started and is waiting for explicit approval.
 - 2026-10-30 — **Phase 7 C5/D1 close-out and checks** (branch `audit/rooms-latest`). Ran a
   16-check Firefox matrix against the production app. C5 passes: cart and public screen, checkout
   name and error, order done, service sent, join name and join-code error, notification panel,
