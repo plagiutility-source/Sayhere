@@ -76,19 +76,19 @@ click through." [x]
 
 ## C. Change, input and key handlers
 
-- [x]] Editor location select (confirm if dirty), room active toggle, preview spot select,
+- [x] Editor location select (confirm if dirty), room active toggle, preview spot select,
   analytics spot select, waiter max select, waiter active toggle, punch spot and fields,
   checkout fields (guests numeric), editor `data-field` with deep paths (`wifi.ssid`).
-- [x]] Toggling a field ending in `.on` re-renders the editor; text fields only refresh the preview
+- [x] Toggling a field ending in `.on` re-renders the editor; text fields only refresh the preview
   and the dirty state.
-- [x]] Dirty = JSON of draft differs from saved JSON.
-- [x]] Join code input strips non-digits, max 6. Enter in the name field clicks Ask; Enter in the
+- [x] Dirty = JSON of draft differs from saved JSON.
+- [x] Join code input strips non-digits, max 6. Enter in the name field clicks Ask; Enter in the
   code field clicks Join.
 - [ ] Route change resets: draft, dirty, preview spot, public screen to home, cart, checkout
   draft and error, last order and round, punch draft, notification panel, analytics spot, order
   filter, join drafts and errors, last scan signature, last service call, dashboard alert;
   stops the ring, closes dialogs, closes the mobile drawer.
-- [x]] **DEV** business-type select (café/restaurant ⇄ hotel): updates the labels everywhere and
+- [x] **DEV** business-type select (café/restaurant ⇄ hotel): updates the labels everywhere and
   resets the analytics spot.
 
 
@@ -97,20 +97,20 @@ click through." [x]
 - [ ] `handleExternalState`: ignore if the stored `savedAt` is not newer. If newer: run detectors,
   update the title; on a customer page re-render only when the **scan signature** changes; on the
   editor do not re-render while dirty; do not re-render while a dialog is open; otherwise re-render.
-- [x]] Sources: `storage` event and a 2500 ms poll.
-- [x]] `detectIncomingOrders` — fires for each unseen round id; skips on the customer page; starts
+- [x] Sources: `storage` event and a 2500 ms poll.
+- [x] `detectIncomingOrders` — fires for each unseen round id; skips on the customer page; starts
   the ring, shows the alert (`round` vs `order`), toast (see E).
-- [x]] `detectServiceCalls` — bell + toast for unseen calls; skips on the customer page.
-- [x]] `detectJoinEvents` — host gets bell + toast for a new pending request; the requester gets a
+- [x] `detectServiceCalls` — bell + toast for unseen calls; skips on the customer page.
+- [x] `detectJoinEvents` — host gets bell + toast for a new pending request; the requester gets a
   toast when its status changes to approved, denied, expired or locked.
-- [x]] `detectBillSent` — bell + toast, and moves the customer from home / service-sent /
+- [x] `detectBillSent` — bell + toast, and moves the customer from home / service-sent /
   order-done to the bill screen.
-- [x]] `detectPaidBill` — bell + toast, same screen switch.
-- [x]] Every second: join countdowns (`data-join-expires`) and bill countdowns
+- [x] `detectPaidBill` — bell + toast, same screen switch.
+- [x] Every second: join countdowns (`data-join-expires`) and bill countdowns
   (`data-bill-expires`); when the paid-bill window closes on the bill screen, go to the chooser.
-- [x]] Document title: `(N) Live table request · Syehere` when N = new orders + open calls,
+- [x] Document title: `(N) Live table request · Syehere` when N = new orders + open calls,
   otherwise `Syehere — Tables, orders & QR pages`; customer page title is `${business} · ${spot}`.
-- [x]] Alert is cleared if the order is no longer active, or (for an order alert) no longer `new`.
+- [x] Alert is cleared if the order is no longer active, or (for an order alert) no longer `new`.
 
 
 ## E. Verbatim messages (copy exactly)
