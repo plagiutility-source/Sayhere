@@ -136,6 +136,12 @@ export function JoinGate({
           placeholder="000000"
           value={code}
           onChange={(event) => onCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onVerify();
+            }
+          }}
         />
         <p className="mt-1 min-h-[14px] text-left text-[9.5px] leading-[1.4] text-red-600">
           {codeError}
@@ -229,6 +235,12 @@ export function JoinGate({
         autoComplete="name"
         value={name || request?.name || ""}
         onChange={(event) => onName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            onAsk();
+          }
+        }}
       />
       <button type="button" className={btnDirect} onClick={onAsk}>
         Ask {hostName} to join

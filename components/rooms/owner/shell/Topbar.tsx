@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/rooms/shared/icons";
 import { Badge, cx } from "@/components/rooms/shared/ui";
@@ -29,11 +30,13 @@ export function Topbar() {
     useOwner();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifWrap = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   const calls = activeServiceCalls(state);
   const waiting = countNewOrders(state);
   const orders = newOrders(state);
   const requests = waiting + calls.length;
+  const locationId = state.locations[0]?.id || "";
 
   const resolveCall = (id: string) => {
     const result = resolveServiceCall(state, id);
@@ -58,7 +61,7 @@ export function Topbar() {
 
   useEffect(() => {
     setNotifOpen(false);
-  }, [resetToken]);
+  }, [resetToken, pathname]);
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -219,7 +222,7 @@ export function Topbar() {
               )}
 
               <Link
-                href="/rooms"
+                href={`/orders${orders[0]?.locId ? `?loc=${orders[0].locId}` : locationId ? `?loc=${locationId}` : ""}`}
                 className="mt-3 flex items-center gap-1.5 border-t border-black/5 pt-2.5 text-[11px] font-medium text-brand-blue"
                 onClick={() => setNotifOpen(false)}
               >

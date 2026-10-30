@@ -67,11 +67,17 @@ function AnalyticsContent({
   const [period, setPeriod] = useState<PeriodKey>("today");
   const [spot, setSpot] = useState(initialSpot);
   const previousBusiness = useRef(businessType);
+  const previousLocation = useRef(location.id);
   useEffect(() => {
     if (previousBusiness.current === businessType) return;
     previousBusiness.current = businessType;
     setSpot("all");
   }, [businessType]);
+  useEffect(() => {
+    if (previousLocation.current === location.id) return;
+    previousLocation.current = location.id;
+    setSpot("all");
+  }, [location.id]);
   const spotLabel = spotWord(businessType, false);
   const spotsLabel = spotWord(businessType, true);
 

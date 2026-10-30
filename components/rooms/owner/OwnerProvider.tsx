@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -94,6 +95,13 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
   const [origin, setOrigin] = useState("");
   const [resetToken, setResetToken] = useState(0);
   const [hydrated, setHydrated] = useState(false);
+  const pathname = usePathname();
+
+  /* The demo closes dialogs and the mobile drawer on every route change. */
+  useEffect(() => {
+    setDialog(null);
+    setNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => setHydrated(true), []);
 

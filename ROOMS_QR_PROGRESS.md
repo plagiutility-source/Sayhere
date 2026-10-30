@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 6 code complete; screenshots blocked)
+Last updated: 2026-10-30 (Phase 7 code audit in progress; browser rows blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -287,6 +287,11 @@ reviewer pass done.
 ## Phase 7 — Parity audit
 - [ ] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
   and 1280. Fix every mismatch.
+  Audit progress 2026-10-30 (source review; the running side-by-side check is blocked): fixed
+  the notification footer target (Orders, not Rooms), the demo's bill/service guard messages,
+  the locked Wi-Fi guard, Enter submission on the join name/code fields, and route-change
+  cleanup for dialogs/drawer, notification panel, dashboard alert, scan drafts, order filter
+  and analytics spot. Remaining rows are visual/interaction checks at the three widths.
 - [ ] Run each message in checklist E and compare wording.
 - [ ] Run through the demo's three main flows twice (first order and reorder; join with code;
   bill and payment), once with each model reviewing.
@@ -320,6 +325,14 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 audit in progress** (branch `feat/rooms-standalone`). Source review of
+  the full checklist fixed the notification footer to open Orders, restored the demo's
+  “Place an order first…”, “No bill is open yet.” and “Ask the waiter for the bill first…”
+  messages, added the locked Wi-Fi toast, made Enter submit both join fields, and reset shell
+  overlays plus scan/order/analytics state on route or location changes. `npm run typecheck` ✅,
+  `npm run build` ✅, rules check 139 ✅. The side-by-side walk at 390/768/1280 and the golden
+  screenshots are still blocked because this environment has no browser; those rows stay
+  unticked. Next: owner captures the demo screenshots and reviews the interactive flows.
 - 2026-10-30 — **Phase 6 code complete** (branch `feat/rooms-standalone`). Task 4 adds
   `lib/rooms/report.ts` and wires Download report on the Dashboard and Download report/CSV on
   Analytics; a smoke test verified BOM, header, cancelled exclusion, per-spot filenames, the

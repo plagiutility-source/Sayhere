@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
 import { PeriodBar } from "../PeriodBar";
@@ -100,6 +100,13 @@ function OrdersContent({
   const [expanded, setExpanded] = useState<string[]>(() =>
     initialOpen ? [initialOpen] : [],
   );
+  const previousLocation = useRef(location.id);
+  useEffect(() => {
+    if (previousLocation.current === location.id) return;
+    previousLocation.current = location.id;
+    setFilter("all");
+    setExpanded([]);
+  }, [location.id]);
 
   useEffect(() => {
     if (!initialOpen) return;

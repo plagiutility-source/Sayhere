@@ -105,6 +105,8 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const knownBillSentKeys = useRef<Set<string>>(new Set());
   const knownPaidBillIds = useRef<Set<string>>(new Set());
   const detectorsReady = useRef(false);
+  const routeKey = `${slug}:${code}`;
+  const lastRouteKey = useRef(routeKey);
   const [feedback, setFeedback] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
@@ -115,6 +117,27 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     setOrigin(window.location.origin);
     setDeviceId(currentDeviceId());
   }, []);
+
+  /* The demo resets every transient customer screen state on a route change. */
+  useEffect(() => {
+    if (lastRouteKey.current === routeKey) return;
+    lastRouteKey.current = routeKey;
+    setScreen("home");
+    setCart({});
+    setDraft({ name: "", phone: "", guests: 2, waiterId: "auto" });
+    setCheckoutError("");
+    setLastOrder(null);
+    setLastRound(null);
+    setLastAdded(false);
+    setLastCall(null);
+    setJoinName("");
+    setJoinCode("");
+    setJoinCodeError("");
+    setFeedback("");
+    setFeedbackEmail("");
+    setFeedbackError("");
+    setToast(null);
+  }, [routeKey]);
 
   useEffect(() => {
     if (!toast) return;
@@ -391,12 +414,33 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     if (!room) return;
     const result = requestService(state, { locId: location.id, code: room.code }, serviceKind);
     if (!result.call) {
-      setToast("No bill is open yet.");
+      setToast("Place an order first — then you can call a waiter or ask for the bill.");
       return;
     }
     if (result.state !== state) save(result.state);
     setLastCall(result.call);
     setScreen("service-sent");
+  };
+
+  const openBillScreen = () => {
+    const target = openBill || paidBill;
+    if (!target) {
+      setToast("No bill is open yet.");
+      return;
+    }
+    if (target.status !== "completed" && !target.billSentAt) {
+      setToast("Ask the waiter for the bill first — the counter will send it to your phone.");
+      return;
+    }
+    setScreen("bill");
+  };
+
+  const openWifi = () => {
+    if (!wifiUnlockedForOrder(openBill, config, businessType)) {
+      setToast("Wi-Fi is available only after your order is accepted.");
+      return;
+    }
+    setScreen("wifi");
   };
 
   const askToJoin = () => {
@@ -1058,7 +1102,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
             </button>
           </div>
           {wifiUnlockedForOrder(liveBill, config, businessType) ? (
-            <button type="button" className={btnLink} onClick={() => setScreen("wifi")}>
+            <button type="button" className={btnLink} onClick={openWifi}>
               <Icon name="wifi" size={14} /> Wi-Fi password
             </button>
           ) : null}
@@ -1458,7 +1502,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--cp-primary)] px-2.5 py-1.5 text-[10.5px] font-medium text-white"
-                onClick={() => setScreen("bill")}
+                onClick={openBillScreen}
               >
                 <Icon name="receipt" size={14} /> View &amp; download
               </button>
@@ -1560,12 +1604,12 @@ export function ScanPage({ slug, code }: ScanPageProps) {
             <Tile icon="utensils" label={config.menu.title.trim() || "Menu"} onClick={() => setScreen("menu")} />
           ) : null}
           {openBill && openBill.billSentAt ? (
-            <Tile icon="receipt" label="Bill" onClick={() => setScreen("bill")} />
+            <Tile icon="receipt" label="Bill" onClick={openBillScreen} />
           ) : null}
           {!openBill && paidBill ? (
-            <Tile icon="receipt" label="Paid bill" onClick={() => setScreen("bill")} />
+            <Tile icon="receipt" label="Paid bill" onClick={openBillScreen} />
           ) : null}
-          {wifiReady ? <Tile icon="wifi" label="Wi-Fi" onClick={() => setScreen("wifi")} /> : null}
+          {wifiReady ? <Tile icon="wifi" label="Wi-Fi" onClick={openWifi} /> : null}
           {config.hours.on ? (
             <Tile icon="clock" label="Hours and contact" onClick={() => setScreen("hours")} />
           ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/rooms/shared/icons";
 import {
@@ -31,6 +32,7 @@ type DashboardAlert = LiveAlertDetail;
  */
 export function LiveAlerts() {
   const { state, hydrated, soundOn, toast, businessType } = useOwner();
+  const pathname = usePathname();
   const [alert, setAlert] = useState<DashboardAlert | null>(null);
   const knownRounds = useRef<Set<string>>(new Set());
   const knownCalls = useRef<Set<string>>(new Set());
@@ -100,6 +102,12 @@ export function LiveAlerts() {
   }, [state]);
 
   useEffect(() => () => ring.current?.stop(), []);
+
+  /* The demo clears the dashboard alert and stops the ring on navigation. */
+  useEffect(() => {
+    setAlert(null);
+    stopRing();
+  }, [pathname, stopRing]);
 
   useEffect(() => {
     if (!soundOn) stopRing();
