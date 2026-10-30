@@ -49,7 +49,7 @@ export function Sidebar() {
           alert: waiting > 0,
         },
         { label: words, icon: "rooms", key: "rooms", href: "/rooms", badge: "New" },
-        { label: "Customer page", icon: "page", key: "editor" },
+        { label: "Customer page", icon: "page", key: "editor", href: "/customer-page" },
         { label: "Loyalty", icon: "loyalty", key: "loyalty", muted: true },
       ],
     },

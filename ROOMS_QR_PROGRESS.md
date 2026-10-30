@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 5 code complete; screenshots blocked)
+Last updated: 2026-10-30 (Phase 6 in progress; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -254,8 +254,13 @@ Done when: checklist B rows for join, bill, wifi pass; section D passes for join
 screenshots S42–S53 and S61 match; reviewer pass done.
 
 ## Phase 6 — Editor, Dashboard, Analytics and exports
-- [ ] Customer page editor (both tabs): rows, dirty tracking, save, discard, reset, view live,
-  leave confirm, phone preview with spot selector and the preview-click rule.
+- [x] Customer page editor (both tabs): rows, dirty tracking, save, discard, reset, view live,
+  leave confirm, phone preview with spot selector and the preview-click rule. Built 2026-10-30:
+  `/customer-page` + `owner/pages/CustomerPageEditor.tsx` and customer `PagePreview.tsx`; page
+  head (location select, Reset, Save, View live), tabs with counts, blue/amber banners,
+  announcement and thank-you with counters, six toggle rows with deep-path fields, footer
+  Save/Discard, JSON dirty tracking, confirm on tab/location change, beforeunload, preview spot
+  selector and the two preview-only toasts; saves `configs[loc:kind]` with the demo's wording.
 - [ ] Dashboard: period bar, banners, stat cards, trend card, spot snapshot, recent bills.
 - [ ] Analytics: spot filter, stat cards, trend, spot table, day table, bill details.
 - [ ] CSV report (`report.ts`), hotel mode checked on every page.
@@ -299,6 +304,12 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 6 task 1 done** (branch `feat/rooms-standalone`). The customer page editor is
+  live at `/customer-page`: both tabs, the demo's banners, every row and field (announcement and
+  thank-you counters, menu/wifi/hours/call/directions/custom, locked review row), Save/Discard/
+  Reset/View live, JSON dirty tracking, confirm on tab or location change, beforeunload, and a
+  phone preview with the spot selector and the two preview-only toasts. `npm run typecheck` ✅,
+  `npm run build` ✅ (`/customer-page` 6.15 kB), rules check 139 ✅. Next: task 2 (Dashboard).
 - 2026-10-30 — **Phase 5 code complete** (branch `feat/rooms-standalone`). Tasks 5–6: verified the
   Wi-Fi screen/tiles against the demo (and made a locked screen fall back home), then added the
   ref-backed join/bill/paid detectors — host request bell + toast, guest approved/denied/expired/
