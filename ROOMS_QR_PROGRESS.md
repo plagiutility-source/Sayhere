@@ -251,3 +251,5 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   typecheck` ✅, `npm run build` ✅ (`/locations` and `/rooms` dynamic), rules check 124 ✅, both
   pages return 200 with the expected server HTML. Screenshot parity [BLOCKED: owner must capture].
   Next: Phase 3 (customer ordering).
+  Reviewer pass (checklist A 1–9, 38–41): no mismatches. A.40 is the merge-time sidebar wiring;
+  the standalone keeps the demo toast. Screenshot rows remain [BLOCKED: owner must capture].
