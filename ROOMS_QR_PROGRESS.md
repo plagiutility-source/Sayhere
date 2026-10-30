@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 6 task 3 done; screenshots blocked)
+Last updated: 2026-10-30 (Phase 6 code complete; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -265,14 +265,21 @@ screenshots S42–S53 and S61 match; reviewer pass done.
   Built 2026-10-30: `/dashboard` + `owner/pages/DashboardPage.tsx`, linked from the sidebar and
   the root redirect; service and new-order banners, four stat cards with deltas, earnings trend,
   spot snapshot and the four newest bills. "Full analytics" links to the task-3 route; the CSV
-  button arrives with task 4.
+  button arrives with task 4. The phase review also added the demo's feature/QR card and feedback
+  strip, which the task list left out but the demo dashboard shows.
 - [x] Analytics: spot filter, stat cards, trend, spot table, day table, bill details.
   Built 2026-10-30: `/analytics` + `owner/pages/AnalyticsPage.tsx`, linked from the sidebar and
   the dashboard. The select (rooms, direct punch, all) filters the page, invalid spots fall back
   to all, stat cards compare with the previous range, and the location-wide trend, clickable spot
   table, reversed day table and newest-first bill rows match the demo. CSV buttons arrive with
   task 4.
-- [ ] CSV report (`report.ts`), hotel mode checked on every page.
+- [x] CSV report (`report.ts`), hotel mode checked on every page.
+  Built 2026-10-30: `lib/rooms/report.ts` (BOM + CRLF, quoted cells, cancelled excluded,
+  spot-scoped filename and exact headers) wired to Dashboard and both Analytics buttons; a smoke
+  run checked BOM, header, cancelled exclusion, scoped filename, direct label and hotel label.
+  Hotel pass audited the labels on every owner page (spotWord/displaySpotName), the customer
+  screens, the outlet switch toast and the analytics spot reset; demo-hardcoded "table" join copy
+  was left as-is because the demo does the same. S23 remains blocked.
 
 Done when: checklist A rows 11–14, 22, 33–34 pass; screenshots S01–S02, S09–S13 and S23 match;
 reviewer pass done.
@@ -313,6 +320,17 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 6 code complete** (branch `feat/rooms-standalone`). Task 4 adds
+  `lib/rooms/report.ts` and wires Download report on the Dashboard and Download report/CSV on
+  Analytics; a smoke test verified BOM, header, cancelled exclusion, per-spot filenames, the
+  direct-punch label and the hotel "All rooms" label. Hotel mode was audited page by page: every
+  spot noun goes through spotWord/displaySpotName, the outlet switch now toasts the demo's exact
+  wording, and Analytics resets its spot filter on a switch. Review fixes: removed an invented
+  Analytics filter toast, stopped the dashboard snapshot from pre-filtering Analytics, and ported
+  the demo's feature/QR card and feedback strip. `npm run typecheck` ✅, `npm run build` ✅
+  (`/dashboard` 5.26 kB, `/analytics` 5.71 kB), rules check 139 ✅. Golden screenshots S01–S02,
+  S09–S13 and S23 remain [BLOCKED: owner must capture]; interactive CSV/print checks are
+  likewise unverified in a browser. Next: Phase 7 after approval.
 - 2026-10-30 — **Phase 6 task 3 done** (branch `feat/rooms-standalone`). Analytics is live at
   `/analytics` and linked from the sidebar and Dashboard: the spot select filters every card and
   the bill list (unknown or missing direct-punch spots fall back to all), the four cards use the

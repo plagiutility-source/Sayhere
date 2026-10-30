@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Icon } from "@/components/rooms/shared/icons";
 import { PeriodBar } from "../PeriodBar";
-import { Badge, CodePill, Delta, cx } from "@/components/rooms/shared/ui";
+import {
+  Badge,
+  CodePill,
+  Delta,
+  btnOutline,
+  btnPrimary,
+  btnSm,
+  cx,
+} from "@/components/rooms/shared/ui";
 import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
 import {
   deltaLabel,
@@ -25,6 +34,7 @@ import {
   spotMatches,
   waiterName,
 } from "@/lib/rooms/rules";
+import { downloadReport } from "@/lib/rooms/report";
 import type { Order, Room, SpotLocation } from "@/lib/rooms/types";
 import { useOwner } from "../OwnerProvider";
 
@@ -56,6 +66,12 @@ function AnalyticsContent({
   const { state, toast, businessType } = useOwner();
   const [period, setPeriod] = useState<PeriodKey>("today");
   const [spot, setSpot] = useState(initialSpot);
+  const previousBusiness = useRef(businessType);
+  useEffect(() => {
+    if (previousBusiness.current === businessType) return;
+    previousBusiness.current = businessType;
+    setSpot("all");
+  }, [businessType]);
   const spotLabel = spotWord(businessType, false);
   const spotsLabel = spotWord(businessType, true);
 
@@ -145,14 +161,6 @@ function AnalyticsContent({
 
   const chooseSpot = (code: string) => {
     setSpot(code);
-    const room = location.rooms.find((item) => item.code === code) || null;
-    const label =
-      code === "all"
-        ? `All ${spotsLabel.toLowerCase()}`
-        : code === "direct"
-          ? "Direct punch"
-          : displaySpotName(businessType, room);
-    toast(`Filtered to ${label}.`);
   };
 
   return (
@@ -182,6 +190,21 @@ function AnalyticsContent({
               <option value="direct">Direct punch · no table</option>
             ) : null}
           </select>
+          <button
+            type="button"
+            className={btnPrimary}
+            onClick={() =>
+              downloadReport(
+                state,
+                location.id,
+                period,
+                activeSpot === "all" ? null : activeSpot,
+                toast,
+              )
+            }
+          >
+            <Icon name="download" size={15} /> Download report
+          </button>
         </div>
       </div>
 
@@ -387,12 +410,29 @@ function AnalyticsContent({
       </section>
 
       <section className="mt-3 rounded-card border border-black/10 bg-white shadow-soft">
-        <div className="border-b border-black/5 px-4 py-3">
-          <p className="text-[12.5px] font-medium">Bill details · {selectedLabel}</p>
-          <p className="mt-0.5 text-[10.5px] text-ink-muted">
-            Every bill in {PERIODS[period].range}, newest first. The CSV download includes the same
-            rows.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-black/5 px-4 py-3">
+          <div>
+            <p className="text-[12.5px] font-medium">Bill details · {selectedLabel}</p>
+            <p className="mt-0.5 text-[10.5px] text-ink-muted">
+              Every bill in {PERIODS[period].range}, newest first. The CSV download includes the
+              same rows.
+            </p>
+          </div>
+          <button
+            type="button"
+            className={cx(btnOutline, btnSm)}
+            onClick={() =>
+              downloadReport(
+                state,
+                location.id,
+                period,
+                activeSpot === "all" ? null : activeSpot,
+                toast,
+              )
+            }
+          >
+            <Icon name="download" size={14} /> CSV
+          </button>
         </div>
         {scoped.length ? (
           <div className="flex flex-col">

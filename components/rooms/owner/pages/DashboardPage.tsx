@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
+import { QrArt } from "@/components/rooms/shared/QrArt";
 import { PeriodBar } from "../PeriodBar";
-import { Badge, CodePill, Delta, cx } from "@/components/rooms/shared/ui";
+import {
+  Badge,
+  CodePill,
+  Delta,
+  btnOutline,
+  btnPrimary,
+  btnSm,
+  cx,
+} from "@/components/rooms/shared/ui";
 import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
 import {
   deltaLabel,
@@ -28,6 +37,8 @@ import {
   serviceCallSpotName,
   statsForRange,
 } from "@/lib/rooms/rules";
+import { absoluteUrl, spotPath } from "@/lib/rooms/links";
+import { downloadReport } from "@/lib/rooms/report";
 import type { Order, SpotLocation } from "@/lib/rooms/types";
 import { useOwner } from "../OwnerProvider";
 
@@ -50,7 +61,7 @@ export function DashboardPage() {
 }
 
 function DashboardContent({ location }: { location: SpotLocation }) {
-  const { state, toast, businessType } = useOwner();
+  const { state, toast, businessType, origin } = useOwner();
   const [period, setPeriod] = useState<PeriodKey>("today");
   const spot = spotWord(businessType, false);
   const spots = spotWord(businessType, true);
@@ -103,6 +114,9 @@ function DashboardContent({ location }: { location: SpotLocation }) {
   }
   const snapshotTotal = rows.reduce((sum, row) => sum + row.earnings, 0);
   const snapshotMax = Math.max(1, ...rows.map((row) => row.earnings));
+  const demoCode = location.rooms[0] ? location.rooms[0].code : "reception";
+  const demoPath = spotPath(location.slug, demoCode);
+  const demoUrl = absoluteUrl(origin, demoPath);
 
   const changePeriod = (key: PeriodKey) => {
     setPeriod(key);
@@ -125,6 +139,13 @@ function DashboardContent({ location }: { location: SpotLocation }) {
           >
             <Icon name="analytics" size={15} /> Full analytics
           </Link>
+          <button
+            type="button"
+            className="inline-flex h-10 items-center gap-1.5 rounded-control border border-ink/15 bg-white px-3.5 text-[13px] font-medium text-ink hover:bg-surface-muted"
+            onClick={() => downloadReport(state, location.id, period, null, toast)}
+          >
+            <Icon name="download" size={15} /> Download report
+          </button>
         </div>
       </div>
 
@@ -276,9 +297,7 @@ function DashboardContent({ location }: { location: SpotLocation }) {
             {rows.map((row) => (
               <Link
                 key={row.key}
-                href={`/analytics?loc=${location.id}${
-                  row.code ? `&spot=${row.code}` : "&spot=direct"
-                }`}
+                href={`/analytics?loc=${location.id}`}
                 className="flex flex-col gap-1 border-b border-black/5 py-2 last:border-b-0"
               >
                 <span className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
@@ -340,6 +359,78 @@ function DashboardContent({ location }: { location: SpotLocation }) {
             No bills in {PERIODS[period].range}. Scan a {spot.toLowerCase()} QR or switch the range.
           </p>
         )}
+      </section>
+
+      <section className="mt-3 flex flex-col gap-4 rounded-card border border-black/10 bg-white p-4 shadow-soft min-[900px]:flex-row min-[900px]:items-center">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-brand-blue">
+            <Icon name="sparkles" size={14} /> New feature concept
+          </p>
+          <h2 className="mt-1.5 text-[17px] font-medium leading-[1.35]">
+            One QR per {spot.toLowerCase()}. One page to edit.
+          </h2>
+          <p className="mt-1.5 max-w-[640px] text-[11.5px] leading-[1.6] text-ink-muted">
+            Every {spot.toLowerCase()} gets its own permanent QR and link. All of them open the
+            location&apos;s shared {spots.toLowerCase()} page, so a single change updates every QR
+            while orders still arrive tagged with the exact {spot.toLowerCase()}.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href={`/rooms?loc=${location.id}`} className={cx(btnPrimary, btnSm)}>
+              <Icon name="qr" size={14} /> Open {spots.toLowerCase()} QRs
+            </Link>
+            <Link
+              href={`/customer-page?loc=${location.id}&kind=rooms`}
+              className={cx(btnOutline, btnSm)}
+            >
+              <Icon name="edit" size={14} /> Edit {spots.toLowerCase()} page
+            </Link>
+            <Link href={demoPath} className={cx(btnOutline, btnSm)}>
+              <Icon name="external" size={14} /> Preview a {spot.toLowerCase()} QR
+            </Link>
+          </div>
+        </div>
+        <div className="w-[146px] shrink-0 self-center rounded-card border border-black/10 bg-white p-2.5 max-[900px]:w-[132px]">
+          <QrArt url={demoUrl} />
+        </div>
+      </section>
+
+      <section
+        className="mt-3 flex flex-col rounded-card border border-black/10 bg-white px-4 shadow-soft"
+        aria-label="Recent feedback"
+      >
+        {[
+          {
+            message: "“Cold brew was excellent and the order arrived in minutes.”",
+            meta: `${spot} 2 · 18 min ago · positive`,
+            negative: false,
+          },
+          {
+            message: "“Loved the free refill — did not expect that.”",
+            meta: `${spot} 1 · 1 hr ago · positive`,
+            negative: false,
+          },
+          {
+            message: "“Waiter was busy, but the QR ordering still worked perfectly.”",
+            meta: `${spot} 3 · 3 hrs ago · private message`,
+            negative: true,
+          },
+        ].map((feedback) => (
+          <div
+            key={feedback.meta}
+            className="flex items-start gap-2.5 border-b border-black/5 py-3 last:border-b-0"
+          >
+            <span
+              className={cx(
+                "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                feedback.negative ? "bg-slate-300" : "bg-brand-green",
+              )}
+            />
+            <div>
+              <p className="text-[11.5px] leading-[1.5]">{feedback.message}</p>
+              <p className="mt-1 text-[10px] text-ink-muted">{feedback.meta}</p>
+            </div>
+          </div>
+        ))}
       </section>
     </>
   );
