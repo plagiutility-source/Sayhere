@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+/* Small, respectful confetti burst for the happy review moment
+   (brand-guide.md "Tone by Moment"). Turned off for reduced motion. */
+@keyframes cp-confetti {
+  0% {
+    transform: translateY(-6px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(160px) rotate(220deg);
+    opacity: 0;
+  }
+}
+
+.cp-confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 10px;
+  border-radius: 2px;
+  animation: cp-confetti 900ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-confetti-piece {
+    animation: none;
+    opacity: 0;
+  }
+}
