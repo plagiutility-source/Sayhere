@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (A/B, C/D and G done; full reset/guard matrices and second reviewer open)
+Last updated: 2026-10-30 (A/B/C/D/G done; A40, three unreachable B controls and second reviewer open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -286,8 +286,8 @@ reviewer pass done.
 
 ## Phase 7 — Parity audit
 - [ ] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
-  and 1280. Fix every mismatch. A and B rows are complete except A40 (Phase 8) and three
-  unreachable customer guards; C, D and G remain open.
+  and 1280. Fix every mismatch.  A and B rows are complete except A40 (Phase 8) and three
+  unreachable customer guards; C, D and G are complete.
   Audit progress 2026-10-30: the full route-level visual walk now runs in Firefox against the
   demo at all three widths (7 routes, 42 captures) and is clean. Fixed the customer View bill
   and bill-sent lines, shell groups/badge, period range, dashboard 1.35/1 trend split, Locations
@@ -304,17 +304,22 @@ reviewer pass done.
   each subscriber now has its own delivery watermark. C1–C4, C6 and D2–D10 also pass in the
   runtime: deep-path saves, toggle/dirty behavior, location and preview selection, waiter and room
   toggles, punch/checkout fields, join input/Enter, countdowns, alert clearing and title updates.
-  C5 (the full route-reset matrix) and D1 (the full external-state guard matrix) still need a
-  dedicated pass. The G golden screenshot set is captured: 57 states at 390, 768 and 1280 (171
-  PNGs); the second reviewer remains open.
+  C5 and D1 now pass a 16-check Firefox matrix: all customer resets (cart, checkout, order,
+  service, join name/code), owner notification panel, Add/Punch dialogs, filters, analytics spot,
+  editor draft/preview, mobile drawer, alert clearing, plus D1's unrelated-update preservation and
+  bill-sent transition. The app re-renders on newer customer state instead of using the demo's
+  scan-signature gate; React preserves the visible screen and cart. The G golden screenshot set is
+  captured: 57 states at 390, 768 and 1280 (171 PNGs). A40 waits for Phase 8, three B guards have
+  no reachable control, and the second reviewer remains blocked.
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
-- [ ] Run through the demo's three main flows twice (first order and reorder; join with code;
-  bill and payment), once with each model reviewing. First pass done 2026-10-30 in Firefox on the
-  production build: order #1043 placed, reorder joined the same bill as round 2 (₹340), a guest
-  joined after host approval and code `595240`, the owner sent the bill, and exact payment of
-  ₹180 closed it. The second model's review pass is still outstanding.
+- [BLOCKED: second reviewer model GLM 5.3 Flash is unavailable in this environment] Run through
+  the demo's three main flows twice (first order and reorder; join with code; bill and payment),
+  once with each model reviewing. First pass done 2026-10-30 in Firefox on the production build:
+  order #1043 placed, reorder joined the same bill as round 2 (₹340), a guest joined after host
+  approval and code `595240`, the owner sent the bill, and exact payment of ₹180 closed it. The
+  second model's review pass is still outstanding.
 - [x] Hotel mode full pass. Switched the outlet on both demo and app and compared all seven
   routes; fixed the Orders banner to keep the demo's literal "table arrow" in hotel mode.
 - [x] `npm run typecheck`, `npm run build` and the rules check pass.
@@ -346,6 +351,16 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 C5/D1 close-out and checks** (branch `audit/rooms-latest`). Ran a
+  16-check Firefox matrix against the production app. C5 passes: cart and public screen, checkout
+  name and error, order done, service sent, join name and join-code error, notification panel,
+  Add and Punch dialogs, order filter, analytics spot, editor draft/dirty/preview, mobile drawer
+  and live alert clearing all reset on navigation. D1 passes for stale/newer state, dirty-editor
+  and dialog guards (previous pass), customer menu/cart preservation across an unrelated newer
+  update, and the bill-sent transition. The customer page intentionally relies on React's local
+  state instead of a separate scan-signature check; no visible difference was found. No app code
+  changed. `npm run typecheck` ✅, `npm run build` ✅, rules check 139 ✅. Remaining: A40 (Phase 8),
+  the three unreachable B controls and the unavailable second reviewer.
 - 2026-10-30 — **Phase 7 G golden screenshots** (branch `audit/rooms-latest`). Captured all 57
   states from the demo with Playwright/Firefox at 390, 768 and 1280 — 171 PNGs in
   `reference/screens/`. Seeded the demo’s own localStorage for deterministic bills and used the

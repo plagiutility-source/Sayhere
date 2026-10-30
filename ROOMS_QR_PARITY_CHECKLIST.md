@@ -84,19 +84,29 @@ click through." [x]
 - [x] Dirty = JSON of draft differs from saved JSON.
 - [x] Join code input strips non-digits, max 6. Enter in the name field clicks Ask; Enter in the
   code field clicks Join.
-- [ ] Route change resets: draft, dirty, preview spot, public screen to home, cart, checkout
+- [x] Route change resets: draft, dirty, preview spot, public screen to home, cart, checkout
   draft and error, last order and round, punch draft, notification panel, analytics spot, order
   filter, join drafts and errors, last scan signature, last service call, dashboard alert;
-  stops the ring, closes dialogs, closes the mobile drawer.
+  stops the ring, closes dialogs, closes the mobile drawer. Verified 2026-10-30 with 14 browser
+  checks: cart/screen, checkout name/error, order done, service sent, join name and code error,
+  notification panel, Add dialog, Punch dialog, order filter, analytics spot, editor draft/dirty/
+  preview, mobile drawer and the live alert. The app has no stored `lastScanSignature`; its
+  visible equivalent is covered by D1. Navigation clears the alert through the same branch that
+  stops the ring.
 - [x] **DEV** business-type select (café/restaurant ⇄ hotel): updates the labels everywhere and
   resets the analytics spot.
 
 
 ## D. Live events
 
-- [ ] `handleExternalState`: ignore if the stored `savedAt` is not newer. If newer: run detectors,
+- [x] `handleExternalState`: ignore if the stored `savedAt` is not newer. If newer: run detectors,
   update the title; on a customer page re-render only when the **scan signature** changes; on the
   editor do not re-render while dirty; do not re-render while a dialog is open; otherwise re-render.
+  Verified 2026-10-30: stale updates ignored, newer updates applied, editor dirty and open-dialog
+  guards preserved, and a customer menu/cart survives an unrelated newer update while a bill
+  sent on a newer update moves home to the bill. Implementation note: React subscribes to every
+  newer state and preserves the screen/cart in local state, so it has no explicit scan-signature
+  gate; the visible behaviour is the same.
 - [x] Sources: `storage` event and a 2500 ms poll.
 - [x] `detectIncomingOrders` — fires for each unseen round id; skips on the customer page; starts
   the ring, shows the alert (`round` vs `order`), toast (see E).
