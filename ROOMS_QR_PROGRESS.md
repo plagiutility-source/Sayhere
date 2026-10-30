@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30
+Last updated: 2026-10-30 (Phase 4 in progress)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -184,8 +184,11 @@ home, service, hours, thumb, google, contact, feedback and chooser pass; screens
 S54–S60 match; reviewer pass done.
 
 ## Phase 4 — Owner Orders and live alerts
-- [ ] Orders page: banners, stat cards, filters with counts, spot groups (collapsible), order
-  rows with tags and status buttons, Direct punch group.
+- [x] Orders page: banners, stat cards, filters with counts, spot groups (collapsible), order
+  rows with tags and status buttons, Direct punch group. Built 2026-10-30: `/orders` route +
+  `components/rooms/owner/pages/OrdersPage.tsx`, shared `owner/PeriodBar.tsx`, `Delta` in
+  `shared/ui.tsx`; status toasts copied from the demo's `setOrderStatus`. Invoice and Punch
+  buttons land with tasks 3 and 4.
 - [ ] Waiters card and the Add waiter dialog; max, toggle and remove.
 - [ ] Invoice dialog: items, rounds, print, send to phone, email (SIM), payment verify.
 - [ ] Punch dialog (table and direct).
@@ -253,6 +256,12 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Audit of Phases 0–3** (read-only) + approved fixes. `npm install`, typecheck,
+  build and the rules check all passed; 124 checks. Three audit items fixed and pushed: the topbar
+  notification row now names the order's location and shows the demo's arrow, `lib/rooms/qr.ts`
+  uses the documented QR dark colour in its fallback instead of a fourth hex, and `tsx` is now a
+  declared dev dependency so `npm ci` can run the rules check. Open item unchanged: golden
+  screenshots still `[BLOCKED: owner must capture]`.
 - 2026-10-30 — Phase 0 files written. Waiting on owner tasks in Phase 0.
 - 2026-10-30 — **Phase 0 complete** (branch `feat/rooms-standalone`). Planning files present; demo
   folder verified unchanged (`app.js` 5,576 lines); bracketed spec functions all exist (no

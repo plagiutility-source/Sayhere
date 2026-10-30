@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { DeltaLabel } from "@/lib/rooms/format";
 
 /** Tiny class-name joiner (the scaffold has no `clsx`). */
 export function cx(...values: Array<string | false | null | undefined>): string {
@@ -43,6 +44,28 @@ export function CodePill({ children }: { children: ReactNode }) {
       {children}
     </span>
   );
+}
+
+/** The demo's `deltaLabel` markup (arrow + percentage, then the comparison). */
+export function Delta({ label }: { label: DeltaLabel }) {
+  if (label.tone === "up" || label.tone === "down") {
+    const [head, ...rest] = label.text.split(" vs ");
+    return (
+      <>
+        <span
+          className={
+            label.tone === "up"
+              ? "font-medium text-brand-green-deep"
+              : "font-medium text-red-700"
+          }
+        >
+          {label.tone === "up" ? "\u2191" : "\u2193"} {head}
+        </span>
+        {rest.length ? ` vs ${rest.join(" vs ")}` : ""}
+      </>
+    );
+  }
+  return <>{label.text}</>;
 }
 
 /** The demo's `.switch`; the hidden checkbox is still keyboard reachable. */
