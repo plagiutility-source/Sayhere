@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
+import { LocalTime } from "@/components/rooms/shared/LocalTime";
 import { PeriodBar } from "../PeriodBar";
 import {
   Badge,
@@ -17,7 +18,6 @@ import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
 import {
   deltaLabel,
   displaySpotName,
-  formatWhen,
   money,
   orderSpotName,
   periodRangeLabel,
@@ -499,7 +499,9 @@ function BillRow({ order }: { order: Order }) {
       <span className="min-w-0">
         <strong className="block text-[11.5px] font-medium">
           #{order.number}{" "}
-          <span className="font-normal text-ink-muted">{formatWhen(order.createdAt)}</span>
+          <span className="font-normal text-ink-muted">
+            <LocalTime value={order.createdAt} />
+          </span>
         </strong>
         <span className="block text-[10.5px] text-ink-muted">
           {orderSpotName(state, order)} · {order.customerName} · {rounds.length} round

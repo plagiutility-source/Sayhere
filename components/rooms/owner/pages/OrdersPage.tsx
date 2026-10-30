@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
+import { LocalTime } from "@/components/rooms/shared/LocalTime";
 import { PeriodBar } from "../PeriodBar";
 import { WaitersCard } from "../WaitersCard";
 import { AddWaiterDialog } from "../modals/AddWaiterDialog";
@@ -24,7 +25,6 @@ import { simulateOrder } from "@/lib/rooms/simulate";
 import {
   deltaLabel,
   displaySpotName,
-  formatWhen,
   money,
   orderSpotName,
   periodRangeLabel,
@@ -660,7 +660,9 @@ function OrderRow({
       <div className="min-w-0">
         <strong className="block text-xs font-medium">
           #{order.number}{" "}
-          <span className="font-normal text-ink-muted">{formatWhen(order.createdAt)}</span>
+          <span className="font-normal text-ink-muted">
+            <LocalTime value={order.createdAt} />
+          </span>
         </strong>
         <span className="block">{order.customerName}</span>
         <span className="block text-[10.5px] text-ink-muted">

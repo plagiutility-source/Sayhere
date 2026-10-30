@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
 import { QrArt } from "@/components/rooms/shared/QrArt";
+import { LocalTime } from "@/components/rooms/shared/LocalTime";
 import { PeriodBar } from "../PeriodBar";
 import {
   Badge,
@@ -19,7 +20,6 @@ import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
 import {
   deltaLabel,
   displaySpotName,
-  formatWhen,
   money,
   orderSpotName,
   periodRangeLabel,
@@ -476,7 +476,7 @@ function MiniOrder({ order }: { order: Order }) {
       <span className="min-w-0 flex-[1.2]">
         <strong className="block font-medium">{orderSpotName(state, order)}</strong>
         <span className="text-[10px] text-ink-muted">
-          #{order.number} · {formatWhen(order.createdAt)}
+          #{order.number} · <LocalTime value={order.createdAt} />
         </span>
       </span>
       <span className="min-w-0 flex-1 text-[11px]">
