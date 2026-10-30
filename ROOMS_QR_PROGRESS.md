@@ -112,19 +112,37 @@ pass, and no component code exists yet. **True — 124 checks passed, typecheck 
 components yet.**
 
 ## Phase 2 — Owner shell, Locations, Spots page and dialogs
-- [ ] Dev shell: sidebar, topbar (search, notifications bell, sound toggle, business chip), page
-  frame, mobile drawer. Mark dev-only parts `// DEV-ONLY`.
-- [ ] Dev bar: outlet select, Try join approval, Reset demo (DEV-ONLY).
-- [ ] Route wrappers and page components for `locations` and `rooms`.
-- [ ] Locations: location cards, QR panel with Reception and Spots tabs, QR card, reception card.
-- [ ] Spots page: toolbar, shared strip, room rows with call chips and actions.
-- [ ] Dialogs: Add spot, Rename, QR (copy link, SVG download). Shared `Modal` with Escape and
-  overlay close.
-- [ ] Toasts, clipboard helper.
-- [ ] Room active toggle, rename, add (cap 12).
+- [x] Dev shell — sidebar (groups, `New` badge, active yellow bar, 72 px rail below 1280, drawer
+  below 1024), topbar (search, live-requests bell with badge and panel, sound toggle, business
+  chip), page frame, mobile drawer with backdrop. Dev-only parts marked `// DEV-ONLY`.
+- [x] Dev bar — outlet select (café/restaurant ⇄ hotel), Try join approval, Reset demo.
+- [x] Route wrappers — `app/(dashboard)/layout.tsx` plus 3-line `/locations` and `/rooms` pages;
+  `lib/rooms/links.ts` builds the spec section 14 QR URLs.
+- [x] Locations — location cards, QR panel with Reception / Tables tabs, QR card, reception card.
+- [x] Tables/Rooms page — toolbar (location switcher + counts), shared strip, rows with QR thumb,
+  code pill, scans, call/open chips, waiter names, status, toggle, Orders, Rename, QR, Preview.
+- [x] Dialogs — Add, Rename, QR (copy link, SVG download); shared `Modal` closes on Escape and
+  overlay click and focuses the first input.
+- [x] Toasts and clipboard helper — 3 s toast; clipboard API with textarea fallback.
+- [x] Room active toggle, rename, add (cap 12, permanent code).
+
+Deviations / notes for the reviewer:
+- `lib/rooms/links.ts` is new but lives in `lib/rooms/`; it is the demo's `pageUrl` (spec 14).
+- Vendored `qrcode.js`: the UMD wrapper was removed as well as adding the ESM export. Next treats
+  the file as ESM, and the `module.exports` branch threw during prerender.
+- Dashboard, Feedback, Analytics, Orders and Customer page are later phases, so their sidebar
+  items show the demo's `not-in-demo` toast for now; at merge they become the real SaaS links
+  (checklist A.40).
+- The notifications panel shipped read-only (lists calls and new orders, links to the Tables page);
+  Phase 4 adds Done, Send bill and the Orders links.
+- Row “Send bill” / “Mark handled” buttons arrive with Phases 4–5; the seed has no service calls,
+  so S03–S05, S14–S16 and S23 are unaffected.
+- The demo logos were copied to `public/rooms/` unchanged.
+- The dashboard routes are `force-dynamic` so `?loc=` / `?kind=` render on the server.
 
 Done when: checklist A rows 1–9 and 38–41 pass; screenshots S03–S05, S14–S16 and S23 (Rooms) match
-at 390, 768 and 1280; reviewer pass done.
+at 390, 768 and 1280; reviewer pass done. **Code paths and wording verified; screenshot parity
+[BLOCKED: owner must capture].**
 
 ## Phase 3 — Customer ordering (scan page core)
 - [ ] `app/r/[slug]/[code]/page.tsx` and a placeholder `app/r/[slug]/page.tsx` for the reception
@@ -228,3 +246,8 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   wording issue: F.22 says the previous window has "the same length"; the demo ends it one
   millisecond before the current window starts, so a partial day makes it longer. `rules.ts`
   `previousPeriodWindow` follows the demo; the checklist row is the inaccurate part.
+- 2026-10-30 — **Phase 2 complete** (branch `feat/rooms-standalone`). Owner shell + demo bar,
+  Locations and Tables/Rooms pages, Add/Rename/QR dialogs, toasts and clipboard. `npm run
+  typecheck` ✅, `npm run build` ✅ (`/locations` and `/rooms` dynamic), rules check 124 ✅, both
+  pages return 200 with the expected server HTML. Screenshot parity [BLOCKED: owner must capture].
+  Next: Phase 3 (customer ordering).

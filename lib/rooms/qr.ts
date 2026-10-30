@@ -4,8 +4,10 @@
  * QR rendering, ported from the demo's `qrSvg` (`app.js` around line 2006).
  *
  * `lib/rooms/vendor/qrcode.js` is the demo's `assets/qrcode.js`, vendored with
- * its licence header intact. The only edit is the final `export default qrcode`
- * line so it can be imported as a module; logged in the session log.
+ * its licence header intact. Two edits so it can be imported as a module: the
+ * final `export default qrcode` line, and the removal of the UMD wrapper (Next
+ * treats the file as ESM and its `module.exports` branch throws at runtime).
+ * Both are logged in the session log.
  *
  * The SVG is returned as a string exactly as the demo builds it. Components
  * show it through an `<img src="data:image/svg+xml,...">` or download it, so no
