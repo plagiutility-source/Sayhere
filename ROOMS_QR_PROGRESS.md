@@ -189,7 +189,11 @@ S54–S60 match; reviewer pass done.
   `components/rooms/owner/pages/OrdersPage.tsx`, shared `owner/PeriodBar.tsx`, `Delta` in
   `shared/ui.tsx`; status toasts copied from the demo's `setOrderStatus`. Invoice and Punch
   buttons land with tasks 3 and 4.
-- [ ] Waiters card and the Add waiter dialog; max, toggle and remove.
+- [x] Waiters card and the Add waiter dialog; max, toggle and remove.
+- [x] Waiters card and the Add waiter dialog; max, toggle and remove. Built 2026-10-30:
+  `components/rooms/owner/WaitersCard.tsx` + `modals/AddWaiterDialog.tsx`, wired into the Orders
+  aside; load bar, status badge, max 1–8, pause switch, remove confirm and every toast come from
+  `rules.ts`.
 - [ ] Invoice dialog: items, rounds, print, send to phone, email (SIM), payment verify.
 - [ ] Punch dialog (table and direct).
 - [ ] Notifications panel, topbar badge, sidebar Orders badge, document title.

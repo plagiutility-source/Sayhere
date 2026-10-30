@@ -4,6 +4,8 @@ import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
 import { PeriodBar } from "../PeriodBar";
+import { WaitersCard } from "../WaitersCard";
+import { AddWaiterDialog } from "../modals/AddWaiterDialog";
 import {
   Badge,
   CodePill,
@@ -75,6 +77,7 @@ function OrdersContent({ location }: { location: SpotLocation }) {
   const [period, setPeriod] = useState<PeriodKey>("today");
   const [filter, setFilter] = useState<OrderFilter>("all");
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [addWaiterOpen, setAddWaiterOpen] = useState(false);
 
   const table = spotWord(businessType, false);
   const tables = spotWord(businessType, true);
@@ -235,7 +238,8 @@ function OrdersContent({ location }: { location: SpotLocation }) {
         />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_300px]">
+        <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div
             className="inline-flex flex-wrap gap-0.5 rounded-[10px] bg-slate-100 p-[3px]"
@@ -293,7 +297,12 @@ function OrdersContent({ location }: { location: SpotLocation }) {
             </p>
           </section>
         )}
+        </div>
+        <WaitersCard location={location} onAdd={() => setAddWaiterOpen(true)} />
       </div>
+      {addWaiterOpen ? (
+        <AddWaiterDialog location={location} onClose={() => setAddWaiterOpen(false)} />
+      ) : null}
     </>
   );
 }
