@@ -197,7 +197,11 @@ S54–S60 match; reviewer pass done.
   Built 2026-10-30: `modals/InvoiceDialog.tsx` (invoice paper, rounds, print, send to phone,
   email SIM, Cash/UPI/Card exact-amount verify), `markBillEmailed()` rule (+2 checks, 126 now),
   the demo's `@media print` behaviour in `globals.css`, and the row / group bill buttons wired.
-- [ ] Punch dialog (table and direct).
+- [x] Punch dialog (table and direct). Built 2026-10-30: `modals/PunchDialog.tsx`, the page-head
+  "Punch order" button and a "Punch" button on every spot group (direct groups open without a
+  table); table punches join the open bill through `createPunchOrder`, direct punches start a new
+  one, the customer fields hide when a bill is joined, and the demo's `punch-add`/`punch-dec`
+  handlers are the 20-max quantity controls.
 - [ ] Notifications panel, topbar badge, sidebar Orders badge, document title.
 - [ ] Live alert card, ring timing, bell, sound toggle, `handleExternalState` rules (checklist D).
 - [ ] `simulate-order` (DEV-ONLY).
@@ -262,6 +266,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 4 task 4 done** (branch `feat/rooms-standalone`). The Punch dialog: page-head
+  "Punch order", a "Punch" button on every spot group (the Direct punch group has no table), the
+  add-to picker with the demo's open-bill / new-bill hint, the demo menu with Add / plus / minus up
+  to 20 per item, the running item count and total, the open-bill note that replaces the customer
+  fields, and `createPunchOrder` for both paths with the demo's two toasts. `npm run typecheck` ✅,
+  `npm run build` ✅ (`/orders` 11.4 kB), rules check 126 ✅. Next: task 5 (notifications panel,
+  topbar badge, sidebar Orders badge and document title).
 - 2026-10-30 — **Phase 4 tasks 1–3 done** (branch `feat/rooms-standalone`). Orders page (period
   bar, banners, stat cards, filters with counts, collapsible groups, Direct punch group, row tags
   and status buttons), Waiters card + Add waiter dialog, and the Invoice dialog (print, send to

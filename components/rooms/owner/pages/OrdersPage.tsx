@@ -7,6 +7,7 @@ import { PeriodBar } from "../PeriodBar";
 import { WaitersCard } from "../WaitersCard";
 import { AddWaiterDialog } from "../modals/AddWaiterDialog";
 import { InvoiceDialog } from "../modals/InvoiceDialog";
+import { PunchDialog } from "../modals/PunchDialog";
 import {
   Badge,
   CodePill,
@@ -82,6 +83,7 @@ function OrdersContent({ location }: { location: SpotLocation }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const [addWaiterOpen, setAddWaiterOpen] = useState(false);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+  const [punchCode, setPunchCode] = useState<string | null>(null);
 
   const table = spotWord(businessType, false);
   const tables = spotWord(businessType, true);
@@ -177,6 +179,11 @@ function OrdersContent({ location }: { location: SpotLocation }) {
             {location.name} · {stats.orders} bill{stats.orders === 1 ? "" : "s"} ·{" "}
             {periodRangeLabel(period)}. Grouped by {table.toLowerCase()}, oldest first.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className={btnPrimary} onClick={() => setPunchCode("")}>
+            <Icon name="plus" size={15} /> Punch order
+          </button>
         </div>
       </div>
 
@@ -301,6 +308,7 @@ function OrdersContent({ location }: { location: SpotLocation }) {
                 onChangeStatus={changeStatus}
                 onOpenBill={(order) => setOpenBillId(order.id)}
                 onSendBill={sendBill}
+                onPunch={(code) => setPunchCode(code)}
               />
             ))}
           </div>
@@ -320,6 +328,13 @@ function OrdersContent({ location }: { location: SpotLocation }) {
       </div>
       {addWaiterOpen ? (
         <AddWaiterDialog location={location} onClose={() => setAddWaiterOpen(false)} />
+      ) : null}
+      {punchCode !== null ? (
+        <PunchDialog
+          location={location}
+          initialCode={punchCode}
+          onClose={() => setPunchCode(null)}
+        />
       ) : null}
       {openBillId
         ? (() => {
@@ -365,6 +380,7 @@ function OrderGroup({
   onChangeStatus,
   onOpenBill,
   onSendBill,
+  onPunch,
 }: {
   location: SpotLocation;
   room: Room | null;
@@ -374,6 +390,7 @@ function OrderGroup({
   onChangeStatus: (order: Order, status: "preparing" | "served" | "cancelled") => void;
   onOpenBill: (order: Order) => void;
   onSendBill: (order: Order) => void;
+  onPunch: (code: string) => void;
 }) {
   const { state, businessType } = useOwner();
   const direct = !room;
@@ -434,15 +451,24 @@ function OrderGroup({
             </p>
           </div>
         </div>
-        {canSendBill && billOrder ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {canSendBill && billOrder ? (
+            <button
+              type="button"
+              className={cx(btnPrimary, btnXs)}
+              onClick={() => onSendBill(billOrder)}
+            >
+              <Icon name="receipt" size={12} /> Send bill
+            </button>
+          ) : null}
           <button
             type="button"
-            className={cx(btnPrimary, btnXs)}
-            onClick={() => onSendBill(billOrder)}
+            className={cx(btnOutline, btnXs)}
+            onClick={() => onPunch(room ? room.code : "")}
           >
-            <Icon name="receipt" size={12} /> Send bill
+            <Icon name="plus" size={12} /> Punch
           </button>
-        ) : null}
+        </div>
       </header>
 
       {isOpen ? (
