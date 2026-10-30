@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 6 task 2 done; screenshots blocked)
+Last updated: 2026-10-30 (Phase 6 task 3 done; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -266,7 +266,12 @@ screenshots S42–S53 and S61 match; reviewer pass done.
   the root redirect; service and new-order banners, four stat cards with deltas, earnings trend,
   spot snapshot and the four newest bills. "Full analytics" links to the task-3 route; the CSV
   button arrives with task 4.
-- [ ] Analytics: spot filter, stat cards, trend, spot table, day table, bill details.
+- [x] Analytics: spot filter, stat cards, trend, spot table, day table, bill details.
+  Built 2026-10-30: `/analytics` + `owner/pages/AnalyticsPage.tsx`, linked from the sidebar and
+  the dashboard. The select (rooms, direct punch, all) filters the page, invalid spots fall back
+  to all, stat cards compare with the previous range, and the location-wide trend, clickable spot
+  table, reversed day table and newest-first bill rows match the demo. CSV buttons arrive with
+  task 4.
 - [ ] CSV report (`report.ts`), hotel mode checked on every page.
 
 Done when: checklist A rows 11–14, 22, 33–34 pass; screenshots S01–S02, S09–S13 and S23 match;
@@ -308,6 +313,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 6 task 3 done** (branch `feat/rooms-standalone`). Analytics is live at
+  `/analytics` and linked from the sidebar and Dashboard: the spot select filters every card and
+  the bill list (unknown or missing direct-punch spots fall back to all), the four cards use the
+  demo's scope and previous-range deltas, the earnings trend stays location-wide, and the spot
+  table, reversed day table and newest-first bill details follow the demo's wording. CSV download
+  is still task 4. `npm run typecheck` ✅, `npm run build` ✅ (`/analytics` 4.9 kB), rules check 139
+  ✅. Next: task 4 (CSV report and the hotel-mode pass).
 - 2026-10-30 — **Phase 6 task 2 done** (branch `feat/rooms-standalone`). The dashboard now lives at
   `/dashboard` (root redirects there, sidebar item active): the shared period bar, live service and
   new-order banners, earnings/bills/guests/collected stat cards with deltas, the day-by-day
