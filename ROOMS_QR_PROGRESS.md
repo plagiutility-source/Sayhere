@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (A/B runtime sweep done; live-alert fan-out fixed; C/D, G and second reviewer open)
+Last updated: 2026-10-30 (A/B and most C/D rows done; full reset/guard matrices, G and second reviewer open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -301,8 +301,11 @@ reviewer pass done.
   UI (the cart bar disappears at zero and the Wi-Fi tile is hidden until accepted). While running
   the live-alert rows, found and fixed a real bug: the store's shared `latest` watermark let the
   owner hook consume an external update before the detector subscriber, so alerts never fired;
-  each subscriber now has its own delivery watermark. The G golden screenshot set and second
-  reviewer remain open.
+  each subscriber now has its own delivery watermark. C1–C4, C6 and D2–D10 also pass in the
+  runtime: deep-path saves, toggle/dirty behavior, location and preview selection, waiter and room
+  toggles, punch/checkout fields, join input/Enter, countdowns, alert clearing and title updates.
+  C5 (the full route-reset matrix) and D1 (the full external-state guard matrix) still need a
+  dedicated pass. The G golden screenshot set and second reviewer remain open.
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
@@ -342,6 +345,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 C/D pass** (branch `audit/rooms-latest`). Exercised editor deep-path save,
+  toggle re-render/dirty, location-switch confirmation, preview spot, room active toggle, waiter
+  max/active, punch fields, checkout guests, hotel-mode spot reset, order-filter route reset, join
+  name/Enter and code/Enter, input sanitization, join countdown, alert clearing after acceptance
+  and service-call title/panel detection. C1–C4, C6 and D2–D10 are ticked. C5 (all route resets)
+  and D1 (all handleExternalState branches) remain open alongside A40, the three unreachable
+  customer guards, G screenshots and the second reviewer. No code changed in this pass.
 - 2026-10-30 — **Phase 7 A/B sweep and live-alert fix** (branch `audit/rooms-latest`). Ran the owner
   actions in Firefox at 1280/390 and the customer actions at 390: locations/QR (validation, rename,
   download, copy, Escape/overlay, tabs, 12-QR cap), editor save/discard/reset/View live, notifications
