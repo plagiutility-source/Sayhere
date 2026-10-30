@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { copyText } from "@/components/rooms/shared/clipboard";
 import { Icon } from "@/components/rooms/shared/icons";
+import { HostPanel } from "./HostPanel";
 import { JoinGate } from "./JoinGate";
 import { Badge, btnOutline, cx } from "@/components/rooms/shared/ui";
 import { CART_MAX_QTY, GUESTS_OPTIONS } from "@/lib/rooms/constants";
@@ -17,14 +18,17 @@ import {
 } from "@/lib/rooms/format";
 import { absoluteUrl, spotPath } from "@/lib/rooms/links";
 import {
+  approveJoinRequest,
   availableWaiters,
   cancelJoinRequest,
+  denyJoinRequest,
   effectiveJoinStatus,
   findOpenBill,
   latestJoinRequestForDevice,
   orderRounds,
   participantFor,
   placeOrder,
+  regenerateJoinCode,
   requestJoin,
   requestService,
   resolveScanParticipation,
@@ -94,6 +98,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -105,6 +110,13 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  /* The demo's 1 s timer: join countdowns and bill countdowns, and it keeps
+     `effectiveJoinStatus` honest when a request or code expires. */
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const businessType = state.businessType;
   const spot = spotWord(businessType, false);
@@ -323,6 +335,27 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     setJoinCode("");
     setJoinCodeError("");
     setToast("Join request cancelled.");
+  };
+
+  const approveRequest = (id: string) => {
+    const result = approveJoinRequest(state, id);
+    if (!result.ok || !result.request) return;
+    save(result.state);
+    setToast(`Approved — read the code to ${result.request.name}.`);
+  };
+
+  const denyRequest = (id: string) => {
+    const result = denyJoinRequest(state, id);
+    if (!result.ok || !result.request) return;
+    save(result.state);
+    setToast(`Request from ${result.request.name} declined.`);
+  };
+
+  const regenerateCode = (id: string) => {
+    const result = regenerateJoinCode(state, id);
+    if (!result.ok || !result.request) return;
+    save(result.state);
+    setToast(`New code for ${result.request.name}.`);
   };
 
   const submitJoinCode = () => {
@@ -1344,7 +1377,20 @@ export function ScanPage({ slug, code }: ScanPageProps) {
       </div>
 
       <div className="mx-auto max-w-[480px] px-[18px] pb-14 pt-6">
-        <div className="overflow-hidden rounded-[18px] shadow-soft">{body}</div>
+        <div className="overflow-hidden rounded-[18px] shadow-soft">
+          {openBill && participant?.role === "host" ? (
+            <HostPanel
+              order={openBill}
+              participant={participant}
+              guestUrl={url}
+              requests={state.joinRequests.filter((request) => request.orderId === openBill.id)}
+              onApprove={approveRequest}
+              onDeny={denyRequest}
+              onRegenerate={regenerateCode}
+            />
+          ) : null}
+          {body}
+        </div>
         {known && active ? (
           <p className="mt-3.5 rounded-[9px] bg-white/60 px-3 py-2.5 text-center text-[11px] leading-[1.55] text-slate-600">
             {room ? (

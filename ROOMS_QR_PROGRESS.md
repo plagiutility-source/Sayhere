@@ -226,8 +226,14 @@ service calls; screenshots S06–S08, S17–S22 match; reviewer pass done.
   bill is open and this device isn't on it; name form, 2-minute pending, 6-digit approved with
   attempts left, locked, expired (request vs code), denied and cancelled copy from the demo, with
   `data-join-expires` hooks for task 3's ticker.
-- [ ] Host panel: roster, pending request, code card, New code, Cancel; "Open guest view".
-- [ ] Countdown timers (1 s tick).
+- [x] Host panel: roster, pending request, code card, New code, Cancel; "Open guest view".
+  Built 2026-10-30: `components/rooms/customer/HostPanel.tsx`, shown only when the participant is
+  the host, above every customer screen; roster chips, Approve/Deny with the demo toasts, the
+  6-digit code card with attempts and expired/locked states, New code, Cancel, the empty hint and
+  the demo-only note.
+- [x] Countdown timers (1 s tick). Built 2026-10-30: a 1 s interval in `ScanPage` re-renders the
+  join gate and host timers and re-evaluates `effectiveJoinStatus`, so pending/approved requests
+  expire on screen; the bill window reuses the same tick when the bill screen lands in task 4.
 - [ ] Bill screen (unpaid and paid), paid-bill card, download PDF (`bill-pdf.ts`), 5-minute window.
 - [ ] Wi-Fi screen and the unlock rule; Wi-Fi tile on home and on order-done.
 - [ ] `detectJoinEvents`, `detectBillSent`, `detectPaidBill` and the scan-signature re-render.
@@ -281,6 +287,12 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 5 tasks 2–3 done** (branch `feat/rooms-standalone`). Task 2: the host
+  phone now gets the join panel above every customer screen — roster chips, pending approvals with
+  Approve/Deny, the read-aloud 6-digit card with attempts and expired/locked styling, New code,
+  Cancel and Open guest view, all with the demo's toasts. Task 3: a 1 s interval in `ScanPage`
+  drives the join/host countdowns and re-checks expiries. `npm run typecheck` ✅, `npm run build` ✅,
+  rules check 139 ✅. Next: task 4 (bill screen, paid-bill card and PDF).
 - 2026-10-30 — **Phase 5 task 1 done** (branch `feat/rooms-standalone`). The host-approved join
   gate now replaces the customer screens whenever this device scans a spot with an open bill it
   isn't on: name form, pending with the 2-minute timer, approved 6-digit entry with attempts left,
