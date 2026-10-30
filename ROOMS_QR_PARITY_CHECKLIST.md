@@ -57,15 +57,15 @@ sending). Bracketed names are functions in the demo's `app.js`.
 
 ## B. Customer actions (30, from `data-cp-action`)
 
-`add-item` [ ] · `dec-item` [ ] · `cart` (empty → toast "Your cart is empty — add something from
+`add-item` [x] · `dec-item` [ ] · `cart` (empty → toast "Your cart is empty — add something from
 the menu.") [ ] · `checkout` (empty → "Add something from the menu first.") [ ] · `pick-waiter` [ ]
-· `place-order` [ ] · `join-request` [ ] · `join-cancel` [ ] · `join-approve` [ ] · `join-deny` [ ] ·
-`join-regenerate` [ ] · `join-verify` [ ] · `thumb` (both thumbs → chooser) [ ] · `google` [ ] ·
-`contact` [ ] · `submit-feedback` (empty → "Please write a short message.") [ ] · `bill` [ ] ·
-`download-bill` (only when completed; otherwise "The bill is not paid yet.") [ ] · `home` [ ] ·
-`menu` [ ] · `service` [ ] · `service-waiter` / `service-bill` [ ] · `hours` [ ] · `wifi`
+· `place-order` [x] · `join-request` [x] · `join-cancel` [ ] · `join-approve` [x] · `join-deny` [ ] ·
+`join-regenerate` [ ] · `join-verify` [x] · `thumb` (both thumbs → chooser) [x] · `google` [ ] ·
+`contact` [x] · `submit-feedback` (empty → "Please write a short message.") [ ] · `bill` [x] ·
+`download-bill` (only when completed; otherwise "The bill is not paid yet.") [ ] · `home` [x] ·
+`menu` [x] · `service` [x] · `service-waiter` / `service-bill` [ ] · `hours` [ ] · `wifi`
 (locked → "Wi-Fi is available only after your order is accepted.") [ ] · `copy-wifi` (toast
-"Wi-Fi password copied.") [ ] · `call` **REPLACE** with `tel:` [ ] · `directions` **REPLACE** with
+"Wi-Fi password copied.") [x] · `call` **REPLACE** with `tel:` [ ] · `directions` **REPLACE** with
 Google Maps [ ] · `custom` **REPLACE** with the https link [ ] · `write` **REPLACE** with the
 existing review-writer flow [ ].
 

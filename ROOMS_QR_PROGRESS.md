@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (three main flows run once; second reviewer and golden screenshots open)
+Last updated: 2026-10-30 (customer B subset swept; A rows, remaining B rows and golden screenshots open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -292,8 +292,12 @@ reviewer pass done.
   and bill-sent lines, shell groups/badge, period range, dashboard 1.35/1 trend split, Locations
   label, Orders Analytics/Open QR/Report actions and full-width Waiters below 1400, Analytics
   bill rows and 290px filter stack, editor headings, and the mobile demo note, filter counts,
-  SHARE column, recent-bill guest line, outlet row and search width. Remaining checklist A/B
-  action rows and the G golden screenshot set still need to be ticked.
+  SHARE column, recent-bill guest line, outlet row and search width. A 2026-10-30 runtime sweep
+  ticked the observed B rows: add-item, place-order, join request/approve/verify, both thumbs,
+  contact, feedback submit, bill, home, menu, service, service-bill, copy-wifi. The
+  remaining A rows, unobserved B rows (quantity decrement, waiter pick, join cancel/deny/regenerate,
+  download, Google/writer, hours, locked Wi-Fi, call/maps/custom links, service-waiter) and the G
+  golden screenshot set are still open.
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
@@ -333,6 +337,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 B-action sweep, partial** (branch `audit/rooms-latest`). Exercised the
+  customer runtime in Firefox: add/cart/checkout/order placement, join request + host approval +
+  code entry, both thumbs to the chooser, contact, feedback submit, service request
+  for the bill, owner acceptance, Wi-Fi unlock and clipboard copy, and the home/menu/service
+  routes all worked. Ticked only those B rows. The Google chooser link, hours, directions/custom
+  tiles and several join/cart variants remain unverified; A rows and G screenshots are still open.
+  No code changed.
 - 2026-10-30 — **Phase 7 interactive flows, first pass** (branch `audit/rooms-latest`). Ran the
   three main flows in Firefox against the production build at 390 px. First order placed on Table
   4 (#1043, Cold brew ₹180); "Order something else" added Cappuccino to the same bill as round 2
