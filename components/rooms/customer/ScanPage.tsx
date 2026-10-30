@@ -11,6 +11,7 @@ import {
   formatTime,
   money,
   orderSpotName,
+  serviceKindTitle,
   spotWord,
 } from "@/lib/rooms/format";
 import { absoluteUrl, spotPath } from "@/lib/rooms/links";
@@ -34,6 +35,7 @@ import {
   DEMO_WEEK,
   MENU_ITEMS,
 } from "@/lib/rooms/seed";
+import { claimSpotScan } from "@/lib/rooms/scans";
 import { currentDeviceId, useRoomsState } from "@/lib/rooms/store";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
 
@@ -128,18 +130,45 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const cartTotal = cartLines.reduce((sum, item) => sum + item.price * item.qty, 0);
   const wifiReady = wifiUnlockedForOrder(openBill, config, businessType);
 
-  // E1 — the first phone to open a staff-created bill becomes its host.
+  // E1 + O4 — claim a staff-created bill, and count this active spot scan once
+  // per device per 30 minutes. One save keeps the two updates from clobbering
+  // each other.
   useEffect(() => {
-    if (!deviceId || !location || !room || !openBill) return;
-    if (openBill.hostDeviceId || openBill.participants.length) return;
-    const resolved = resolveScanParticipation(openBill, deviceId);
-    if (!resolved.participant) return;
-    save({
-      ...state,
-      orders: state.orders.map((order) =>
-        order.id === resolved.order.id ? resolved.order : order,
-      ),
-    });
+    if (!deviceId || !location || !room) return;
+    let next = state;
+    let changed = false;
+
+    if (openBill && !openBill.hostDeviceId && !openBill.participants.length) {
+      const resolved = resolveScanParticipation(openBill, deviceId);
+      if (resolved.participant) {
+        next = {
+          ...next,
+          orders: next.orders.map((order) =>
+            order.id === resolved.order.id ? resolved.order : order,
+          ),
+        };
+        changed = true;
+      }
+    }
+
+    if (room.active && claimSpotScan(deviceId, location.id, room.code)) {
+      next = {
+        ...next,
+        locations: next.locations.map((item) =>
+          item.id === location.id
+            ? {
+                ...item,
+                rooms: item.rooms.map((spot) =>
+                  spot.code === room.code ? { ...spot, scans: spot.scans + 1 } : spot,
+                ),
+              }
+            : item,
+        ),
+      };
+      changed = true;
+    }
+
+    if (changed) save(next);
   }, [deviceId, location, room, openBill, state, save]);
 
   const scanKey = location ? `${location.id}/${code}` : "";
@@ -281,6 +310,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         {openBill && participant ? (
           <ServiceStrip
             bill={openBill}
+            call={room ? serviceCallsForSpot(state, location.id, room.code)[0] ?? null : null}
             onService={() => setScreen("service")}
           />
         ) : null}
@@ -1005,6 +1035,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
       </Panel>
     );
   } else {
+    const calls = room ? serviceCallsForSpot(state, location.id, room.code) : [];
+    const waiterCall = calls.find((item) => item.kind === "waiter") || null;
+    const billCall = calls.find((item) => item.kind === "bill") || null;
     body = (
       <Panel>
         {config.announcement.on && config.announcement.text.trim() ? (
@@ -1066,6 +1099,17 @@ export function ScanPage({ slug, code }: ScanPageProps) {
                 </span>
               </div>
             </div>
+            {waiterCall ? (
+              <p className="mt-1.5 text-[10.5px] text-brand-green-deep">
+                Waiter called at {formatTime(waiterCall.createdAt)} — someone is on the way.
+              </p>
+            ) : null}
+            {billCall ? (
+              <p className="mt-1.5 text-[10.5px] text-brand-blue">
+                Bill requested at {formatTime(billCall.createdAt)} — waiting for the counter to send
+                it.
+              </p>
+            ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -1369,23 +1413,39 @@ function CartBar({ count, total, onCart }: { count: number; total: number; onCar
   );
 }
 
-function ServiceStrip({ bill, onService }: { bill: Order; onService: () => void }) {
+function ServiceStrip({
+  bill,
+  call,
+  onService,
+}: {
+  bill: Order;
+  call: ServiceCall | null;
+  onService: () => void;
+}) {
   return (
     <div className="mb-1 flex items-center gap-2.5 rounded-[10px] bg-white/70 p-2.5 text-[10.5px]">
       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-        <Icon name="bell" size={15} />
+        <Icon name={call ? "check" : "bell"} size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <strong className="block text-[11px] font-medium">Need something?</strong>
-        <span className="text-ink-muted">Bill #{bill.number} · call a waiter or ask for the bill</span>
+        <strong className="block text-[11px] font-medium">
+          {call ? serviceKindTitle(call.kind) : "Need something?"}
+        </strong>
+        <span className="text-ink-muted">
+          {call
+            ? `Sent at ${formatTime(call.createdAt)} · bill #${bill.number}`
+            : `Bill #${bill.number} · call a waiter or ask for the bill`}
+        </span>
       </div>
-      <button
-        type="button"
-        className="shrink-0 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[10.5px] font-medium text-[var(--cp-primary)]"
-        onClick={onService}
-      >
-        Call waiter
-      </button>
+      {call ? null : (
+        <button
+          type="button"
+          className="shrink-0 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[10.5px] font-medium text-[var(--cp-primary)]"
+          onClick={onService}
+        >
+          Call waiter
+        </button>
+      )}
     </div>
   );
 }

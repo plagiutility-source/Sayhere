@@ -171,7 +171,13 @@ Phase 3 notes so far:
 - [x] Service screens: panel, chooser, sent; `requestService` wired.
 - [x] Chooser, Google, Feedback, Thanks, Hours screens. Reuse the SaaS components at merge; in
   standalone build them to match the demo.
-- [ ] Per-spot scan counter (open item O4), display only.
+- [x] Per-spot scan counter (open item O4), display only — increments once per device per 30
+  minutes via a sessionStorage throttle; the location total and plan limits are untouched.
+
+**Phase 3 complete** — every task above is ticked. `npm run typecheck` ✅, `npm run build` ✅,
+rules check 124 ✅. Reviewer pass on the Phase 3 checklist-B subset found no code mismatches;
+the Google writer placeholder and the Phase 5 bill/join rows are logged above. Screenshot parity
+remains [BLOCKED: owner must capture].
 
 Done when: checklist B rows for add/dec item, cart, checkout, pick waiter, place order, menu,
 home, service, hours, thumb, google, contact, feedback and chooser pass; screenshots S30, S33–S41,
@@ -281,3 +287,10 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   ✅, rules check 124 ✅; SSR checks: QR home, reception (no “Ordering for”) and an unknown code all
   200 with the expected copy. Click-through and screenshots remain owner-verified (no browser
   automation here). Next: task 8 (per-spot scan counter), then the Phase 3 review.
+- 2026-10-30 — **Phase 3 complete** (branch `feat/rooms-standalone`). Added the O4 scan counter
+  (sessionStorage throttle, one per device per 30 minutes) and closed the parity gaps the review
+  found: the menu service strip now shows the active call, and the home panel shows the live
+  waiter/bill request times. `npm run typecheck` ✅, `npm run build` ✅, rules check 124 ✅.
+  Reviewer pass (checklist B subset for Phase 3): no code mismatches; Google's writer remains a
+  placeholder and the bill/join rows stay Phase 5. Screenshots [BLOCKED: owner must capture].
+  Next: Phase 4 (owner Orders and live alerts).
