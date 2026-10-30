@@ -39,9 +39,11 @@ export function PeriodBar({
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-        <span>Showing {def.range}</span>
-        <strong className="font-medium text-ink">{periodRangeLabel(period)}</strong>
+      <div className="flex flex-col items-end gap-0.5 text-[10px] text-ink-muted">
+        <span className="uppercase tracking-[0.06em]">Showing {def.range}</span>
+        <strong className="text-[11.5px] font-medium leading-[1.4] text-ink">
+          {periodRangeLabel(period)}
+        </strong>
       </div>
     </div>
   );

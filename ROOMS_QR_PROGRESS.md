@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 7 code audit in progress; browser rows blocked)
+Last updated: 2026-10-30 (Phase 7 parity walk, wording and hotel pass done; flows and screenshots open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -287,16 +287,22 @@ reviewer pass done.
 ## Phase 7 — Parity audit
 - [ ] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
   and 1280. Fix every mismatch.
-  Audit progress 2026-10-30 (source review; the running side-by-side check is blocked): fixed
-  the notification footer target (Orders, not Rooms), the demo's bill/service guard messages,
-  the locked Wi-Fi guard, Enter submission on the join name/code fields, and route-change
-  cleanup for dialogs/drawer, notification panel, dashboard alert, scan drafts, order filter
-  and analytics spot. Remaining rows are visual/interaction checks at the three widths.
-- [ ] Run each message in checklist E and compare wording.
+  Audit progress 2026-10-30: the full route-level visual walk now runs in Firefox against the
+  demo at all three widths (7 routes, 42 captures) and is clean. Fixed the customer View bill
+  and bill-sent lines, shell groups/badge, period range, dashboard 1.35/1 trend split, Locations
+  label, Orders Analytics/Open QR/Report actions and full-width Waiters below 1400, Analytics
+  bill rows and 290px filter stack, editor headings, and the mobile demo note, filter counts,
+  SHARE column, recent-bill guest line, outlet row and search width. Remaining checklist A/B
+  action rows and the G golden screenshot set still need to be ticked.
+- [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
+  body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
+  differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
 - [ ] Run through the demo's three main flows twice (first order and reorder; join with code;
-  bill and payment), once with each model reviewing.
-- [ ] Hotel mode full pass.
-- [ ] `npm run typecheck`, `npm run build` and the rules check pass.
+  bill and payment), once with each model reviewing. Not run yet; needs a second reviewer
+  model plus an interactive browser pass.
+- [x] Hotel mode full pass. Switched the outlet on both demo and app and compared all seven
+  routes; fixed the Orders banner to keep the demo's literal "table arrow" in hotel mode.
+- [x] `npm run typecheck`, `npm run build` and the rules check pass.
 
 Done when: every row in the checklist is ticked and the reviewer reports zero mismatches.
 
@@ -325,6 +331,17 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 parity walk, wording and hotel pass** (branch `audit/rooms-latest`,
+  continuing `feat/rooms-standalone`). Ran the demo and app side by side in Firefox at 390, 768
+  and 1280. Fixed the customer View bill/service-sent lines and home bill-sent line, shell
+  groups and bell badge, period range, dashboard trend/snapshot split, Locations heading,
+  Orders page actions and Waiters breakpoint, Analytics bill rows and filter stack, editor
+  headings, and the mobile demo-bar note, filter counts, SHARE column, recent-bill guest line,
+  outlet row and search width. Hotel mode is clean after restoring the demo's literal "table
+  arrow". Wording is clean across every route and width; remaining differences are only the
+  stat-label DOM split. `npm run typecheck` ✅, `npm run build` ✅ (10 routes), rules check 139 ✅.
+  Still open: checklist A/B action rows, the three interactive flows with a second reviewer,
+  and the G golden screenshot set.
 - 2026-10-30 — **Phase 7 audit in progress** (branch `feat/rooms-standalone`). Source review of
   the full checklist fixed the notification footer to open Orders, restored the demo's
   “Place an order first…”, “No bill is open yet.” and “Ask the waiter for the bill first…”

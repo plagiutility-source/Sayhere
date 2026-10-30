@@ -63,7 +63,10 @@ export function LocationsPage() {
 
       <div className="grid items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_430px]">
         <section aria-labelledby="locations-heading">
-          <p id="locations-heading" className="mb-2.5 text-[13px] font-medium">
+          <p
+            id="locations-heading"
+            className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted"
+          >
             Your locations
           </p>
           <div className="flex flex-col gap-3">

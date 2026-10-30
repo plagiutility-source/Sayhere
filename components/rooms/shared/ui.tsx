@@ -22,7 +22,7 @@ const badgeTones = {
   green: "bg-brand-green/10 text-brand-green-deep",
   amber: "bg-brand-yellow/20 text-yellow-800",
   blue: "bg-brand-blue/10 text-brand-blue",
-  new: "bg-brand-yellow text-[9px] uppercase tracking-[0.05em] text-yellow-900",
+  new: "bg-brand-yellow text-[9px] tracking-[0.05em] text-yellow-900",
 } as const;
 
 export function Badge({

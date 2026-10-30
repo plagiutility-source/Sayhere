@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/rooms/shared/icons";
@@ -247,6 +248,12 @@ function OrdersContent({
           <button type="button" className={btnOutline} onClick={simulate}>
             <Icon name="sparkles" size={15} /> Simulate customer order
           </button>
+          <Link
+            href={`/analytics?loc=${location.id}`}
+            className={btnOutline}
+          >
+            <Icon name="analytics" size={15} /> Analytics
+          </Link>
         </div>
       </div>
 
@@ -260,7 +267,7 @@ function OrdersContent({
               {waiting} new order{waiting === 1 ? "" : "s"}.
             </span>{" "}
             The bell rang and the {table.toLowerCase()} is highlighted below. Open the{" "}
-            {table.toLowerCase()} arrow to see the orders and accept.
+            table arrow to see the orders and accept.
           </div>
         </div>
       ) : (
@@ -324,7 +331,7 @@ function OrdersContent({
         />
       </div>
 
-      <div className="mt-4 grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="mt-4 grid items-start gap-[14px] min-[1400px]:grid-cols-[minmax(0,1fr)_330px]">
         <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div
@@ -348,7 +355,7 @@ function OrdersContent({
               >
                 {label}
                 {filterCounts[key] ? (
-                  <span className="rounded-pill bg-slate-200 px-1.5 text-[10px] font-medium text-slate-700">
+                  <span className="rounded-pill bg-slate-200 px-1.5 text-[10px] font-medium text-slate-700 max-[640px]:hidden">
                     {filterCounts[key]}
                   </span>
                 ) : null}
@@ -559,6 +566,12 @@ function OrderGroup({
           >
             <Icon name="plus" size={12} /> Punch
           </button>
+          <Link className={cx(btnOutline, btnXs)} href={`/rooms?loc=${location.id}`}>
+            Open QR
+          </Link>
+          <Link className={cx(btnOutline, btnXs)} href={`/analytics?loc=${location.id}`}>
+            Report
+          </Link>
         </div>
       </header>
 

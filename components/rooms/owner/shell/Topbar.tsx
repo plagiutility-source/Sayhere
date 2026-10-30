@@ -85,7 +85,7 @@ export function Topbar() {
         <Icon name="menu" size={18} />
       </button>
 
-      <div className="flex h-9 flex-[0_1_300px] items-center gap-2 rounded-control bg-surface-muted px-3 text-[13px] text-ink-muted max-[640px]:flex-1">
+      <div className="flex h-9 flex-[0_1_300px] items-center gap-2 rounded-control bg-surface-muted px-3 text-[13px] text-ink-muted max-[640px]:w-[128px] max-[640px]:flex-none">
         <Icon name="search" size={16} />
         <input
           type="search"
@@ -109,7 +109,7 @@ export function Topbar() {
           >
             <Icon name="bell" size={18} />
             {requests > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-pill bg-brand-green px-1 text-[9px] font-medium text-white">
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-pill bg-red-600 px-1 text-[9px] font-medium text-white">
                 {requests}
               </span>
             )}

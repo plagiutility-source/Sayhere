@@ -152,7 +152,7 @@ function RoomsContent({ location }: { location: SpotLocation }) {
       <div className="mt-3.5 flex items-start gap-[9px] rounded-[9px] border border-brand-green/[0.18] bg-brand-green/[0.06] px-[11px] py-2.5 text-xs leading-[1.5] text-emerald-900">
         <Icon name="lock" size={15} className="mt-px shrink-0" />
         <div>
-          {tables} links use a permanent code such as <CodePill>QR1</CodePill>. Renaming the{" "}
+          {table} links use a permanent code such as <CodePill>QR1</CodePill>. Renaming the{" "}
           {table.toLowerCase()} or the location does not change the QR. Pausing a QR keeps its code
           reserved so it can never accidentally point at another {table.toLowerCase()}.
         </div>

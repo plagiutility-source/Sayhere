@@ -14,10 +14,10 @@ export function DemoBar() {
       <span className="whitespace-nowrap rounded-pill bg-brand-yellow px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-yellow-900">
         Concept demo
       </span>
-      <label className="flex items-center gap-1.5">
-        <span>Outlet</span>
+      <label className="flex items-center gap-1.5 max-[640px]:w-full">
+        <span className="text-[10px] font-medium uppercase tracking-[0.06em]">Outlet</span>
         <select
-          className="h-6 rounded-[6px] border border-yellow-900/20 bg-white px-1 text-[11.5px]"
+          className="h-6 rounded-[6px] border border-yellow-900/20 bg-white px-1 text-[11.5px] max-[640px]:flex-1"
           aria-label="Outlet category"
           value={businessType === "hotel" ? "hotel" : "cafe"}
           onChange={(event) => {
@@ -34,7 +34,7 @@ export function DemoBar() {
           <option value="hotel">Hotel · Rooms</option>
         </select>
       </label>
-      <span className="max-[640px]:leading-[1.5]">
+      <span className="max-[640px]:hidden">
         QR ordering + live orders · mock data only · nothing here touches your repo
       </span>
       <Link
@@ -45,7 +45,7 @@ export function DemoBar() {
       </Link>
       <button
         type="button"
-        className="whitespace-nowrap rounded-[7px] border border-yellow-900/20 bg-white px-[9px] py-[5px] text-[11.5px] hover:bg-amber-100 max-[640px]:ml-0"
+        className="whitespace-nowrap rounded-[7px] border border-yellow-900/20 bg-white px-[9px] py-[5px] text-[11.5px] hover:bg-amber-100 max-[640px]:ml-auto"
         onClick={resetDemo}
       >
         Reset demo

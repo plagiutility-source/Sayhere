@@ -225,7 +225,7 @@ function DashboardContent({ location }: { location: SpotLocation }) {
         />
       </div>
 
-      <div className="mt-3 grid items-start gap-3 min-[1100px]:grid-cols-2">
+      <div className="mt-[14px] grid items-start gap-[14px] min-[1280px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <section className="rounded-card border border-black/10 bg-white p-4 shadow-soft">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -237,21 +237,21 @@ function DashboardContent({ location }: { location: SpotLocation }) {
             <Badge tone="blue">{money(stats.earnings)}</Badge>
           </div>
           <div
-            className="mt-3 flex h-[122px] items-end gap-1"
+            className="-mx-4 mt-3 flex h-[158px] items-end gap-[3px] border-t border-black/5 px-4 pt-1.5"
             role="img"
             aria-label={`Daily earnings for ${periodRangeLabel(period)}`}
           >
             {days.map((day) => (
               <div
                 key={day.date.toISOString()}
-                className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"
+                className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
                 title={`${day.full} · ${money(day.earnings)} · ${day.orders} bill${
                   day.orders === 1 ? "" : "s"
                 }`}
               >
-                <span className="flex h-[96px] w-full items-end rounded-t-[3px] bg-slate-100">
+                <span className="flex w-full flex-1 items-end rounded-t-[4px] bg-surface-muted">
                   <span
-                    className="block w-full rounded-t-[3px] bg-brand-blue/70"
+                    className="block w-full rounded-t-[4px] bg-gradient-to-b from-blue-400 to-brand-blue"
                     style={{
                       height: `${
                         day.earnings ? Math.max(6, Math.round((day.earnings / max) * 100)) : 0
@@ -259,7 +259,7 @@ function DashboardContent({ location }: { location: SpotLocation }) {
                     }}
                   />
                 </span>
-                <span className="w-full truncate text-center text-[8px] text-ink-muted">
+                <span className="h-3 w-full truncate text-center text-[8.5px] text-ink-muted">
                   {day.label}
                 </span>
               </div>
@@ -308,19 +308,17 @@ function DashboardContent({ location }: { location: SpotLocation }) {
                   ) : null}
                   <span className="ml-auto text-[11.5px] font-medium">{money(row.earnings)}</span>
                 </span>
-                <span className="flex items-center justify-between gap-2 text-[10px] text-ink-muted">
-                  <span>
-                    {row.orders} bill{row.orders === 1 ? "" : "s"} · {row.guests} guest
-                    {row.guests === 1 ? "" : "s"}
-                  </span>
-                  <span className="h-1 w-16 overflow-hidden rounded-full bg-slate-100">
-                    <span
-                      className="block h-full rounded-full bg-brand-blue/70"
-                      style={{
-                        width: `${Math.round((row.earnings / snapshotMax) * 100)}%`,
-                      }}
-                    />
-                  </span>
+                <span className="text-[10px] text-ink-muted">
+                  {row.orders} bill{row.orders === 1 ? "" : "s"} · {row.guests} guest
+                  {row.guests === 1 ? "" : "s"}
+                </span>
+                <span className="mt-1.5 block h-[3px] w-full overflow-hidden rounded-full bg-slate-100">
+                  <span
+                    className="block h-full rounded-full bg-gradient-to-r from-brand-green to-emerald-400"
+                    style={{
+                      width: `${Math.round((row.earnings / snapshotMax) * 100)}%`,
+                    }}
+                  />
                 </span>
               </Link>
             ))}
@@ -371,7 +369,7 @@ function DashboardContent({ location }: { location: SpotLocation }) {
           </h2>
           <p className="mt-1.5 max-w-[640px] text-[11.5px] leading-[1.6] text-ink-muted">
             Every {spot.toLowerCase()} gets its own permanent QR and link. All of them open the
-            location&apos;s shared {spots.toLowerCase()} page, so a single change updates every QR
+            location&apos;s shared {spots} page, so a single change updates every QR
             while orders still arrive tagged with the exact {spot.toLowerCase()}.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -382,7 +380,7 @@ function DashboardContent({ location }: { location: SpotLocation }) {
               href={`/customer-page?loc=${location.id}&kind=rooms`}
               className={cx(btnOutline, btnSm)}
             >
-              <Icon name="edit" size={14} /> Edit {spots.toLowerCase()} page
+              <Icon name="edit" size={14} /> Edit {spots} page
             </Link>
             <Link href={demoPath} className={cx(btnOutline, btnSm)}>
               <Icon name="external" size={14} /> Preview a {spot.toLowerCase()} QR
@@ -479,7 +477,7 @@ function MiniOrder({ order }: { order: Order }) {
           #{order.number} · <LocalTime value={order.createdAt} />
         </span>
       </span>
-      <span className="min-w-0 flex-1 text-[11px]">
+      <span className="min-w-0 flex-1 text-[11px] max-[1023px]:hidden">
         {order.customerName}{" "}
         <span className="text-[10px] text-ink-muted">
           · {order.guests} guest{order.guests === 1 ? "" : "s"}

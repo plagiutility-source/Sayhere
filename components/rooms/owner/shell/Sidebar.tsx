@@ -23,22 +23,17 @@ const NAV_TEXT = "min-[1024px]:max-[1279px]:hidden";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { state, navOpen, setNavOpen, toast, resetDemo, businessType } = useOwner();
+  const { state, navOpen, setNavOpen, toast, businessType } = useOwner();
   const words = spotWord(businessType, true);
   const waiting = countNewOrders(state);
 
   const groups: { group: string; items: NavItem[] }[] = [
     {
-      group: "Overview",
+      group: "Menu",
       items: [
         { label: "Dashboard", icon: "dashboard", key: "dashboard", href: "/dashboard" },
         { label: "Feedback", icon: "feedback", key: "feedback" },
         { label: "Analytics", icon: "analytics", key: "analytics", href: "/analytics" },
-      ],
-    },
-    {
-      group: words,
-      items: [
         { label: "Locations", icon: "location", key: "locations", href: "/locations" },
         {
           label: "Orders",
@@ -179,14 +174,6 @@ export function Sidebar() {
             Open live orders
           </Link>
         </div>
-        {/* DEV-ONLY: reset the standalone demo; deleted at merge. */}
-        <button
-          type="button"
-          className="mt-2 w-full rounded-control bg-white/10 px-3 py-2 text-left text-[11px] text-white/70 hover:bg-white/15"
-          onClick={resetDemo}
-        >
-          Reset demo data
-        </button>
       </div>
     </aside>
   );

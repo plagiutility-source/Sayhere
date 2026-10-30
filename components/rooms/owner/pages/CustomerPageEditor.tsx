@@ -56,7 +56,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-[5px]">
-      <label className={fieldLabel}>{label}</label>
+      {label ? <label className={fieldLabel}>{label}</label> : null}
       {textarea ? (
         <textarea
           className="min-h-[68px] w-full resize-none rounded-control border border-ink/15 bg-white px-2.5 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue focus:ring-[3px] focus:ring-brand-blue/[0.12]"
@@ -336,7 +336,9 @@ function EditorContent({ location, kind }: { location: SpotLocation; kind: Edito
         <div className="flex flex-col gap-3">
           <section className={sectionClass}>
             <div className={sectionHeadClass}>
-              <span className="text-[12.5px] font-medium">Page content</span>
+              <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+                Page content
+              </span>
               <span className={saveStateClass(dirty)}>
                 {dirty ? "Unsaved changes" : "All changes saved"}
               </span>
@@ -373,7 +375,7 @@ function EditorContent({ location, kind }: { location: SpotLocation; kind: Edito
                 </div>
                 <div className="mt-3">
                   <Field
-                    label="Message"
+                    label=""
                     value={draft.thankYou}
                     maxLength={160}
                     textarea
@@ -387,7 +389,9 @@ function EditorContent({ location, kind }: { location: SpotLocation; kind: Edito
 
           <section className={sectionClass}>
             <div className={sectionHeadClass}>
-              <span className="text-[12.5px] font-medium">Buttons</span>
+              <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+                Buttons
+              </span>
               <Badge>{buttonCount} shown to customers</Badge>
             </div>
             <div>

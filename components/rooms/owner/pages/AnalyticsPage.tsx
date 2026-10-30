@@ -179,9 +179,9 @@ function AnalyticsContent({
             {spotLabel.toLowerCase()}.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-[290px] max-w-full flex-col items-start gap-2">
           <select
-            className="h-10 rounded-control border border-ink/15 bg-white px-2.5 text-[12.5px] font-medium text-ink"
+            className="h-10 w-[290px] max-w-full rounded-control border border-ink/15 bg-white px-2.5 text-[12.5px] font-medium text-ink"
             aria-label={`Filter by ${spotLabel.toLowerCase()}`}
             value={activeSpot}
             onChange={(event) => chooseSpot(event.target.value)}
@@ -313,19 +313,19 @@ function AnalyticsContent({
         <div className="px-4 pb-3" role="table" aria-label={`Earnings by ${spotLabel}`}>
           <div
             role="row"
-            className="grid grid-cols-[minmax(0,1.4fr)_42px_48px_78px_64px] items-center gap-2 border-b border-black/5 py-1.5 text-[9.5px] uppercase tracking-wide text-slate-400"
+            className="grid grid-cols-[minmax(0,1.4fr)_42px_48px_78px_64px] items-center gap-2 border-b border-black/5 py-1.5 text-[9.5px] uppercase tracking-wide text-slate-400 max-[640px]:grid-cols-[minmax(0,1.4fr)_42px_48px_78px]"
           >
             <span>{spotLabel}</span>
             <span>Bills</span>
             <span>Guests</span>
             <span className="text-right">Earnings</span>
-            <span>Share</span>
+            <span className="max-[640px]:hidden">Share</span>
           </div>
           <button
             type="button"
             role="row"
             className={cx(
-              "grid w-full grid-cols-[minmax(0,1.4fr)_42px_48px_78px_64px] items-center gap-2 border-b border-black/5 py-2 text-left text-[11px] hover:bg-surface-muted/60",
+              "grid w-full grid-cols-[minmax(0,1.4fr)_42px_48px_78px_64px] items-center gap-2 border-b border-black/5 py-2 text-left text-[11px] hover:bg-surface-muted/60 max-[640px]:grid-cols-[minmax(0,1.4fr)_42px_48px_78px]",
               activeSpot === "all" && "bg-brand-blue/[0.04]",
             )}
             onClick={() => chooseSpot("all")}
@@ -336,7 +336,7 @@ function AnalyticsContent({
             <span>{allValid.length}</span>
             <span>{allGuests}</span>
             <span className="text-right text-[11.5px] font-medium">{money(totalEarnings)}</span>
-            <span className="h-1 overflow-hidden rounded-full bg-slate-100">
+            <span className="h-1 overflow-hidden rounded-full bg-slate-100 max-[640px]:hidden">
               <span className="block h-full w-full rounded-full bg-brand-blue/70" />
             </span>
           </button>
@@ -365,7 +365,7 @@ function AnalyticsContent({
               <span>{row.orders}</span>
               <span>{row.guests}</span>
               <span className="text-right text-[11.5px] font-medium">{money(row.earnings)}</span>
-              <span className="h-1 overflow-hidden rounded-full bg-slate-100">
+              <span className="h-1 overflow-hidden rounded-full bg-slate-100 max-[640px]:hidden">
                 <span
                   className="block h-full rounded-full bg-brand-blue/70"
                   style={{ width: `${Math.round((row.earnings / maxEarnings) * 100)}%` }}
@@ -497,14 +497,10 @@ function BillRow({ order }: { order: Order }) {
   return (
     <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_110px_60px_auto] items-start gap-2 border-b border-black/5 px-4 py-2.5 text-[11px] last:border-b-0 max-[1100px]:grid-cols-[minmax(0,1fr)_auto]">
       <span className="min-w-0">
-        <strong className="block text-[11.5px] font-medium">
-          #{order.number}{" "}
-          <span className="font-normal text-ink-muted">
-            <LocalTime value={order.createdAt} />
-          </span>
-        </strong>
+        <strong className="block text-[11.5px] font-medium">#{order.number}</strong>
         <span className="block text-[10.5px] text-ink-muted">
-          {orderSpotName(state, order)} · {order.customerName} · {rounds.length} round
+          <LocalTime value={order.createdAt} /> · {orderSpotName(state, order)} ·{" "}
+          {order.customerName} · {rounds.length} round
           {rounds.length === 1 ? "" : "s"}
         </span>
       </span>

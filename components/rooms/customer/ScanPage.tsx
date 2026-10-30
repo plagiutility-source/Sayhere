@@ -1106,6 +1106,11 @@ export function ScanPage({ slug, code }: ScanPageProps) {
               <Icon name="wifi" size={14} /> Wi-Fi password
             </button>
           ) : null}
+          {liveBill && liveBill.billSentAt ? (
+            <button type="button" className={btnLink} onClick={openBillScreen}>
+              <Icon name="receipt" size={14} /> View bill
+            </button>
+          ) : null}
           <button type="button" className={btnLink} onClick={() => setScreen("menu")}>
             Order something else
           </button>
@@ -1205,6 +1210,11 @@ export function ScanPage({ slug, code }: ScanPageProps) {
               {isBill ? "The waiter is bringing your bill." : "Someone will be with you shortly."}
             </span>
           </div>
+          {bill && bill.billSentAt ? (
+            <button type="button" className={btnLink} onClick={openBillScreen}>
+              <Icon name="receipt" size={13} /> View bill
+            </button>
+          ) : null}
           <button type="button" className={btnDirect} onClick={() => setScreen("menu")}>
             Order food
           </button>
@@ -1544,6 +1554,12 @@ export function ScanPage({ slug, code }: ScanPageProps) {
                 it.
               </p>
             ) : null}
+            {openBill.billSentAt ? (
+              <p className="mt-1.5 text-[10.5px] text-brand-blue">
+                <Icon name="receipt" size={12} /> Bill sent at {formatTime(openBill.billSentAt)} —
+                open it from the Bill option below.
+              </p>
+            ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -1551,7 +1567,14 @@ export function ScanPage({ slug, code }: ScanPageProps) {
                 onClick={() => setScreen("service")}
               >
                 <Icon name="bell" size={16} />
-                <span>Call waiter</span>
+                <span>
+                  <strong className="block font-medium">Call waiter</strong>
+                  <span className="block text-[9.5px] font-normal text-ink-muted">
+                    {waiterCall || billCall
+                      ? "A request is already with the counter"
+                      : "Waiter or bill — pick next"}
+                  </span>
+                </span>
               </button>
               <button
                 type="button"
@@ -1559,7 +1582,12 @@ export function ScanPage({ slug, code }: ScanPageProps) {
                 onClick={() => setScreen("menu")}
               >
                 <Icon name="utensils" size={16} />
-                <span>Order food</span>
+                <span>
+                  <strong className="block font-medium">Order food</strong>
+                  <span className="block text-[9.5px] font-normal text-ink-muted">
+                    Adds to this same bill
+                  </span>
+                </span>
               </button>
             </div>
           </div>
