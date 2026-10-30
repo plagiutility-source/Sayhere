@@ -412,7 +412,7 @@ join data; audit entries for payment verification. Proposed tables: `spots`, `wa
 
 | # | Item | Default |
 |---|---|---|
-| O1 | Menu price in the SaaS `MenuItem` looks like text; the cart needs a number. Verify in Phase 1 and add `parseMenuPrice()`. | Items whose price cannot be parsed cannot be ordered and show "Ask staff". |
+| O1 | Menu price in the SaaS `MenuItem` looks like text; the cart needs a number. Verify in Phase 1 and add `parseMenuPrice()`. | **ANSWERED (owner, 2026-10-30):** `MenuItem.price` is a `string` such as `"Rs 180"`; `parseMenuPrice()` parses the number out of it. Items whose price cannot be parsed cannot be ordered and show "Ask staff". |
 | O2 | Poppins (500, 600) is imported by the demo; confirm whether the SaaS already uses it. | Use whatever the SaaS already loads; do not add a new font. |
 | O3 | How the demo dashboard merges with the existing dashboard. | Add as a new section below existing content. |
 | O4 | When a table scan is counted for the display-only per-table `scans`. | +1 when an active spot page opens, once per device per 30 minutes; never counted against the plan limit. |

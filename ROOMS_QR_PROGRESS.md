@@ -35,11 +35,37 @@ Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Fla
 - [x] `ROOMS_QR_SPEC.md` written.
 - [x] `ROOMS_QR_PARITY_CHECKLIST.md` written.
 - [x] `ROOMS_QR_PROGRESS.md` written.
-- [ ] Owner: copy the untouched demo folder to `reference/_demo-rooms-feature/` in the new project.
-- [ ] Owner: capture the golden screenshots (checklist section G) from the running demo.
-- [ ] Owner: confirm or change open items O1–O8 in the spec (defaults apply if unanswered).
+- [x] Demo copied untouched to `reference/_demo-rooms-feature/` — verified 2026-10-30:
+  `index.html` (6 lines of markup), `app.js` 5,576 lines, `styles.css` 6,188 lines, `assets/` =
+  `qrcode.js`, `logo-horizontal.svg`, `logo-icon.svg`. Repo clean, files unmodified.
+- [BLOCKED: owner must capture] Golden screenshots (checklist section G) from the running demo,
+  saved as `reference/screens/<id>-<width>.png` at widths 390 / 768 / 1280.
+- [x] Open items O1–O8: defaults applied (below). O1 answered by owner.
+
+**Phase 0 verification.** Every bracketed function reference in the spec was checked against
+`reference/_demo-rooms-feature/app.js`: `[findOpenBill]` (line 830), `[nextRoomCode]` (634) and
+`[supportsOrderWifi]` all exist — **no mismatch**. The 63 other named functions from the spec
+(rules, seed, format, QR, live detectors, CSV/PDF exports) also exist. Two expected absences, not
+mismatches: `qrcode` is the global exported by `assets/qrcode.js` (called at `app.js:2009`), and
+`parseMenuPrice` is new in the port (O1).
+
+**Open items — defaults in force for the whole build:**
+- **O1 answered** (2026-10-30): `MenuItem.price` is a `string` such as `"Rs 180"` (also free text
+  like `"from Rs 1500"` in `lib/mock/customer-page.ts`). `parseMenuPrice()` reads the number out of
+  the string; unparseable prices show "Ask staff" and cannot be ordered.
+- **O2**: no new font. Use the SaaS `Inter` UI stack and the existing `Poppins` display stack from
+  `tailwind.config.ts`; add no font import.
+- **O3**: ordering cards go in a new section below the existing Dashboard / Analytics content.
+- **O4**: the display-only per-spot `scans` increments +1 when an active spot page opens, once per
+  device per 30 minutes; never counted against the plan limit.
+- **O5**: the reception page has no ordering.
+- **O6**: at merge, times use the business `time_zone`; standalone uses browser local time.
+- **O7**: INR, `₹` + `toLocaleString("en-IN")`.
+- **O8**: cap stays 12 spots per location; wording is "Limit: ..." not "Demo limit: ...".
 
 Done when: the three files exist, the demo is copied unchanged, screenshots are saved.
+Status: three files ✅, demo ✅, screenshots **[BLOCKED: owner must capture]** — does not block
+Phase 1.
 
 ## Phase 1 — Foundation (types, rules, store, seed, QR, tests)
 - [ ] Scaffold: new Next.js project with the SaaS `package.json` dependencies, `tsconfig.json`,
@@ -169,3 +195,8 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
 
 ## Session Log
 - 2026-10-30 — Phase 0 files written. Waiting on owner tasks in Phase 0.
+- 2026-10-30 — **Phase 0 complete** (branch `feat/rooms-standalone`). Planning files present; demo
+  folder verified unchanged (`app.js` 5,576 lines); bracketed spec functions all exist (no
+  mismatch); O1–O8 defaults applied, O1 answered (`price` is a string → `parseMenuPrice()`).
+  Deviations: none. Blocked: golden screenshots (checklist G) — owner must capture at 390/768/1280.
+  Next: Phase 1 (foundation).
