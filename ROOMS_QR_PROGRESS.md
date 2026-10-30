@@ -68,29 +68,48 @@ Status: three files ✅, demo ✅, screenshots **[BLOCKED: owner must capture]**
 Phase 1.
 
 ## Phase 1 — Foundation (types, rules, store, seed, QR, tests)
-- [ ] Scaffold: new Next.js project with the SaaS `package.json` dependencies, `tsconfig.json`,
-  `tailwind.config.ts`, `postcss.config.mjs`, `next.config.ts`, `app/globals.css`, `lib/brand/*`.
-  Add scripts `dev`, `build`, `start`, `typecheck` identical to the SaaS.
-- [ ] Verify open item O1: read `lib/mock/customer-page.ts` in the SaaS (`MenuItem.price` type)
-  and write `parseMenuPrice()` accordingly. Log the result.
-- [ ] `lib/rooms/types.ts` — spec section 5, exactly.
-- [ ] `lib/rooms/constants.ts` — spec section 6, exactly.
-- [ ] `lib/rooms/format.ts` — `money`, `formatTime`, `formatWhen`, `formatDay`, `deltaLabel`,
-  `spotWord`, `displaySpotName`, `statusLabel`, `serviceKindLabel/Title`, `orderSpotName`.
-- [ ] `lib/rooms/seed.ts` — `configTemplate`, `seedWaiters`, `seedOrders`, `seedHistoryOrders`
-  (demo lines ~148–420), `seedState`, `ensureShape` (migrations: give every bill an id, billId,
-  first round, participants, host).
-- [ ] `lib/rooms/rules.ts` — spec section 7, R1–R16, as pure functions taking `state` and `now`.
-- [ ] `lib/rooms/store.ts` — load, validate, persist, subscribe; cross-tab updates via the
-  `storage` event and a 2500 ms poll; newest `savedAt` wins; device id in `sessionStorage`;
-  `useRoomsState()` hook.
-- [ ] `lib/rooms/qr.ts` and `lib/rooms/vendor/qrcode.js` — vendored from the demo, SVG output as
-  in the demo.
-- [ ] `lib/rooms/sound.ts` — bell and ring timing from spec section 6.
-- [ ] `scripts/rooms-rules-check.ts` — all 28 groups from checklist section F.
+- [x] Scaffold — SaaS `package.json` deps, `tsconfig.json` (adds `reference/` to `exclude`),
+  `tailwind.config.ts`, `postcss.config.mjs`, `next.config.ts`, `app/globals.css`, `lib/brand/*`;
+  scripts `dev`, `build`, `start`, `typecheck` identical to the SaaS. `npm install` created
+  `package-lock.json` (the SaaS copy shipped none); no versions changed.
+- [x] O1 verified — `MenuItem.price` is `string` (`"Rs 180"`, and `"from Rs 1500"` free text).
+  `parseMenuPrice()` added to `lib/rooms/format.ts`: first number in the string, `null` when there
+  is none (those items show "Ask staff" and cannot be ordered).
+- [x] `lib/rooms/types.ts` — spec section 5, exactly.
+- [x] `lib/rooms/constants.ts` — spec section 6, exactly (+ `PERIODS`, input limits, `STORAGE_KEYS`).
+- [x] `lib/rooms/format.ts` — `money`, `formatTime`, `formatWhen`, `formatDay`, `deltaLabel`,
+  `spotWord`, `displaySpotName`, `statusLabel`, `serviceKindLabel/Title`, `orderSpotName`, plus
+  `periodRangeLabel`, `joinCountdownText`, `billWindowText`, `orderItemsTotal`, `dateKey`.
+- [x] `lib/rooms/seed.ts` — `configTemplate`, `seedWaiters`, `seedOrders`, `seedHistoryOrders`,
+  `seedState`, `ensureShape` (bill id, billId, first round, participants, host); demo
+  BUSINESS/MENU/WEEK fixtures live here for the later phases.
+- [x] `lib/rooms/rules.ts` — R1–R16 as pure functions taking `state` + `now`; every mutating rule
+  clones and returns the next state instead of touching globals.
+- [x] `lib/rooms/store.ts` — load/validate/persist/subscribe, `storage` event + 2500 ms poll,
+  newest `savedAt` wins, device id in `sessionStorage`, sound preference, `useRoomsState()`.
+- [x] `lib/rooms/qr.ts` + `lib/rooms/vendor/qrcode.js` — demo SVG output; vendored with its licence
+  header plus one added `export default qrcode` line and `qrcode.d.ts` types.
+- [x] `lib/rooms/sound.ts` — bell (880/1174.66/1567.98 Hz, 0.16 s step, 0.65 s decay) and the
+  10 s ring (0, 2, 4, 6, 8 s).
+- [x] `scripts/rooms-rules-check.ts` — all 28 groups from checklist section F, plus O1 price
+  parsing: **119 checks passed**.
+
+Deviations from the demo (all deliberate, for the reviewer):
+- Pure rules take `businessType` explicitly (`spotWord`, `displaySpotName`,
+  `wifiUnlockedForOrder`) instead of reading a module-level global.
+- `deltaLabel` returns `{ tone, text, percent }` instead of an HTML string (no
+  `dangerouslySetInnerHTML`); the rendered wording is identical.
+- Demo-only `ensureShape` migrations (adding `qr4`, `historySeed`) are skipped: this project starts
+  from the seed. Only the spec's migrations are implemented.
+- Add-room cap message uses "Limit: 12 room QRs per location." (spec section 14 item 6).
+- QR module colours stay `#111827` on `#ffffff` for scannability (documented in `qr.ts`), not brand
+  tokens: brand colours can break scanning.
+- `setOrderStatus` returns `order: null` for a status outside preparing/served/completed/cancelled
+  instead of silently re-rendering.
 
 Done when: the rules check prints `N checks passed` with every group covered, typecheck and build
-pass, and no component code exists yet.
+pass, and no component code exists yet. **True — 119 checks passed, typecheck ✅, build ✅, no
+components yet.**
 
 ## Phase 2 — Owner shell, Locations, Spots page and dialogs
 - [ ] Dev shell: sidebar, topbar (search, notifications bell, sound toggle, business chip), page
@@ -200,3 +219,8 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   mismatch); O1–O8 defaults applied, O1 answered (`price` is a string → `parseMenuPrice()`).
   Deviations: none. Blocked: golden screenshots (checklist G) — owner must capture at 390/768/1280.
   Next: Phase 1 (foundation).
+- 2026-10-30 — **Phase 1 complete** (branch `feat/rooms-standalone`). Scaffold plus the whole
+  `lib/rooms/` foundation: types, constants, format (+`parseMenuPrice`), seed, rules R1–R16, store,
+  QR (vendored `qrcode.js`), sound, and `scripts/rooms-rules-check.ts` (119 checks covering all 28
+  checklist-F groups). `npm run typecheck` ✅, `npm run build` ✅, no component code. Deviations
+  listed in the phase section. Next: Phase 2 (owner shell, Locations, Spots page and dialogs).
