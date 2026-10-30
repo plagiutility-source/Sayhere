@@ -202,7 +202,10 @@ S54–S60 match; reviewer pass done.
   table); table punches join the open bill through `createPunchOrder`, direct punches start a new
   one, the customer fields hide when a bill is joined, and the demo's `punch-add`/`punch-dec`
   handlers are the 20-max quantity controls.
-- [ ] Notifications panel, topbar badge, sidebar Orders badge, document title.
+- [x] Notifications panel, topbar badge, sidebar Orders badge, document title. Built 2026-10-30:
+  the bell panel lists live calls (Send bill / Done, demo toasts), new orders link to `/orders`
+  with the red unread dot, the sidebar Orders item links to `/orders` and shows the waiting badge
+  (white on red while orders wait), and `AppShell` sets the demo's `updateDocumentTitle` text.
 - [ ] Live alert card, ring timing, bell, sound toggle, `handleExternalState` rules (checklist D).
 - [ ] `simulate-order` (DEV-ONLY).
 
@@ -266,6 +269,14 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 4 task 5 done** (branch `feat/rooms-standalone`). The live-requests panel
+  now shows up to three calls with Send bill / Done (the demo's `sendBillToPhone` and
+  `resolveServiceCall` paths and their toasts), new orders link to `/orders` with the red unread
+  dot, the panel uses the demo's 335 px / 10 px sizing, the sidebar Orders item links to `/orders`
+  with the waiting badge (white on red when orders wait), and `AppShell` applies the demo's
+  document title `(n) Live table request · Syehere` / `Syehere — Tables, orders & QR pages`.
+  Group `Mark handled` and the live alert remain in task 6. `npm run typecheck` ✅,
+  `npm run build` ✅, rules check 126 ✅. Next: task 6 (live alert card, ring/bell, checklist D).
 - 2026-10-30 — **Phase 4 task 4 done** (branch `feat/rooms-standalone`). The Punch dialog: page-head
   "Punch order", a "Punch" button on every spot group (the Direct punch group has no table), the
   add-to picker with the demo's open-bill / new-bill hint, the demo menu with Add / plus / minus up

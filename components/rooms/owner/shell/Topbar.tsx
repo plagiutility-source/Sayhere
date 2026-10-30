@@ -7,8 +7,11 @@ import { Badge, cx } from "@/components/rooms/shared/ui";
 import { formatTime, money, orderSpotName, serviceKindTitle, spotWord } from "@/lib/rooms/format";
 import {
   activeServiceCalls,
+  activeStatus,
   countNewOrders,
   newOrders,
+  resolveServiceCall,
+  sendBillToPhone,
   serviceCallSpotName,
 } from "@/lib/rooms/rules";
 import type { Order } from "@/lib/rooms/types";
@@ -22,7 +25,8 @@ function orderLocationName(state: { locations: Array<{ id: string; name: string 
 }
 
 export function Topbar() {
-  const { state, setNavOpen, soundOn, toggleSound, businessType, resetToken } = useOwner();
+  const { state, save, toast, setNavOpen, soundOn, toggleSound, businessType, resetToken } =
+    useOwner();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifWrap = useRef<HTMLDivElement>(null);
 
@@ -30,6 +34,27 @@ export function Topbar() {
   const waiting = countNewOrders(state);
   const orders = newOrders(state);
   const requests = waiting + calls.length;
+
+  const resolveCall = (id: string) => {
+    const result = resolveServiceCall(state, id);
+    if (!result.call) return;
+    save(result.state);
+    toast(
+      `${serviceCallSpotName(state, result.call)} — ${serviceKindTitle(result.call.kind).toLowerCase()} handled.`,
+    );
+  };
+
+  const sendBill = (order: Order) => {
+    const result = sendBillToPhone(state, order.id);
+    if (!result.ok) {
+      toast(result.error);
+      return;
+    }
+    save(result.state);
+    toast(
+      `${result.sentBefore ? "Bill sent again" : "Bill sent"} to ${order.customerName}'s phone — ${money(order.total)}.`,
+    );
+  };
 
   useEffect(() => {
     setNotifOpen(false);
@@ -91,49 +116,88 @@ export function Topbar() {
             <div
               role="dialog"
               aria-label="Live table requests"
-              className="absolute right-0 top-11 z-40 w-[340px] rounded-card border border-black/10 bg-white p-3.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)]"
+              className="absolute right-0 top-11 z-40 w-[335px] max-w-[calc(100vw-28px)] rounded-card border border-black/10 bg-white p-2.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)]"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between px-1 pb-2 pt-0.5">
                 <strong className="text-[13px] font-medium">Live requests</strong>
                 <Badge tone="blue">{requests}</Badge>
               </div>
 
               {calls.length > 0 && (
                 <>
-                  <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+                  <p className="mb-0.5 mt-1.5 px-1 text-[9px] font-medium uppercase tracking-[0.06em] text-ink-muted">
                     Table calls
                   </p>
-                  {calls.slice(0, 3).map((call) => (
-                    <div key={call.id} className="mt-1.5 flex items-start gap-2">
-                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-pill bg-brand-blue/10 text-brand-blue">
-                        <Icon name={call.kind === "bill" ? "receipt" : "bell"} size={15} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium">
-                          {serviceCallSpotName(state, call)} · {serviceKindTitle(call.kind)}
-                        </p>
-                        <p className="text-[11px] text-ink-muted">
-                          {call.customerName} · {formatTime(call.createdAt)} · open{" "}
-                          {spotWord(businessType, true).toLowerCase()}
-                        </p>
+                  {calls.slice(0, 3).map((call) => {
+                    const callOrder = call.orderId
+                      ? state.orders.find((order) => order.id === call.orderId) || null
+                      : null;
+                    const canSendBill = Boolean(
+                      call.kind === "bill" &&
+                        callOrder &&
+                        activeStatus(callOrder.status) &&
+                        !callOrder.billSentAt,
+                    );
+                    return (
+                      <div
+                        key={call.id}
+                        className="flex items-start gap-2 rounded-[8px] px-2 py-2 hover:bg-surface-muted"
+                      >
+                        <span
+                          className={cx(
+                            "grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[8px]",
+                            call.kind === "bill"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-brand-blue/[0.08] text-brand-blue",
+                          )}
+                        >
+                          <Icon name={call.kind === "bill" ? "receipt" : "bell"} size={15} />
+                        </span>
+                        <Link
+                          href={{ pathname: "/rooms", query: { loc: call.locId } }}
+                          className="min-w-0 flex-1"
+                          onClick={() => setNotifOpen(false)}
+                        >
+                          <strong className="block text-[11.5px] font-medium">
+                            {serviceCallSpotName(state, call)} · {serviceKindTitle(call.kind)}
+                          </strong>
+                          <span className="mt-px block truncate text-[10px] text-ink-muted">
+                            {call.customerName} · {formatTime(call.createdAt)} · open{" "}
+                            {spotWord(businessType, true).toLowerCase()}
+                          </span>
+                        </Link>
+                        <button
+                          type="button"
+                          className={cx(
+                            "shrink-0 whitespace-nowrap rounded-pill border px-[7px] py-[3px] text-[9px] font-medium",
+                            canSendBill
+                              ? "border-brand-green bg-brand-green text-white hover:bg-brand-green-deep"
+                              : "border-ink/15 bg-white text-slate-700 hover:border-brand-green hover:text-brand-green-deep",
+                          )}
+                          onClick={() =>
+                            canSendBill && callOrder ? sendBill(callOrder) : resolveCall(call.id)
+                          }
+                        >
+                          {canSendBill ? "Send bill" : "Done"}
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </>
               )}
 
-              <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+              <p className="mb-0.5 mt-1.5 px-1 text-[9px] font-medium uppercase tracking-[0.06em] text-ink-muted">
                 New orders
               </p>
               {orders.length > 0 ? (
                 orders.slice(0, 4).map((order) => (
                   <Link
                     key={order.id}
-                    href={{ pathname: "/rooms", query: { loc: order.locId } }}
-                    className="mt-1.5 flex items-start gap-2"
+                    href={{ pathname: "/orders", query: { loc: order.locId } }}
+                    className="flex items-start gap-2 rounded-[8px] px-2 py-2 hover:bg-surface-muted"
                     onClick={() => setNotifOpen(false)}
                   >
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-pill bg-brand-green" />
+                    <span className="mt-1.5 h-[7px] w-[7px] shrink-0 rounded-pill bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]" />
                     <span className="min-w-0">
                       <span className="block text-xs font-medium">
                         {orderSpotName(state, order)} · {money(order.total)}
@@ -147,7 +211,7 @@ export function Topbar() {
                   </Link>
                 ))
               ) : (
-                <p className="mt-1.5 text-[11px] leading-[1.5] text-ink-muted">
+                <p className="px-1.5 py-3 text-[11px] leading-[1.5] text-ink-muted">
                   {calls.length
                     ? "No new orders right now — the table calls above are still waiting."
                     : `No table calls. Each new order or bell rings here and is highlighted on its ${spotWord(businessType, false).toLowerCase()}.`}

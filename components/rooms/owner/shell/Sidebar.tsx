@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/rooms/shared/icons";
 import { cx } from "@/components/rooms/shared/ui";
 import { spotWord } from "@/lib/rooms/format";
+import { countNewOrders } from "@/lib/rooms/rules";
 import { useOwner } from "../OwnerProvider";
 
 type NavItem = {
@@ -22,8 +23,9 @@ const NAV_TEXT = "min-[1024px]:max-[1279px]:hidden";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { navOpen, setNavOpen, toast, resetDemo, businessType } = useOwner();
+  const { state, navOpen, setNavOpen, toast, resetDemo, businessType } = useOwner();
   const words = spotWord(businessType, true);
+  const waiting = countNewOrders(state);
 
   const groups: { group: string; items: NavItem[] }[] = [
     {
@@ -38,7 +40,14 @@ export function Sidebar() {
       group: words,
       items: [
         { label: "Locations", icon: "location", key: "locations", href: "/locations" },
-        { label: "Orders", icon: "receipt", key: "orders" },
+        {
+          label: "Orders",
+          icon: "receipt",
+          key: "orders",
+          href: "/orders",
+          badge: waiting ? String(waiting) : "",
+          alert: waiting > 0,
+        },
         { label: words, icon: "rooms", key: "rooms", href: "/rooms", badge: "New" },
         { label: "Customer page", icon: "page", key: "editor" },
         { label: "Loyalty", icon: "loyalty", key: "loyalty", muted: true },
@@ -116,7 +125,10 @@ export function Sidebar() {
                   {item.badge && (
                     <span
                       className={cx(
-                        "ml-auto rounded-pill bg-brand-yellow px-1.5 py-0.5 text-[9px] font-medium tracking-[0.04em] text-yellow-900",
+                        "ml-auto rounded-pill px-1.5 py-0.5 text-[9px] font-medium tracking-[0.04em]",
+                        item.alert
+                          ? "bg-white text-red-700"
+                          : "bg-brand-yellow text-yellow-900",
                         NAV_TEXT,
                         "max-[1023px]:inline-block",
                       )}

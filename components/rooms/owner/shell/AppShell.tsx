@@ -1,16 +1,30 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
+import { activeServiceCalls, countNewOrders } from "@/lib/rooms/rules";
 import { OwnerProvider, useOwner } from "../OwnerProvider";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { DemoBar } from "./DemoBar";
 import { SpotDialogs } from "../modals/SpotDialogs";
 
+/** The demo's `updateDocumentTitle`: the count covers new orders and live calls. */
+function DocumentTitle() {
+  const { state } = useOwner();
+  const requests = countNewOrders(state) + activeServiceCalls(state).length;
+  useEffect(() => {
+    document.title = requests
+      ? `(${requests}) Live table request · Syehere`
+      : "Syehere — Tables, orders & QR pages";
+  }, [requests]);
+  return null;
+}
+
 function ShellFrame({ children }: { children: ReactNode }) {
   const { navOpen, setNavOpen } = useOwner();
   return (
     <div className="min-h-screen">
+      <DocumentTitle />
       {navOpen && (
         <div
           className="fixed inset-0 z-[35] bg-ink/40 min-[1024px]:hidden"
