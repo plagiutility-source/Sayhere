@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/rooms/shared/icons";
-import { freshRounds, freshServiceCalls } from "@/lib/rooms/detect";
+import {
+  freshRounds,
+  freshServiceCalls,
+  LIVE_ALERT_EVENT,
+  type LiveAlertDetail,
+} from "@/lib/rooms/detect";
 import { formatTime, money, orderSpotName, serviceKindTitle, spotWord } from "@/lib/rooms/format";
 import {
   activeServiceCalls,
@@ -15,12 +20,7 @@ import { playBell, startAlertRing, type AlertRing } from "@/lib/rooms/sound";
 import { subscribe } from "@/lib/rooms/store";
 import { useOwner } from "./OwnerProvider";
 
-type DashboardAlert = {
-  orderId: string;
-  kind: "order" | "round";
-  roundId: string | null;
-  at: string;
-};
+type DashboardAlert = LiveAlertDetail;
 
 /**
  * The demo's `detectIncomingOrders` + `detectServiceCalls` + `renderLiveAlert`.
@@ -90,11 +90,32 @@ export function LiveAlerts() {
     });
   }, [hydrated, startRing, stopRing]);
 
+  /* A round created in this tab (punch or simulate) must not ring on the next external sync. */
+  useEffect(() => {
+    if (!initialised.current) return;
+    state.orders.forEach((item) => {
+      orderRounds(item).forEach((round) => knownRounds.current.add(round.id));
+    });
+    activeServiceCalls(state).forEach((call) => knownCalls.current.add(call.id));
+  }, [state]);
+
   useEffect(() => () => ring.current?.stop(), []);
 
   useEffect(() => {
     if (!soundOn) stopRing();
   }, [soundOn, stopRing]);
+
+  useEffect(() => {
+    const onLocalAlert = (event: Event) => {
+      const detail = (event as CustomEvent<LiveAlertDetail>).detail;
+      if (!detail) return;
+      if (detail.roundId) knownRounds.current.add(detail.roundId);
+      startRing();
+      setAlert(detail);
+    };
+    window.addEventListener(LIVE_ALERT_EVENT, onLocalAlert);
+    return () => window.removeEventListener(LIVE_ALERT_EVENT, onLocalAlert);
+  }, [startRing]);
 
   const order = alert ? state.orders.find((item) => item.id === alert.orderId) || null : null;
   const visible = Boolean(

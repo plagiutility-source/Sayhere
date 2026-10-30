@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 4 in progress)
+Last updated: 2026-10-30 (Phase 4 code complete; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -212,7 +212,10 @@ S54–S60 match; reviewer pass done.
   checks (132 now), the group call chip and "Mark handled" button, and a `hydrated` flag so stored
   state never rings on load. The editor-dirty and scan-page guards wait for Phases 5–6, where
   those screens exist.
-- [ ] `simulate-order` (DEV-ONLY).
+- [x] `simulate-order` (DEV-ONLY). Built 2026-10-30: `lib/rooms/simulate.ts` (prefers quiet spots,
+  random name / 1–2 items / free waiter, injectable random for the checks), the page-head and
+  empty-state buttons, and a local `LIVE_ALERT_EVENT` so the simulated order rings without waiting
+  for the poll. Marked `// DEV-ONLY` for deletion at merge.
 
 Done when: checklist A rows 10–37 relevant to Orders pass; section D passes for incoming orders and
 service calls; screenshots S06–S08, S17–S22 match; reviewer pass done.
@@ -274,6 +277,15 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 4 code complete** (branch `feat/rooms-standalone`). Task 7 added the
+  DEV-ONLY simulated order with its page-head and empty-state buttons. Reviewer pass (checklist
+  A 15–32 and section D): two mismatches found and fixed — "View table/room" now expands the spot
+  group when Orders is already open, and rounds created in this tab (punch/simulate) no longer ring
+  again on the next external sync. Everything else matched: panel actions, resolve-service wording,
+  sound toggle stopping the ring, order filters/status buttons, bill email/phone/verify, punch
+  quantities, waiter actions and title. `npm run typecheck` ✅, `npm run build` ✅ (`/orders`
+  12.7 kB), rules check 139 ✅. Screenshots S06–S08 and S17–S22 remain [BLOCKED: owner must
+  capture]. Next: Phase 5 after approval.
 - 2026-10-30 — **Phase 4 task 6 done** (branch `feat/rooms-standalone`). Live events: the
   storage/poll subscription now feeds `freshRounds` / `freshServiceCalls` (new `lib/rooms/detect.ts`,
   +6 checks), the alert card shows New order vs New round, starts the 10 s ring, stops on dismiss or

@@ -13,6 +13,15 @@ import type { Order, Round, RoomsState, ServiceCall } from "./types";
 
 export type FreshRound = { order: Order; round: Round };
 
+/** DOM event used by the DEV-ONLY simulate tool to raise the alert locally. */
+export const LIVE_ALERT_EVENT = "rooms:live-alert";
+export type LiveAlertDetail = {
+  orderId: string;
+  kind: "order" | "round";
+  roundId: string | null;
+  at: string;
+};
+
 /** Every unseen round, oldest first; the demo rings for the latest one. */
 export function freshRounds(state: RoomsState, known: Set<string>): FreshRound[] {
   const fresh: FreshRound[] = [];
