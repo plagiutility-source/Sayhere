@@ -293,8 +293,10 @@ reviewer pass done.
   label, Orders Analytics/Open QR/Report actions and full-width Waiters below 1400, Analytics
   bill rows and 290px filter stack, editor headings, and the mobile demo note, filter counts,
   SHARE column, recent-bill guest line, outlet row and search width. A 2026-10-30 runtime sweep
-  ticked the observed B rows: add-item, place-order, join request/approve/verify, both thumbs,
-  contact, feedback submit, bill, home, menu, service, service-bill, copy-wifi. The
+  observed add-item, place-order, join request/approve/verify, both thumbs, contact, feedback
+  submit, bill, home, menu, service, service-bill and copy-wifi; ticked only the rows whose full
+  description passed (add-item, place-order, join request/approve/verify, thumbs, contact, bill,
+  home, menu, service, copy-wifi). The
   remaining A rows, unobserved B rows (quantity decrement, waiter pick, join cancel/deny/regenerate,
   download, Google/writer, hours, locked Wi-Fi, call/maps/custom links, service-waiter) and the G
   golden screenshot set are still open.
