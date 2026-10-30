@@ -234,7 +234,11 @@ service calls; screenshots S06–S08, S17–S22 match; reviewer pass done.
 - [x] Countdown timers (1 s tick). Built 2026-10-30: a 1 s interval in `ScanPage` re-renders the
   join gate and host timers and re-evaluates `effectiveJoinStatus`, so pending/approved requests
   expire on screen; the bill window reuses the same tick when the bill screen lands in task 4.
-- [ ] Bill screen (unpaid and paid), paid-bill card, download PDF (`bill-pdf.ts`), 5-minute window.
+- [x] Bill screen (unpaid and paid), paid-bill card, download PDF (`bill-pdf.ts`), 5-minute window.
+  Built 2026-10-30: the `bill` screen in `ScanPage` (paid/unpaid banner, bill paper with rounds,
+  total and paid line), the 5-minute window on the tick, Download bill through the new
+  `lib/rooms/bill-pdf.ts` (the demo's hand-built PDF port), the home paid-bill card and the Bill /
+  Paid bill tiles, and the demo's 1.2 s move to the review after download.
 - [ ] Wi-Fi screen and the unlock rule; Wi-Fi tile on home and on order-done.
 - [ ] `detectJoinEvents`, `detectBillSent`, `detectPaidBill` and the scan-signature re-render.
 
@@ -287,6 +291,12 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 5 task 4 done** (branch `feat/rooms-standalone`). The customer bill screen
+  now covers unpaid and paid bills with the demo's banner copy, rounds paper, paid line and
+  5-minute window; the home page gains the paid-bill card plus Bill/Paid bill tiles, and Download
+  bill uses the ported hand-built PDF in `lib/rooms/bill-pdf.ts` before moving to the review.
+  `npm run typecheck` ✅, `npm run build` ✅, rules check 139 ✅. Next: task 5 (verify the Wi-Fi
+  screen/unlock), then task 6 (join/bill/paid detectors).
 - 2026-10-30 — **Phase 5 tasks 2–3 done** (branch `feat/rooms-standalone`). Task 2: the host
   phone now gets the join panel above every customer screen — roster chips, pending approvals with
   Approve/Deny, the read-aloud 6-digit card with attempts and expired/locked styling, New code,

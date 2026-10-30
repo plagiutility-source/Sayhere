@@ -7,8 +7,9 @@ import { Icon } from "@/components/rooms/shared/icons";
 import { HostPanel } from "./HostPanel";
 import { JoinGate } from "./JoinGate";
 import { Badge, btnOutline, cx } from "@/components/rooms/shared/ui";
-import { CART_MAX_QTY, GUESTS_OPTIONS } from "@/lib/rooms/constants";
+import { CART_MAX_QTY, GUESTS_OPTIONS, PAID_BILL_WINDOW_MS } from "@/lib/rooms/constants";
 import {
+  billWindowText,
   displaySpotName,
   formatTime,
   money,
@@ -26,10 +27,12 @@ import {
   findOpenBill,
   latestJoinRequestForDevice,
   orderRounds,
+  paidBillRemaining,
   participantFor,
   placeOrder,
   regenerateJoinCode,
   requestJoin,
+  recentPaidBill,
   requestService,
   resolveScanParticipation,
   serviceCallsForSpot,
@@ -45,6 +48,7 @@ import {
   DEMO_WEEK,
   MENU_ITEMS,
 } from "@/lib/rooms/seed";
+import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
 import { currentDeviceId, useRoomsState } from "@/lib/rooms/store";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
@@ -56,6 +60,7 @@ type Screen =
   | "cart"
   | "checkout"
   | "order-done"
+  | "bill"
   | "service"
   | "service-sent"
   | "wifi"
@@ -98,7 +103,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -142,6 +147,16 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const joinRequest =
     openBill && deviceId ? latestJoinRequestForDevice(state, openBill, deviceId) : null;
   const joinStatus = effectiveJoinStatus(joinRequest);
+  const paidBill =
+    location && room && !openBill && deviceId
+      ? recentPaidBill(state, location.id, room.code, deviceId)
+      : null;
+  const bill = openBill || paidBill;
+
+  useEffect(() => {
+    if (screen !== "bill" || !bill || bill.status !== "completed") return;
+    if (paidBillRemaining(bill) <= 0) setScreen("chooser");
+  }, [screen, bill, tick]);
 
   const cartLines = useMemo(
     () =>
@@ -358,6 +373,29 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     setToast(`New code for ${result.request.name}.`);
   };
 
+  const downloadBill = () => {
+    if (!bill || bill.status !== "completed") {
+      setToast("The bill is not paid yet.");
+      return;
+    }
+    const anchor = document.createElement("a");
+    const href = URL.createObjectURL(billPdfBlob(bill, {
+      spotName: orderSpotName(state, bill),
+      waiterName: waiterName(state, bill.locId, bill.waiterId),
+    }));
+    anchor.href = href;
+    anchor.download = `syehere-bill-${bill.number}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(href), 1500);
+    setToast("PDF bill downloaded — taking you to the review.");
+    window.setTimeout(
+      () => setScreen((current) => (current === "bill" ? "chooser" : current)),
+      1200,
+    );
+  };
+
   const submitJoinCode = () => {
     const result = verifyJoinCode(state, openBill, deviceId, joinCode);
     if (!result.ok) {
@@ -408,6 +446,131 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         onVerify={submitJoinCode}
       />
     );
+  } else if (screen === "bill" && bill) {
+    if (bill.status !== "completed" && !bill.billSentAt) {
+      body = null;
+    } else {
+      const paid = bill.status === "completed";
+      const payment = bill.payment || null;
+      const rounds = orderRounds(bill);
+      const expiresAt = bill.paidAt
+        ? new Date(new Date(bill.paidAt).getTime() + PAID_BILL_WINDOW_MS).toISOString()
+        : "";
+      body = (
+        <Panel>
+          <ScreenHead
+            title={paid ? "Your paid bill" : "Your bill"}
+            sub={`${orderSpotName(state, bill)} · #${bill.number}`}
+            onBack={() => setScreen("home")}
+          />
+          <div
+            className={
+              paid
+                ? "flex items-start gap-2.5 rounded-[9px] border border-brand-green/25 bg-brand-green/[0.07] px-2.5 py-2.5"
+                : "flex items-start gap-2.5 rounded-[9px] border border-brand-yellow/60 bg-amber-50 px-2.5 py-2.5"
+            }
+          >
+            <Icon
+              name={paid ? "check" : "receipt"}
+              size={17}
+              className={paid ? "mt-0.5 shrink-0 text-brand-green-deep" : "mt-0.5 shrink-0 text-amber-700"}
+            />
+            <div>
+              <strong className="block text-[11.5px] font-medium">
+                {paid ? "Payment received" : "Bill not paid yet"}
+              </strong>
+              <span className="text-[10.5px] leading-[1.5] text-ink-muted">
+                {paid
+                  ? `Paid ${money(payment ? payment.amount : bill.total)}${payment && payment.mode ? ` via ${payment.mode}` : ""}${bill.paidAt ? ` at ${formatTime(bill.paidAt)}` : ""}`
+                  : "Pay at the counter. This bill updates automatically when the owner closes it."}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-[10px] border border-black/10 bg-white px-3 py-3">
+            <div className="border-b border-black/10 pb-2">
+              <strong className="block text-[13px] font-medium">{DEMO_BUSINESS.name}</strong>
+              <span className="block text-[10px] text-ink-muted">
+                12 Linking Road, Bandra West, Mumbai
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-ink-muted">
+              <span>#{bill.number}</span>
+              <span>{orderSpotName(state, bill)}</span>
+              <span>{formatTime(bill.createdAt)}</span>
+            </div>
+            {rounds.map((round, index) => (
+              <div key={round.id} className="mt-2.5 border-t border-black/5 pt-1.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <strong className="text-[10.5px] font-medium">Round {index + 1}</strong>
+                  <span className="text-[9.5px] text-ink-muted">
+                    {formatTime(round.at)}
+                    {round.by ? ` · ${round.by}` : ""}
+                  </span>
+                </div>
+                {round.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between gap-2 py-0.5 text-[10.5px]"
+                  >
+                    <span>
+                      {item.qty}× {item.name}
+                    </span>
+                    <span>{money(item.price * item.qty)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="mt-2 flex items-baseline justify-between border-t border-black/10 pt-2">
+              <span className="text-[11px] font-medium">
+                Total <small className="text-[9px] font-normal text-ink-muted">taxes included</small>
+              </span>
+              <strong className="text-[13px] font-medium">{money(bill.total)}</strong>
+            </div>
+            {paid ? (
+              <p className="mt-1.5 flex items-center gap-1 text-[10px] text-brand-green-deep">
+                <Icon name="check" size={12} /> Paid
+                {payment && payment.mode ? ` via ${payment.mode}` : ""}
+              </p>
+            ) : null}
+          </div>
+
+          {paid ? (
+            <>
+              <div
+                className="mt-3 text-center text-[9.5px] tabular-nums text-ink-muted"
+                data-bill-expires={expiresAt}
+              >
+                Available for {billWindowText(paidBillRemaining(bill))}
+              </div>
+              <button type="button" className={btnDirect} onClick={downloadBill}>
+                <Icon name="download" size={15} /> Download bill
+              </button>
+              <p className={noteClass}>
+                <Icon name="download" size={12} />
+                <span>
+                  Downloads a PDF and takes you to the review. This paid bill closes automatically
+                  in 5 minutes.
+                </span>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className={noteClass}>
+                <Icon name="lock" size={12} />
+                <span>
+                  This unpaid bill was sent by the counter. Download unlocks after payment. Every
+                  round stays on this one bill.
+                </span>
+              </p>
+              <button type="button" className={btnLink} onClick={() => setScreen("home")}>
+                Back to session
+              </button>
+            </>
+          )}
+        </Panel>
+      );
+    }
   } else if (screen === "menu") {
     body = (
       <Panel>
@@ -1192,6 +1355,47 @@ export function ScanPage({ slug, code }: ScanPageProps) {
             </span>
           </div>
         ) : null}
+        {paidBill ? (
+          <section
+            aria-label="Paid bill"
+            className="mt-3 rounded-[10px] border border-brand-green/25 bg-white/75 p-3"
+          >
+            <div className="flex items-start gap-2.5">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-green/15 text-brand-green-deep">
+                <Icon name="check" size={16} />
+              </span>
+              <div>
+                <strong className="block text-[11.5px] font-medium">Payment received — thank you!</strong>
+                <span className="text-[10.5px] leading-[1.5] text-ink-muted">
+                  Bill #{paidBill.number} is paid. Download it before the window closes.
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between border-t border-black/10 pt-2">
+              <span className="text-[11px] text-ink-muted">
+                {orderSpotName(state, paidBill)}
+              </span>
+              <strong className="text-sm font-medium">{money(paidBill.total)}</strong>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--cp-primary)] px-2.5 py-1.5 text-[10.5px] font-medium text-white"
+                onClick={() => setScreen("bill")}
+              >
+                <Icon name="receipt" size={14} /> View &amp; download
+              </button>
+              <span
+                className="text-[9.5px] tabular-nums text-ink-muted"
+                data-bill-expires={new Date(
+                  new Date(paidBill.paidAt as string).getTime() + PAID_BILL_WINDOW_MS,
+                ).toISOString()}
+              >
+                Available for {billWindowText(paidBillRemaining(paidBill))}
+              </span>
+            </div>
+          </section>
+        ) : null}
         {openBill && participant ? (
           <div className="mt-3 rounded-[10px] border border-black/10 bg-white/70 p-3">
             <div className="flex items-center gap-2.5">
@@ -1277,6 +1481,12 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           {config.menu.on ? (
             <Tile icon="utensils" label={config.menu.title.trim() || "Menu"} onClick={() => setScreen("menu")} />
+          ) : null}
+          {openBill && openBill.billSentAt ? (
+            <Tile icon="receipt" label="Bill" onClick={() => setScreen("bill")} />
+          ) : null}
+          {!openBill && paidBill ? (
+            <Tile icon="receipt" label="Paid bill" onClick={() => setScreen("bill")} />
           ) : null}
           {wifiReady ? <Tile icon="wifi" label="Wi-Fi" onClick={() => setScreen("wifi")} /> : null}
           {config.hours.on ? (
@@ -1614,7 +1824,7 @@ function Tile({
   onClick,
   href,
 }: {
-  icon: "utensils" | "wifi" | "clock" | "phone" | "map" | "link";
+  icon: "utensils" | "wifi" | "clock" | "phone" | "map" | "link" | "receipt";
   label: string;
   onClick?: () => void;
   href?: string;
