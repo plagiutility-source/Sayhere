@@ -224,3 +224,7 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   QR (vendored `qrcode.js`), sound, and `scripts/rooms-rules-check.ts` (124 checks covering all 28
   checklist-F groups). `npm run typecheck` ✅, `npm run build` ✅, no component code. Deviations
   listed in the phase section. Next: Phase 2 (owner shell, Locations, Spots page and dialogs).
+  Reviewer pass (checklist section F): 28/28 groups covered, no code mismatches. One checklist
+  wording issue: F.22 says the previous window has "the same length"; the demo ends it one
+  millisecond before the current window starts, so a partial day makes it longer. `rules.ts`
+  `previousPeriodWindow` follows the demo; the checklist row is the inaccurate part.
