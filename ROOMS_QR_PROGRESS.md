@@ -145,9 +145,17 @@ at 390, 768 and 1280; reviewer pass done. **Code paths and wording verified; scr
 [BLOCKED: owner must capture].**
 
 ## Phase 3 — Customer ordering (scan page core)
-- [ ] `app/r/[slug]/[code]/page.tsx` and a placeholder `app/r/[slug]/page.tsx` for the reception
-  preview (placeholder is deleted at merge).
-- [ ] Scan page frame, themed with `--cp-primary`, `--cp-secondary`, `--cp-bg`; unavailable states.
+- [x] `app/r/[slug]/[code]/page.tsx` and a placeholder `app/r/[slug]/page.tsx` for the reception
+  preview (placeholder is deleted at merge). Both are thin async wrappers over `ScanPage`.
+- [x] Scan page frame, themed with `--cp-primary`, `--cp-secondary`, `--cp-bg`; unavailable states
+  (unknown code and paused QR), scan bar with Copy link and the other-page link.
+
+Phase 3 notes so far:
+- Customer pages use `useRoomsState()` directly, so Copy link has a small local toast instead of
+  the owner `OwnerProvider` host.
+- Unknown location slugs get the same “isn't linked to a table” card, with Back to Tables pointing
+  at `/rooms` (the demo cannot route an unknown location; this is defensive only).
+- The card body currently renders the customer home header; the interactive screens follow.
 - [ ] Home, menu (with service strip), cart bar and cart pill, cart, checkout (new and
   continuing), order done.
 - [ ] Waiter picker with Available, At capacity and Paused states.
@@ -253,3 +261,9 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   Next: Phase 3 (customer ordering).
   Reviewer pass (checklist A 1–9, 38–41): no mismatches. A.40 is the merge-time sidebar wiring;
   the standalone keeps the demo toast. Screenshot rows remain [BLOCKED: owner must capture].
+- 2026-10-30 — **Phase 3 in progress** (branch `feat/rooms-standalone`). Tasks 1–2 done: the
+  `/r/[slug]/[code]` spot route and `/r/[slug]` reception placeholder, the themed scan frame, scan
+  bar, Copy link and both unavailable states. `npm run typecheck` ✅, `npm run build` ✅ (four
+  dynamic routes), rules check 124 ✅; HTTP: a valid QR, an unknown code, the reception page and an
+  unknown slug all return 200 with the expected copy. Next: customer screens (home, menu, cart,
+  checkout, order done).
