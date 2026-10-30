@@ -6,6 +6,7 @@ import { Icon } from "@/components/rooms/shared/icons";
 import { PeriodBar } from "../PeriodBar";
 import { WaitersCard } from "../WaitersCard";
 import { AddWaiterDialog } from "../modals/AddWaiterDialog";
+import { InvoiceDialog } from "../modals/InvoiceDialog";
 import {
   Badge,
   CodePill,
@@ -35,7 +36,9 @@ import {
   ordersBetween,
   periodWindow,
   previousPeriodWindow,
+  sendBillToPhone,
   serviceCallSpotName,
+  serviceCallsForSpot,
   setOrderStatus,
   statsForRange,
   supportsOrderWifi,
@@ -78,6 +81,7 @@ function OrdersContent({ location }: { location: SpotLocation }) {
   const [filter, setFilter] = useState<OrderFilter>("all");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [addWaiterOpen, setAddWaiterOpen] = useState(false);
+  const [openBillId, setOpenBillId] = useState<string | null>(null);
 
   const table = spotWord(businessType, false);
   const tables = spotWord(businessType, true);
@@ -118,6 +122,18 @@ function OrdersContent({ location }: { location: SpotLocation }) {
   const changePeriod = (key: PeriodKey) => {
     setPeriod(key);
     toast(`Showing ${PERIODS[key].range} — ${periodRangeLabel(key)}.`);
+  };
+
+  const sendBill = (order: Order) => {
+    const result = sendBillToPhone(state, order.id);
+    if (!result.ok) {
+      toast(result.error);
+      return;
+    }
+    save(result.state);
+    toast(
+      `${result.sentBefore ? "Bill sent again" : "Bill sent"} to ${order.customerName}'s phone — ${money(order.total)}.`,
+    );
   };
 
   const toggleGroup = (key: string) => {
@@ -283,6 +299,8 @@ function OrdersContent({ location }: { location: SpotLocation }) {
                 expanded={expanded}
                 onToggle={toggleGroup}
                 onChangeStatus={changeStatus}
+                onOpenBill={(order) => setOpenBillId(order.id)}
+                onSendBill={sendBill}
               />
             ))}
           </div>
@@ -303,6 +321,14 @@ function OrdersContent({ location }: { location: SpotLocation }) {
       {addWaiterOpen ? (
         <AddWaiterDialog location={location} onClose={() => setAddWaiterOpen(false)} />
       ) : null}
+      {openBillId
+        ? (() => {
+            const order = state.orders.find((item) => item.id === openBillId);
+            return order ? (
+              <InvoiceDialog order={order} onClose={() => setOpenBillId(null)} />
+            ) : null;
+          })()
+        : null}
     </>
   );
 }
@@ -337,6 +363,8 @@ function OrderGroup({
   expanded,
   onToggle,
   onChangeStatus,
+  onOpenBill,
+  onSendBill,
 }: {
   location: SpotLocation;
   room: Room | null;
@@ -344,6 +372,8 @@ function OrderGroup({
   expanded: string[];
   onToggle: (key: string) => void;
   onChangeStatus: (order: Order, status: "preparing" | "served" | "cancelled") => void;
+  onOpenBill: (order: Order) => void;
+  onSendBill: (order: Order) => void;
 }) {
   const { state, businessType } = useOwner();
   const direct = !room;
@@ -357,6 +387,12 @@ function OrderGroup({
   const waiters = Array.from(new Set(orders.map((order) => order.waiterId).filter(Boolean)))
     .map((id) => waiterName(state, location.id, id))
     .join(", ");
+  const calls = direct ? [] : serviceCallsForSpot(state, location.id, room.code);
+  const billCall = calls.find((call) => call.kind === "bill");
+  const billOrder = billCall ? state.orders.find((order) => order.id === billCall.orderId) : null;
+  const canSendBill = Boolean(
+    billOrder && activeStatus(billOrder.status) && !billOrder.billSentAt,
+  );
 
   return (
     <section
@@ -398,6 +434,15 @@ function OrderGroup({
             </p>
           </div>
         </div>
+        {canSendBill && billOrder ? (
+          <button
+            type="button"
+            className={cx(btnPrimary, btnXs)}
+            onClick={() => onSendBill(billOrder)}
+          >
+            <Icon name="receipt" size={12} /> Send bill
+          </button>
+        ) : null}
       </header>
 
       {isOpen ? (
@@ -408,6 +453,7 @@ function OrderGroup({
               order={order}
               index={index}
               onChangeStatus={onChangeStatus}
+              onOpenBill={onOpenBill}
             />
           ))}
         </div>
@@ -420,10 +466,12 @@ function OrderRow({
   order,
   index,
   onChangeStatus,
+  onOpenBill,
 }: {
   order: Order;
   index: number;
   onChangeStatus: (order: Order, status: "preparing" | "served" | "cancelled") => void;
+  onOpenBill: (order: Order) => void;
 }) {
   const { state, businessType } = useOwner();
   const rounds = orderRounds(order);
@@ -547,6 +595,33 @@ function OrderRow({
             onClick={() => onChangeStatus(order, "served")}
           >
             Mark served
+          </button>
+        ) : null}
+        {order.status === "served" ? (
+          <button
+            type="button"
+            className={cx(btnPrimary, btnXs)}
+            onClick={() => onOpenBill(order)}
+          >
+            <Icon name="receipt" size={12} /> Bill &amp; payment
+          </button>
+        ) : null}
+        {order.status === "completed" ? (
+          <button
+            type="button"
+            className={cx(btnOutline, btnXs)}
+            onClick={() => onOpenBill(order)}
+          >
+            <Icon name="receipt" size={12} /> View bill
+          </button>
+        ) : null}
+        {order.status !== "served" && order.status !== "completed" && order.status !== "cancelled" ? (
+          <button
+            type="button"
+            className={cx(btnOutline, btnXs)}
+            onClick={() => onOpenBill(order)}
+          >
+            Bill
           </button>
         ) : null}
         {order.status === "cancelled" ? (

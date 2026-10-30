@@ -9,10 +9,13 @@ import { cx } from "./ui";
  */
 export function Modal({
   wide,
+  focusFirst = true,
   onClose,
   children,
 }: {
   wide?: boolean;
+  /** The demo skips the focus for the bill and punch dialogs. */
+  focusFirst?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -23,9 +26,9 @@ export function Modal({
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const input = panel.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-      "input, textarea",
-    );
+    const input = focusFirst
+      ? panel.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
+      : null;
     const timer = window.setTimeout(() => {
       input?.focus();
       input?.select?.();
@@ -34,7 +37,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       window.clearTimeout(timer);
     };
-  }, [onClose]);
+  }, [onClose, focusFirst]);
 
   return (
     <div

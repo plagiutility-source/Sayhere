@@ -194,7 +194,10 @@ S54–S60 match; reviewer pass done.
   `components/rooms/owner/WaitersCard.tsx` + `modals/AddWaiterDialog.tsx`, wired into the Orders
   aside; load bar, status badge, max 1–8, pause switch, remove confirm and every toast come from
   `rules.ts`.
-- [ ] Invoice dialog: items, rounds, print, send to phone, email (SIM), payment verify.
+- [x] Invoice dialog: items, rounds, print, send to phone, email (SIM), payment verify.
+  Built 2026-10-30: `modals/InvoiceDialog.tsx` (invoice paper, rounds, print, send to phone,
+  email SIM, Cash/UPI/Card exact-amount verify), `markBillEmailed()` rule (+2 checks, 126 now),
+  the demo's `@media print` behaviour in `globals.css`, and the row / group bill buttons wired.
 - [ ] Punch dialog (table and direct).
 - [ ] Notifications panel, topbar badge, sidebar Orders badge, document title.
 - [ ] Live alert card, ring timing, bell, sound toggle, `handleExternalState` rules (checklist D).
@@ -260,6 +263,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 4 tasks 1–3 done** (branch `feat/rooms-standalone`). Orders page (period
+  bar, banners, stat cards, filters with counts, collapsible groups, Direct punch group, row tags
+  and status buttons), Waiters card + Add waiter dialog, and the Invoice dialog (print, send to
+  phone, email SIM, exact-amount payment verify). `npm run typecheck` ✅, `npm run build` ✅
+  (`/orders` dynamic), rules check 126 ✅. Next: task 4 (Punch dialog), then 5–7 (notifications
+  and title, live alert + detectors, simulate-order). Mark handled and the live alert stay in
+  tasks 5–6.
 - 2026-10-30 — **Audit of Phases 0–3** (read-only) + approved fixes. `npm install`, typecheck,
   build and the rules check all passed; 124 checks. Three audit items fixed and pushed: the topbar
   notification row now names the order's location and shows the demo's arrow, `lib/rooms/qr.ts`

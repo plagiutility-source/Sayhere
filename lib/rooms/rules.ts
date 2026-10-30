@@ -18,6 +18,7 @@ import {
   JOIN_MAX_ATTEMPTS,
   JOIN_REQUEST_TTL_MS,
   MAX_ROOMS_PER_LOCATION,
+  EMAIL_MAX,
   NAME_MAX,
   PAID_BILL_WINDOW_MS,
   PERIODS,
@@ -724,6 +725,23 @@ export function sendBillToPhone(
 export type PaymentResult =
   | { ok: true; state: RoomsState; order: Order; amount: number }
   | { ok: false; error: string | null };
+
+/** The demo's `sendBill`: store where the bill was emailed (Stage 1 is simulated). */
+export function markBillEmailed(
+  state: RoomsState,
+  orderId: string,
+  email: string,
+  now: DateLike = new Date(),
+): { state: RoomsState; order: Order } | null {
+  const order = state.orders.find((item) => item.id === orderId);
+  if (!order) return null;
+  const next = cloneState(state);
+  const target = next.orders.find((item) => item.id === orderId);
+  if (!target) return null;
+  target.emailedTo = String(email || "").trim().slice(0, EMAIL_MAX);
+  target.emailedAt = toDate(now).toISOString();
+  return { state: next, order: target };
+}
 
 /** R10 — completion happens only when the amount matches to the paisa. */
 export function verifyPayment(

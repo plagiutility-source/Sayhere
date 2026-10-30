@@ -15,6 +15,7 @@ import {
   dailySeries,
   effectiveJoinStatus,
   findOpenBill,
+  markBillEmailed,
   nextOrderNumber,
   nextRoomCode,
   placeOrder,
@@ -440,6 +441,9 @@ eq(
   closedSent17.ok ? "sent" : closedSent17.error,
   "This bill is already closed — start a new order instead.",
 );
+const emailed17 = markBillEmailed(state17, "bill17", "customer@example.com", NOW);
+eq("17 email stored", emailed17?.order.emailedTo, "customer@example.com");
+eq("17 email timestamp", emailed17?.order.emailedAt, today);
 
 /* 18 --------------------------------------------------------------- */
 group(18);
