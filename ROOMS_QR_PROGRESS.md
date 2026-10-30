@@ -92,7 +92,7 @@ Phase 1.
 - [x] `lib/rooms/sound.ts` — bell (880/1174.66/1567.98 Hz, 0.16 s step, 0.65 s decay) and the
   10 s ring (0, 2, 4, 6, 8 s).
 - [x] `scripts/rooms-rules-check.ts` — all 28 groups from checklist section F, plus O1 price
-  parsing: **119 checks passed**.
+  parsing: **124 checks passed**.
 
 Deviations from the demo (all deliberate, for the reviewer):
 - Pure rules take `businessType` explicitly (`spotWord`, `displaySpotName`,
@@ -108,7 +108,7 @@ Deviations from the demo (all deliberate, for the reviewer):
   instead of silently re-rendering.
 
 Done when: the rules check prints `N checks passed` with every group covered, typecheck and build
-pass, and no component code exists yet. **True — 119 checks passed, typecheck ✅, build ✅, no
+pass, and no component code exists yet. **True — 124 checks passed, typecheck ✅, build ✅, no
 components yet.**
 
 ## Phase 2 — Owner shell, Locations, Spots page and dialogs
@@ -221,6 +221,6 @@ passes with fewer fixes as the builder; use the other as reviewer. Log the resul
   Next: Phase 1 (foundation).
 - 2026-10-30 — **Phase 1 complete** (branch `feat/rooms-standalone`). Scaffold plus the whole
   `lib/rooms/` foundation: types, constants, format (+`parseMenuPrice`), seed, rules R1–R16, store,
-  QR (vendored `qrcode.js`), sound, and `scripts/rooms-rules-check.ts` (119 checks covering all 28
+  QR (vendored `qrcode.js`), sound, and `scripts/rooms-rules-check.ts` (124 checks covering all 28
   checklist-F groups). `npm run typecheck` ✅, `npm run build` ✅, no component code. Deviations
   listed in the phase section. Next: Phase 2 (owner shell, Locations, Spots page and dialogs).
