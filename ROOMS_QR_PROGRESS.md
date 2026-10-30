@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (Phase 6 in progress; screenshots blocked)
+Last updated: 2026-10-30 (Phase 6 task 2 done; screenshots blocked)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -261,7 +261,11 @@ screenshots S42–S53 and S61 match; reviewer pass done.
   announcement and thank-you with counters, six toggle rows with deep-path fields, footer
   Save/Discard, JSON dirty tracking, confirm on tab/location change, beforeunload, preview spot
   selector and the two preview-only toasts; saves `configs[loc:kind]` with the demo's wording.
-- [ ] Dashboard: period bar, banners, stat cards, trend card, spot snapshot, recent bills.
+- [x] Dashboard: period bar, banners, stat cards, trend card, spot snapshot, recent bills.
+  Built 2026-10-30: `/dashboard` + `owner/pages/DashboardPage.tsx`, linked from the sidebar and
+  the root redirect; service and new-order banners, four stat cards with deltas, earnings trend,
+  spot snapshot and the four newest bills. "Full analytics" links to the task-3 route; the CSV
+  button arrives with task 4.
 - [ ] Analytics: spot filter, stat cards, trend, spot table, day table, bill details.
 - [ ] CSV report (`report.ts`), hotel mode checked on every page.
 
@@ -304,6 +308,14 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 6 task 2 done** (branch `feat/rooms-standalone`). The dashboard now lives at
+  `/dashboard` (root redirects there, sidebar item active): the shared period bar, live service and
+  new-order banners, earnings/bills/guests/collected stat cards with deltas, the day-by-day
+  earnings trend with best day and daily average, the spot-wise snapshot with direct-punch row and
+  analytics links, and the four newest bills with the waiting badge on View all. Feature card and
+  feedback strip are outside this checklist item; Download report lands with task 4.
+  `npm run typecheck` ✅, `npm run build` ✅ (`/dashboard` 4.47 kB), rules check 139 ✅. Next: task 3
+  (Analytics).
 - 2026-10-30 — **Phase 6 task 1 done** (branch `feat/rooms-standalone`). The customer page editor is
   live at `/customer-page`: both tabs, the demo's banners, every row and field (announcement and
   thank-you counters, menu/wifi/hours/call/directions/custom, locked review row), Save/Discard/

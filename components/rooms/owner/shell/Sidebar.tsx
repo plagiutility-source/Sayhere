@@ -31,7 +31,7 @@ export function Sidebar() {
     {
       group: "Overview",
       items: [
-        { label: "Dashboard", icon: "dashboard", key: "dashboard" },
+        { label: "Dashboard", icon: "dashboard", key: "dashboard", href: "/dashboard" },
         { label: "Feedback", icon: "feedback", key: "feedback" },
         { label: "Analytics", icon: "analytics", key: "analytics" },
       ],
