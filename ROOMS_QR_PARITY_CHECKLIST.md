@@ -205,6 +205,12 @@ Every other string: copy from the demo source. When unsure, search `app.js` for 
 
 ## G. Golden screenshot set (take from the demo before building)
 
+- [x] Captured 2026-10-30: all 57 states at **390**, **768** and **1280** — 171 PNGs in
+  `reference/screens/`, generated from the demo with its seeded state and the real action flows.
+  Every image was checked for dimensions; representative owner and customer states were inspected
+  at each width. The order-done “See it on the owner dashboard” link is a short inline link that
+  overlaps its note in the demo at 390 px; the capture preserves that demo behaviour.
+
 Widths: **390**, **768**, **1280**. Save as `reference/screens/<id>-<width>.png`.
 
 Owner: S01 Dashboard (today) · S02 Dashboard (month) · S03 Locations, Spots tab · S04 Locations,

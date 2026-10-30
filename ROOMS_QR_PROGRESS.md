@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (A/B and most C/D rows done; full reset/guard matrices, G and second reviewer open)
+Last updated: 2026-10-30 (A/B, C/D and G done; full reset/guard matrices and second reviewer open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -305,7 +305,8 @@ reviewer pass done.
   runtime: deep-path saves, toggle/dirty behavior, location and preview selection, waiter and room
   toggles, punch/checkout fields, join input/Enter, countdowns, alert clearing and title updates.
   C5 (the full route-reset matrix) and D1 (the full external-state guard matrix) still need a
-  dedicated pass. The G golden screenshot set and second reviewer remain open.
+  dedicated pass. The G golden screenshot set is captured: 57 states at 390, 768 and 1280 (171
+  PNGs); the second reviewer remains open.
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
@@ -345,6 +346,15 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 G golden screenshots** (branch `audit/rooms-latest`). Captured all 57
+  states from the demo with Playwright/Firefox at 390, 768 and 1280 — 171 PNGs in
+  `reference/screens/`. Seeded the demo’s own localStorage for deterministic bills and used the
+  real UI for cart, checkout, order placement, service, join gates, bill and review flows. The
+  owner set was captured first (25 states per width); two selector failures were fixed and
+  recaptured. Every file was checked for the expected width; representative owner, host/guest,
+  join, bill, Wi-Fi and unavailable states were inspected at each width. The demo’s short inline
+  “See it on the owner dashboard” order-done link overlap is preserved as demo behaviour. No app
+  code changed.
 - 2026-10-30 — **Phase 7 C/D pass** (branch `audit/rooms-latest`). Exercised editor deep-path save,
   toggle re-render/dirty, location-switch confirmation, preview spot, room active toggle, waiter
   max/active, punch fields, checkout guests, hotel-mode spot reset, order-filter route reset, join
