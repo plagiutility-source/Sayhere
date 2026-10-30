@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { copyText } from "@/components/rooms/shared/clipboard";
 import { Icon } from "@/components/rooms/shared/icons";
+import { JoinGate } from "./JoinGate";
 import { Badge, btnOutline, cx } from "@/components/rooms/shared/ui";
 import { CART_MAX_QTY, GUESTS_OPTIONS } from "@/lib/rooms/constants";
 import {
@@ -17,13 +18,18 @@ import {
 import { absoluteUrl, spotPath } from "@/lib/rooms/links";
 import {
   availableWaiters,
+  cancelJoinRequest,
+  effectiveJoinStatus,
   findOpenBill,
+  latestJoinRequestForDevice,
   orderRounds,
   participantFor,
   placeOrder,
+  requestJoin,
   requestService,
   resolveScanParticipation,
   serviceCallsForSpot,
+  verifyJoinCode,
   waiterLoad,
   waiterName,
   wifiUnlockedForOrder,
@@ -81,6 +87,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const [lastRound, setLastRound] = useState<Round | null>(null);
   const [lastAdded, setLastAdded] = useState(false);
   const [lastCall, setLastCall] = useState<ServiceCall | null>(null);
+  const [joinName, setJoinName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [joinCodeError, setJoinCodeError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
@@ -118,6 +127,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
 
   const openBill = location && room ? findOpenBill(state, location.id, room.code) : null;
   const participant = openBill && deviceId ? participantFor(openBill, deviceId) : null;
+  const joinRequest =
+    openBill && deviceId ? latestJoinRequestForDevice(state, openBill, deviceId) : null;
+  const joinStatus = effectiveJoinStatus(joinRequest);
 
   const cartLines = useMemo(
     () =>
@@ -175,6 +187,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   useEffect(() => {
     setCart({});
     setCheckoutError("");
+    setJoinName("");
+    setJoinCode("");
+    setJoinCodeError("");
     setScreen("home");
   }, [scanKey]);
 
@@ -280,6 +295,50 @@ export function ScanPage({ slug, code }: ScanPageProps) {
     setScreen("service-sent");
   };
 
+  const askToJoin = () => {
+    if (!openBill) {
+      setToast("This bill is no longer open. Ask a member of staff for help.");
+      return;
+    }
+    const name = (joinName || joinRequest?.name || "").trim();
+    if (!name) {
+      document.getElementById("join-name")?.focus();
+      setToast("Enter your name so the host knows who is joining.");
+      return;
+    }
+    const result = requestJoin(state, openBill, name, deviceId);
+    if (result.error) {
+      setToast(result.error);
+      return;
+    }
+    if (result.state !== state) save(result.state);
+    setJoinCodeError("");
+    setToast(`Request sent to ${openBill.customerName}. Waiting for approval.`);
+  };
+
+  const cancelJoin = () => {
+    const result = cancelJoinRequest(state, openBill, deviceId);
+    if (!result.ok) return;
+    save(result.state);
+    setJoinCode("");
+    setJoinCodeError("");
+    setToast("Join request cancelled.");
+  };
+
+  const submitJoinCode = () => {
+    const result = verifyJoinCode(state, openBill, deviceId, joinCode);
+    if (!result.ok) {
+      if (result.state !== state) save(result.state);
+      setJoinCodeError(result.error || "This join request is no longer active.");
+      return;
+    }
+    save(result.state);
+    setJoinCode("");
+    setJoinCodeError("");
+    setScreen("home");
+    setToast(`You joined ${openBill?.customerName}'s bill #${openBill?.number}.`);
+  };
+
   let body: ReactNode;
   if (!known) {
     body = (
@@ -297,6 +356,23 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         text={`The link is still reserved for this ${spot.toLowerCase()}. Re-activate it from ${spots} to turn the page back on.`}
         backHref={`/rooms?loc=${location.id}`}
         backLabel={`Back to ${spots}`}
+      />
+    );
+  } else if (openBill && !participant) {
+    body = (
+      <JoinGate
+        order={openBill}
+        spotName={displaySpot}
+        status={joinStatus}
+        request={joinRequest}
+        name={joinName}
+        code={joinCode}
+        codeError={joinCodeError}
+        onName={setJoinName}
+        onCode={setJoinCode}
+        onAsk={askToJoin}
+        onCancel={cancelJoin}
+        onVerify={submitJoinCode}
       />
     );
   } else if (screen === "menu") {

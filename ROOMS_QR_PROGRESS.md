@@ -221,7 +221,11 @@ Done when: checklist A rows 10–37 relevant to Orders pass; section D passes fo
 service calls; screenshots S06–S08, S17–S22 match; reviewer pass done.
 
 ## Phase 5 — Joining, bill and Wi-Fi (customer and host)
-- [ ] Join gate: form, pending, approved, locked, expired, denied, cancelled.
+- [x] Join gate: form, pending, approved, locked, expired, denied, cancelled. Built 2026-10-30:
+  `components/rooms/customer/JoinGate.tsx` + `ScanPage` wiring above every customer screen when a
+  bill is open and this device isn't on it; name form, 2-minute pending, 6-digit approved with
+  attempts left, locked, expired (request vs code), denied and cancelled copy from the demo, with
+  `data-join-expires` hooks for task 3's ticker.
 - [ ] Host panel: roster, pending request, code card, New code, Cancel; "Open guest view".
 - [ ] Countdown timers (1 s tick).
 - [ ] Bill screen (unpaid and paid), paid-bill card, download PDF (`bill-pdf.ts`), 5-minute window.
@@ -277,6 +281,13 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 5 task 1 done** (branch `feat/rooms-standalone`). The host-approved join
+  gate now replaces the customer screens whenever this device scans a spot with an open bill it
+  isn't on: name form, pending with the 2-minute timer, approved 6-digit entry with attempts left,
+  locked, expired (request vs code), denied and cancelled, all through `requestJoin`,
+  `cancelJoinRequest` and `verifyJoinCode` with the demo's toast wording. `npm run typecheck` ✅,
+  `npm run build` ✅, rules check 139 ✅. Next: task 2 (host panel). Note: the countdown displays are
+  still static until task 3 adds the 1 s tick.
 - 2026-10-30 — **Phase 4 code complete** (branch `feat/rooms-standalone`). Task 7 added the
   DEV-ONLY simulated order with its page-head and empty-state buttons. Reviewer pass (checklist
   A 15–32 and section D): two mismatches found and fixed — "View table/room" now expands the spot
