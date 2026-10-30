@@ -1,6 +1,6 @@
 # Tables & Rooms QR Ordering — Build Progress Tracker
 
-Last updated: 2026-10-30 (customer B subset swept; A rows, remaining B rows and golden screenshots open)
+Last updated: 2026-10-30 (A/B runtime sweep done; live-alert fan-out fixed; C/D, G and second reviewer open)
 Project: `syehere-rooms-standalone` (standalone build, then merged into `Review-SaaS-main`)
 Build environment: Freebuff. Builder: DeepSeek V4.1 Flash. Reviewer: GLM 5.3 Flash.
 
@@ -286,20 +286,23 @@ reviewer pass done.
 
 ## Phase 7 — Parity audit
 - [ ] Walk the whole parity checklist (A–G) against the running demo, side by side, at 390, 768
-  and 1280. Fix every mismatch.
+  and 1280. Fix every mismatch. A and B rows are complete except A40 (Phase 8) and three
+  unreachable customer guards; C, D and G remain open.
   Audit progress 2026-10-30: the full route-level visual walk now runs in Firefox against the
   demo at all three widths (7 routes, 42 captures) and is clean. Fixed the customer View bill
   and bill-sent lines, shell groups/badge, period range, dashboard 1.35/1 trend split, Locations
   label, Orders Analytics/Open QR/Report actions and full-width Waiters below 1400, Analytics
   bill rows and 290px filter stack, editor headings, and the mobile demo note, filter counts,
   SHARE column, recent-bill guest line, outlet row and search width. A 2026-10-30 runtime sweep
-  observed add-item, place-order, join request/approve/verify, both thumbs, contact, feedback
-  submit, bill, home, menu, service, service-bill and copy-wifi; ticked only the rows whose full
-  description passed (add-item, place-order, join request/approve/verify, thumbs, contact, bill,
-  home, menu, service, copy-wifi). The
-  remaining A rows, unobserved B rows (quantity decrement, waiter pick, join cancel/deny/regenerate,
-  download, Google/writer, hours, locked Wi-Fi, call/maps/custom links, service-waiter) and the G
-  golden screenshot set are still open.
+  passed A1–A39 and A41–A42; A40 stays blocked for the Phase 8 SaaS links. The same sweep passed
+  every reachable B row, including decrement, waiter pick, join cancel/deny/regenerate, paid-bill
+  download, Google, feedback validation, service-waiter, hours and the replaced links. Empty-cart,
+  empty-checkout and locked-Wi-Fi remain unticked because those controls are not reachable in the
+  UI (the cart bar disappears at zero and the Wi-Fi tile is hidden until accepted). While running
+  the live-alert rows, found and fixed a real bug: the store's shared `latest` watermark let the
+  owner hook consume an external update before the detector subscriber, so alerts never fired;
+  each subscriber now has its own delivery watermark. The G golden screenshot set and second
+  reviewer remain open.
 - [x] Run each message in checklist E and compare wording. Verified by diffing the rendered
   body text of all seven routes at 390, 768 and 1280 plus hotel mode; the only remaining text
   differences are the stat label's `TODAY`/`today` DOM split, which renders identically.
@@ -339,6 +342,19 @@ Run the Phase 1 rules task once with each model on the same prompt. Keep the one
 passes with fewer fixes as the builder; use the other as reviewer. Log the result below.
 
 ## Session Log
+- 2026-10-30 — **Phase 7 A/B sweep and live-alert fix** (branch `audit/rooms-latest`). Ran the owner
+  actions in Firefox at 1280/390 and the customer actions at 390: locations/QR (validation, rename,
+  download, copy, Escape/overlay, tabs, 12-QR cap), editor save/discard/reset/View live, notifications
+  and sound, service resolution, group toggle, filters/period, accept/serve/cancel, invoice print,
+  email validation/send, send-to-phone, exact payment, punch add/dec plus direct/append, analytics
+  spot filter/CSV, waiters add/duplicate/load-blocked/remove, drawer, reset and simulate. Customer
+  checks covered decrement, waiter pick, join cancel/deny/regenerate, paid-bill PDF and review,
+  Google/writer, feedback empty/sent, Wi-Fi copy, hours, call/maps/custom and the editor preview
+  toasts. All passed except A40, which is the merge-time SaaS link, and the three unreachable
+  empty/locked guards noted above. Root-caused the missing live alert to `subscribe()`'s shared
+  `latest` gate; made the delivery watermark per subscriber. Verified external orders now show the
+  New order alert and New round/View table flow. `npm run typecheck` ✅, `npm run build` ✅, rules
+  check 139 ✅.
 - 2026-10-30 — **Phase 7 B-action sweep, partial** (branch `audit/rooms-latest`). Exercised the
   customer runtime in Firefox: add/cart/checkout/order placement, join request + host approval +
   code entry, both thumbs to the chooser, contact, feedback submit, service request

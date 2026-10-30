@@ -86,21 +86,31 @@ export function subscribe(listener: (state: RoomsState) => void): () => void {
   const start = readStorage();
   if (start) adopt(start);
 
+  /*
+   * `latest` is shared by every subscriber, so it cannot also be the
+   * delivered watermark: the owner hook and the live-alert detector both
+   * subscribe in the same tab, and the first one to run would make the
+   * second ignore the same storage update. Keep the watermark per
+   * subscriber, while still rejecting genuinely stale state.
+   */
+  let delivered = latest?.savedAt ?? 0;
+  const accept = (candidate: RoomsState | null) => {
+    if (!candidate) return;
+    if (candidate.savedAt <= delivered) return;
+    if (latest && candidate.savedAt < latest.savedAt) return;
+    const next = adopt(candidate);
+    if (next.savedAt <= delivered) return;
+    delivered = next.savedAt;
+    listener(next);
+  };
+
   const onStorage = (event: StorageEvent) => {
     if (event.key !== STORAGE_KEYS.state) return;
-    const candidate = stateFromRaw(event.newValue);
-    if (!candidate) return;
-    if (latest && candidate.savedAt <= latest.savedAt) return;
-    listener(adopt(candidate));
+    accept(stateFromRaw(event.newValue));
   };
 
   window.addEventListener("storage", onStorage);
-  const timer = window.setInterval(() => {
-    const candidate = readStorage();
-    if (!candidate) return;
-    if (latest && candidate.savedAt <= latest.savedAt) return;
-    listener(adopt(candidate));
-  }, POLL_INTERVAL_MS);
+  const timer = window.setInterval(() => accept(readStorage()), POLL_INTERVAL_MS);
 
   return () => {
     window.removeEventListener("storage", onStorage);

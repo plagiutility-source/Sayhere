@@ -14,64 +14,65 @@ sending). Bracketed names are functions in the demo's `app.js`.
 
 | # | Action | Behaviour | Tick |
 |---|---|---|---|
-| 1 | `add-room` | Open the Add dialog; blocked at 12 spots with the limit toast | [ ] |
-| 2 | `create-room` | Name required (toast "Enter a room name."), slice 40, permanent next code, toast `${name} added — it has its own permanent QR (QR3) and a live order feed.` | [ ] |
-| 3 | `rename-room` | Open Rename dialog | [ ] |
-| 4 | `rename-save` | Name required (inline error), name only changes, toast "Room renamed — the QR and link did not change." | [ ] |
-| 5 | `view-qr` | QR dialog with URL, Copy link, Download SVG | [ ] |
-| 6 | `download-qr` | Downloads the SVG, toast "QR downloaded as SVG." | [ ] |
-| 7 | `copy-link` | Copies the URL (clipboard fallback), toast | [ ] |
-| 8 | `close-modal` | Closes the dialog; Escape and overlay click also close | [ ] |
-| 9 | `panel-kind` | Switch Reception / Spots tab in the QR panel | [ ] |
-| 10 | `editor-kind` | Switch editor tab; confirm "Discard unsaved changes?" if dirty | [ ] |
-| 11 | `save-config` | Saves the draft for that location and kind; toast depends on kind (see E) | [ ] |
-| 12 | `discard-config` | Restores the saved copy, toast "Changes discarded." | [ ] |
-| 13 | `reset-config` | Confirm "Reset this page to the default content?", loads defaults unsaved, toast "Default page loaded — save to publish it." | [ ] |
-| 14 | `view-live` | Saves if dirty (with toast), then opens the live page | [ ] |
-| 15 | `toggle-notifications` | Opens/closes the live requests panel; outside click closes | [ ] |
-| 16 | `toggle-sound` | Persists the preference; on → plays bell; off → stops ring; toasts (see E) | [ ] |
-| 17 | `resolve-service` | Marks a call done, toast `${spot} — ${kind title lowercase} handled.` | [ ] |
-| 18 | `toggle-order-group` | Expands/collapses a spot's group (memory only) | [ ] |
-| 19 | `dismiss-live-alert` | Hides the alert and stops the ring | [ ] |
-| 20 | `open-live-alert` | Expands that spot's group, hides the alert, goes to Orders | [ ] |
-| 21 | `order-filter` | All / New / Preparing / Served / Done | [ ] |
-| 22 | `period-filter` | Sets period, toast `Showing ${range} — ${range label}.` | [ ] |
-| 23 | `order-status` | Calls `setOrderStatus` (preparing, served, cancelled from the UI) | [ ] |
-| 24 | `open-bill` | Invoice dialog | [ ] |
-| 25 | `print-bill` | `window.print()` | [ ] |
-| 26 | `send-bill` | Email the bill: validate address, store `emailedTo/At`, toast. **SIM** | [ ] |
-| 27 | `send-bill-phone` | Sets `billSentAt`, resolves bill calls (see rules) | [ ] |
-| 28 | `verify-payment` | Exact amount only; closes the bill | [ ] |
-| 29 | `punch-order` | Open Punch dialog (optionally for a given spot) | [ ] |
-| 30 | `punch-add` / 31 `punch-dec` | Quantity 0–20 per item; dialog re-renders | [ ] |
-| 32 | `create-punch` | Creates or appends a punch round (see rules) | [ ] |
-| 33 | `analytics-spot` | Filters the analytics page by a table row | [ ] |
-| 34 | `download-report` | CSV of the current period and spot | [ ] |
-| 35 | `add-waiter` | Open Add waiter dialog | [ ] |
-| 36 | `create-waiter` | Name required, unique, clamp 1–8, toast `${name} added — can handle ${n} tables at a time.` | [ ] |
-| 37 | `remove-waiter` | Blocked while loaded; confirm `Remove ${name} from this location?` | [ ] |
-| 38 | `open-sidebar` / 39 `close-sidebar` | Mobile drawer (merged app uses the SaaS shell) | [ ] |
-| 40 | `not-in-demo` | **REPLACE** — the muted sidebar items link to the real SaaS pages | [ ] |
-| 41 | `reset-demo` | **DEV** — confirm "Reset the demo to its starting state.", reseed, reset all transient state, toast "Demo reset to its starting state." | [ ] |
-| 42 | `simulate-order` | **DEV** — random spot (prefers quiet ones), random name, 1–2 items, random waiter; rings the alert | [ ] |
+| 1 | `add-room` | Open the Add dialog; blocked at 12 spots with the limit toast | [x] |
+| 2 | `create-room` | Name required (toast "Enter a room name."), slice 40, permanent next code, toast `${name} added — it has its own permanent QR (QR3) and a live order feed.` | [x] |
+| 3 | `rename-room` | Open Rename dialog | [x] |
+| 4 | `rename-save` | Name required (inline error), name only changes, toast "Room renamed — the QR and link did not change." | [x] |
+| 5 | `view-qr` | QR dialog with URL, Copy link, Download SVG | [x] |
+| 6 | `download-qr` | Downloads the SVG, toast "QR downloaded as SVG." | [x] |
+| 7 | `copy-link` | Copies the URL (clipboard fallback), toast | [x] |
+| 8 | `close-modal` | Closes the dialog; Escape and overlay click also close | [x] |
+| 9 | `panel-kind` | Switch Reception / Spots tab in the QR panel | [x] |
+| 10 | `editor-kind` | Switch editor tab; confirm "Discard unsaved changes?" if dirty | [x] |
+| 11 | `save-config` | Saves the draft for that location and kind; toast depends on kind (see E) | [x] |
+| 12 | `discard-config` | Restores the saved copy, toast "Changes discarded." | [x] |
+| 13 | `reset-config` | Confirm "Reset this page to the default content?", loads defaults unsaved, toast "Default page loaded — save to publish it." | [x] |
+| 14 | `view-live` | Saves if dirty (with toast), then opens the live page | [x] |
+| 15 | `toggle-notifications` | Opens/closes the live requests panel; outside click closes | [x] |
+| 16 | `toggle-sound` | Persists the preference; on → plays bell; off → stops ring; toasts (see E) | [x] |
+| 17 | `resolve-service` | Marks a call done, toast `${spot} — ${kind title lowercase} handled.` | [x] |
+| 18 | `toggle-order-group` | Expands/collapses a spot's group (memory only) | [x] |
+| 19 | `dismiss-live-alert` | Hides the alert and stops the ring | [x] |
+| 20 | `open-live-alert` | Expands that spot's group, hides the alert, goes to Orders | [x] |
+| 21 | `order-filter` | All / New / Preparing / Served / Done | [x] |
+| 22 | `period-filter` | Sets period, toast `Showing ${range} — ${range label}.` | [x] |
+| 23 | `order-status` | Calls `setOrderStatus` (preparing, served, cancelled from the UI) | [x] |
+| 24 | `open-bill` | Invoice dialog | [x] |
+| 25 | `print-bill` | `window.print()` | [x] |
+| 26 | `send-bill` | Email the bill: validate address, store `emailedTo/At`, toast. **SIM** | [x] |
+| 27 | `send-bill-phone` | Sets `billSentAt`, resolves bill calls (see rules) | [x] |
+| 28 | `verify-payment` | Exact amount only; closes the bill | [x] |
+| 29 | `punch-order` | Open Punch dialog (optionally for a given spot) | [x] |
+| 30 | `punch-add` / 31 `punch-dec` | Quantity 0–20 per item; dialog re-renders | [x] |
+| 32 | `create-punch` | Creates or appends a punch round (see rules) | [x] |
+| 33 | `analytics-spot` | Filters the analytics page by a table row | [x] |
+| 34 | `download-report` | CSV of the current period and spot | [x] |
+| 35 | `add-waiter` | Open Add waiter dialog | [x] |
+| 36 | `create-waiter` | Name required, unique, clamp 1–8, toast `${name} added — can handle ${n} tables at a time.` | [x] |
+| 37 | `remove-waiter` | Blocked while loaded; confirm `Remove ${name} from this location?` | [x] |
+| 38 | `open-sidebar` / 39 `close-sidebar` | Mobile drawer (merged app uses the SaaS shell) | [x] |
+| 40 | `not-in-demo` | **REPLACE** — the muted sidebar items link to the real SaaS pages | [BLOCKED: Phase 8 merge replaces the demo toast with the SaaS link] |
+| 41 | `reset-demo` | **DEV** — confirm "Reset the demo to its starting state.", reseed, reset all transient state, toast "Demo reset to its starting state." | [x] |
+| 42 | `simulate-order` | **DEV** — random spot (prefers quiet ones), random name, 1–2 items, random waiter; rings the alert | [x] |
+
 
 ## B. Customer actions (30, from `data-cp-action`)
 
-`add-item` [x] · `dec-item` [ ] · `cart` (empty → toast "Your cart is empty — add something from
-the menu.") [ ] · `checkout` (empty → "Add something from the menu first.") [ ] · `pick-waiter` [ ]
-· `place-order` [x] · `join-request` [x] · `join-cancel` [ ] · `join-approve` [x] · `join-deny` [ ] ·
-`join-regenerate` [ ] · `join-verify` [x] · `thumb` (both thumbs → chooser) [x] · `google` [ ] ·
-`contact` [x] · `submit-feedback` (empty → "Please write a short message.") [ ] · `bill` [x] ·
-`download-bill` (only when completed; otherwise "The bill is not paid yet.") [ ] · `home` [x] ·
-`menu` [x] · `service` [x] · `service-waiter` / `service-bill` [ ] · `hours` [ ] · `wifi`
+`add-item` [x] · `dec-item` [x] · `cart` (empty → toast "Your cart is empty — add something from
+the menu.") [ ] · `checkout` (empty → "Add something from the menu first.") [ ] · `pick-waiter` [x]
+· `place-order` [x] · `join-request` [x] · `join-cancel` [x] · `join-approve` [x] · `join-deny` [x] ·
+`join-regenerate` [x] · `join-verify` [x] · `thumb` (both thumbs → chooser) [x] · `google` [x] ·
+`contact` [x] · `submit-feedback` (empty → "Please write a short message.") [x] · `bill` [x] ·
+`download-bill` (only when completed; otherwise "The bill is not paid yet.") [x] · `home` [x] ·
+`menu` [x] · `service` [x] · `service-waiter` / `service-bill` [x] · `hours` [x] · `wifi`
 (locked → "Wi-Fi is available only after your order is accepted.") [ ] · `copy-wifi` (toast
-"Wi-Fi password copied.") [x] · `call` **REPLACE** with `tel:` [ ] · `directions` **REPLACE** with
-Google Maps [ ] · `custom` **REPLACE** with the https link [ ] · `write` **REPLACE** with the
-existing review-writer flow [ ].
+"Wi-Fi password copied.") [x] · `call` **REPLACE** with `tel:` [x] · `directions` **REPLACE** with
+Google Maps [x] · `custom` **REPLACE** with the https link [x] · `write` **REPLACE** with the
+existing review-writer flow [BLOCKED: Phase 8 review-writer].
 
 Editor preview rule: inside the phone preview, links toast "This is the live preview. Open the
 live page to follow links." and customer actions toast "Live preview — open “View live page” to
-click through." [ ]
+click through." [x]
 
 ## C. Change, input and key handlers
 
