@@ -1,0 +1,381 @@
+diff --git a/AI_MENU_PHOTOS.md b/AI_MENU_PHOTOS.md
+new file mode 100644
+index 0000000..8544313
+--- /dev/null
++++ b/AI_MENU_PHOTOS.md
+@@ -0,0 +1,189 @@
++# AI Dish Photos for the Menu
++
++Owner-approved feature (2026-10-14). Owners can generate a professional dish photo for a menu item
++with AI. Customers see a small thumbnail in the menu and can open the photo full screen.
++
++**Status:** Phase 1 (UI + mock generation + mock credits) is built. Phase 2 (real image provider,
++real credits, R2 storage) is NOT built and must not start before Stage 2/4 (database, API routes,
++R2, Upstash) exist. Real AI keys must never be placed in browser code.
++
++This feature reverses the old "menus are text only" rule. PRD 5.5.6, business-rules 11.20 and
++security 4A/4C were updated to match; this file is the detailed spec they point to.
++
++---
++
++## 1. Decisions (owner-approved)
++
++| Topic | Decision |
++|---|---|
++| What AI makes | One dish photo per item from the item name and "What's in it". Text to image only. No "upload my photo and enhance it" in v1 |
++| Prompt | Built by the server (`buildMenuImagePrompt` in `lib/ai-images.ts`). Owners never type a prompt |
++| Approval | A generated photo is a draft. It is attached to the item only after the owner taps "Use this photo" |
++| Customer view | Thumbnail in the list. Tap opens the photo full screen. Default **Fit** (whole photo); a "Fill screen" button covers the whole phone |
++| Label | Customers always see "AI-generated image, for illustration" in the viewer and a one-line note under the menu |
++| Orientation | Portrait 2:3 so it fills a phone screen well |
++
++### Plan allowances (placeholders, finalize before launch, see section 11)
++
++| Plan | AI photos | Resets |
++|---|---|---|
++| Free | 3 | Never (one-time trial) |
++| Starter | 15 | Every billing month |
++| Pro | 40 | Every billing month |
++| Enterprise | 100 (an admin can raise it per business) | Every billing month |
++
++There is **no unlimited tier**. Numbers live in `plans.page.ai_images` (`schema.sql` seed and
++`lib/mock/plans.ts`). Rule of thumb for the final numbers: allowance x cost per image should stay
++around 10 to 15 percent of the plan price. Check the provider's current price per image first; do not
++guess it.
++
++---
++
++## 2. Owner flow
++
++1. Customer page editor > Menu > an item. Each item has a photo square with **Add photo**
++   (**Change photo** and **Remove photo** once it has one).
++2. Add photo needs an item name first ("Enter an item name first, so the photo matches the dish.").
++3. The dialog shows the remaining count, for example "3 of 3 AI photos left (one-time trial)".
++4. **Make photo** reserves one credit and generates. The dialog cannot be closed while it works.
++5. The owner sees the photo and picks **Use this photo**, **Make another** (uses another credit) or
++   **Discard** (the credit stays used, the work was done).
++6. If generation fails, the credit is refunded and the owner sees a plain message.
++7. Out of credits: no Make photo button; a clear message and a link to Billing (Free), or "they
++   refill when your next billing month starts" (paid).
++8. The photo is saved with the rest of the page when the owner saves (same Save as every other edit).
++
++Downgrade: existing photos stay. Only new generation stops (same idea as business-rules 11.5).
++
++## 3. Customer flow
++
++- Menu screen: items with a photo show a 72 px thumbnail on the right. Items without a photo look
++  exactly as before.
++- Tap the thumbnail: full-screen viewer (`components/customer-page/photo-viewer.tsx`) with the photo,
++  the dish name, price, "What's in it", and the AI label.
++- **Fit** shows the entire photo. **Fill screen** covers the entire phone and crops the edges a little.
++- Close with the X button or Escape. The page behind does not scroll while it is open, and focus
++  returns to the thumbnail.
++
++---
++
++## 4. Cost protection (the most important part)
++
++Every image costs real money. These layers all apply, in this order, on every generate call:
++
++1. **Feature switch.** `system_settings.ai_images.enabled` must be true. Ships `false`.
++2. **Eligibility.** Signed-in owner, verified email, business `status = active` (not past_due,
++   suspended or cancelled), `ai_images_disabled = 0`, and the page belongs to this business.
++3. **Plan allowance.** Credits left on the plan (see 1). Free is a lifetime trial.
++4. **Daily hard cap per business**, on every plan: `business_daily_cap` (10 per day).
++5. **Cooldown and concurrency.** At most one running job per business; a short cooldown between
++   starts (`cooldown_seconds`); plus an Upstash rate limit per business per minute.
++6. **Global daily budget.** `daily_budget_paise` in `system_settings.ai_images`. When today's
++   provider spend reaches it, generation pauses for everyone until the next day, and an admin is
++   alerted at 70 and 90 percent.
++7. **Admin kill switches:** global (`enabled`) and per business (`ai_images_disabled`).
++8. **Provider-side spending limit.** Set a hard monthly cap in the provider's console. This is the
++   real safety net if every rule above had a bug.
++9. **One image per request, fixed size.** No batch (n = 1), no custom sizes, no free-text prompts.
++10. **Idempotency.** The client sends a key per click; the same key never creates a second job or a
++    second charge (`ai_image_jobs UNIQUE (business_id, idempotency_key)`).
++
++### Reserve, generate, settle
++
++```
++1  Validate input (item name, ownership, plan, status)              -> 4xx, nothing spent
++2  Atomic reserve (ONE statement, so parallel requests cannot overspend):
++     UPDATE businesses SET ai_images_used = ai_images_used + 1, ai_images_lifetime_used = ai_images_lifetime_used + 1
++      WHERE id = ? AND ai_images_disabled = 0 AND <plan allowance not reached> AND <daily cap not reached>
++   0 rows changed -> "no credits" / "daily limit", nothing spent
++3  Insert ai_image_jobs (status reserved) with the idempotency key
++4  Call the provider (timeout, no automatic retries that could double-charge)
++5a Success: re-encode, store draft in R2, status ready, return the draft reference
++5b Failure or safety block: refund (ai_images_used - 1), status failed, credit_charged = 0
++6  Owner approves -> status approved, the item's `image` is saved with page_config
++   Owner discards or never approves -> status discarded / expired; the credit stays used
++```
++
++Draft images that are never approved are deleted from R2 after 24 hours (cron).
++
++---
++
++## 5. Data model (Phase 2)
++
++Already added to `schema.sql`:
++
++- `businesses.ai_images_used`, `ai_images_lifetime_used`, `ai_images_reset_at`, `ai_images_disabled`
++- table `ai_image_jobs` (audit trail, idempotency, spend)
++- `system_settings` row `ai_images` (ships `enabled: false`, no budget set)
++- `plans.page.ai_images` = `{ limit, period }` in the plans seed
++
++Menu item shape (`lib/mock/customer-page.ts`): `image?: { key, variant, ai: true } | null`.
++`key` is OUR random id (Stage 4: the R2 object key), never an owner-supplied URL. The save route's zod
++schema must accept only `^[a-z0-9-]{8,40}$` keys that exist in `ai_image_jobs` for this business with
++status approved, and reject any unknown key in the object.
++
++## 6. API routes (Phase 2)
++
++| Route | Purpose |
++|---|---|
++| `POST /api/menu-photos/generate` | Runs steps 1 to 5 above. Body: location id, item name, details, idempotency key. Returns the draft reference + remaining credits |
++| `POST /api/menu-photos/approve` | Marks a ready draft approved (owner confirmed). Idempotent |
++| `DELETE /api/menu-photos/[key]` | Removes a photo and its R2 files when an owner removes the photo or the item |
++| `GET /api/menu-photos/usage` | Credits left, daily left, period reset date |
++| Admin: `/admin` spend view | Today's spend, per business usage, switches (global and per business), audit log |
++
++All routes: authenticated, CSRF/origin checked like other owner routes, zod-validated, rate limited.
++
++## 7. Image and storage
++
++- Generate portrait 2:3. Re-encode with `sharp` to WebP: full size about 1080 x 1620 (a few hundred
++  KB at most) and a thumbnail about 160 x 240. Strip metadata. Random file names.
++- Served only from the one fixed R2 public domain (`R2_PUBLIC_DOMAIN`). CSP `img-src` adds only that
++  domain. No hotlinking, ever.
++- Per-business R2 storage cap rises from 5 MB to 20 MB (security 4A) to hold the photos.
++- Deleting a menu item, removing a photo, deleting a location or the account deletes the R2 files.
++- `<img>` gets `width` and `height`, `loading="lazy"` for thumbnails, and a meaningful `alt`.
++
++## 8. Safety and privacy
++
++- The prompt is the only thing sent to the provider: a fixed food-photo style plus the cleaned dish
++  name and details. Nothing about the owner, the business, or customers is sent.
++- Cleaned text only (letters, digits and a few marks), so text cannot act as an instruction.
++- Block outputs the provider flags; refund the credit.
++- The AI label is mandatory on the customer page (avoid misleading customers about the real dish).
++- Privacy Policy and Terms must name the image provider and say photos are AI-generated before launch.
++- Owners can always remove a photo. Admins can remove any photo and disable AI photos for a business.
++
++## 9. Mock (Phase 1) vs real (Phase 2)
++
++| Phase 1 file | Becomes in Phase 2 |
++|---|---|
++| `lib/mock/ai-images.ts` (browser credit ledger, fake provider, "(fail)" test name) | Deleted. Replaced by the routes in section 6 |
++| `components/menu-photo.tsx` (drawn placeholder) | Renders the real R2 `<img>` (same props) |
++| `lib/mock/plans.ts` `ai_images` | Read from the `plans` seed row |
++| `lib/ai-images.ts` (constants, prompt builder, messages) | Kept, shared by the server routes |
++| `components/dashboard/menu-photo-dialog.tsx`, `photo-viewer.tsx`, `menu-screen.tsx` | Kept; only the generate call changes |
++
++To try the refund path in the mock, give a dish a name that contains "(fail)".
++
++## 10. Tests Phase 2 must pass
++
++- Two parallel generate calls with 1 credit left: exactly one succeeds.
++- The same idempotency key twice: one job, one credit.
++- Provider failure and safety block: credit refunded, nothing attached.
++- Free owner after 3 photos: refused, no provider call. Paid owner at the monthly limit: refused;
++  after the reset date: allowed.
++- 11th generation in a day: refused on any plan. Past-due or suspended business: refused.
++- Global budget reached: refused for everyone; admin kill switch: refused.
++- Saving a menu with a made-up `image.key`, another business's key, or a URL: rejected.
++- Removing an item or photo deletes the R2 files; an unapproved draft is deleted after 24 hours.
++- A downgrade keeps existing photos and stops new generation.
++
++## 11. Launch gates (all required before `enabled: true`)
++
++1. Image provider and model chosen; current price per image verified from the provider's pricing page.
++2. Allowances in section 1 recalculated from that price; plan table, pricing page and `schema.sql` updated.
++3. Provider-side hard spending limit set; `daily_budget_paise` set; alerts wired.
++4. R2 bucket, public domain and CSP updated; cleanup cron running.
++5. Privacy Policy and Terms updated (provider named, AI-generated photos).
++6. Section 10 tests pass.
+diff --git a/PRD.md b/PRD.md
+index 3f4e6dc..470ad89 100644
+--- a/PRD.md
++++ b/PRD.md
+@@ -394,8 +394,9 @@ required. Exact screens and wireframes: `customer-page-ui-spec.md`.
+    automatically (5.5.5). Its saved value is kept, so turning it back on needs no retyping.
+ 5. **Structured fields only.** Owners fill fields in fixed templates. No HTML, CSS, JavaScript,
+    Markdown or embeds, ever (security-and-reliability.md section 4C).
+-6. **No images and no uploads on the customer page.** Only the business logo (Settings) is an
+-   image. There is no photo gallery and no menu images.
++6. **No owner uploads and no galleries on the customer page.** The images are the business logo
++   (Settings) and the AI-generated dish photos on menu items that WE generate and store
++   (5.5.6, AI_MENU_PHOTOS.md). Owners never upload photos or paste image links.
+ 7. **Same QR and NFC, always.** Editing the page never changes the slug (business-rules.md 9).
+ 8. **Quantity limits by plan, not feature locks.** Every plan can use every block type; plans differ
+    only in how much they can add (business-rules.md section 1 and 11). The one plan-gated feature in the
+@@ -495,8 +496,8 @@ button grid, social icon row.
+ - Minimum tap target 44 x 44 px; body text at least 16 px; one-tap Call, WhatsApp and Copy actions.
+ 
+ **5.5.6 Menu / Services and prices (manual builder, optional)**
+-There is no menu link option and no image upload. The owner builds the list by hand; everything
+-except the item name is optional.
++There is no menu link option and no photo upload. The owner builds the list by hand; everything
++except the item name is optional. An item can also have one **AI-generated dish photo** (below).
+ - Label adapts to the business type: **Menu** (café, restaurant), **Services and prices** (salon,
+   gym), **Products** (retail, other). The owner can rename the title (max 40 chars).
+ - **Lists (categories):** up to 12, each with a name (max 40), added with **Add category**.
+@@ -515,6 +516,19 @@ except the item name is optional.
+ - The **Menu button is shown to customers only when at least one item has a name.**
+ - Prices are display text only. There is no ordering, cart or payment in v1.
+ - Drag-and-drop reorder of lists and items is nice-to-have and may follow after v1 launch.
++- **AI dish photo (per item, optional).** Full spec: AI_MENU_PHOTOS.md.
++  - **Add photo** on an item (needs an item name first) opens a dialog. The server makes a
++    professional food photo from the item name and "What's in it"; the owner never writes a prompt.
++  - The owner sees the photo first and chooses **Use this photo**, **Make another** or **Discard**.
++    Nothing is attached until they approve. **Change photo** and **Remove photo** follow.
++  - Every photo uses one plan credit: Free 3 (one-time trial), Starter 15 / month, Pro 40 / month,
++    Enterprise 100 / month. There is no unlimited tier. A failed generation refunds the credit.
++    Extra caps (daily per business, cooldown, global budget, admin switches) are in
++    AI_MENU_PHOTOS.md section 4. Counter shown in the editor: "AI photos 3 / 3 left".
++  - **Customer view:** the item shows a small thumbnail; tapping it opens the photo full screen
++    (**Fit** by default, **Fill screen** to cover the whole phone), with the name, price and details.
++    The page says photos are AI-generated for illustration. Items without a photo are unchanged.
++  - Existing photos stay after a downgrade; only new generation stops.
+ 
+ **5.5.7 Contact and hours, Wi-Fi**
+ - Phone and WhatsApp number: digits with optional leading `+`, 7 to 15 digits (E.164 style).
+@@ -527,7 +541,8 @@ except the item name is optional.
+   before it can be activated (business-rules.md 11, rule 15).
+ 
+ **5.5.8 Removed and restricted options**
+-- **Photo gallery: removed** for every business type (no image uploads on the customer page).
++- **Photo gallery: removed** for every business type (no owner image uploads on the customer page).
++  The only photos are AI-generated menu item photos (5.5.6).
+ - **Menu link / external menu: removed.** Menus are built manually (5.5.6).
+ - **Order online and Book now are not built-in buttons** for any business type. An owner who wants
+   them adds them as custom link buttons.
+@@ -668,4 +683,5 @@ and Limited Use statement (google-approval.md section 8).
+ - Owner-supplied HTML, CSS, JavaScript or embeds on the customer page (structured blocks only)
+ - Online ordering, carts, payments or a table/appointment booking engine on the customer page
+   (café, salon and restaurant pages have no "Order online" or "Book now" buttons)
+-- Photo gallery or any image upload on the customer page (menus are text only)
++- Photo gallery or any owner image upload on the customer page (menu photos are AI-generated by us,
++  never uploaded; see AI_MENU_PHOTOS.md)
+diff --git a/PROGRESS.md b/PROGRESS.md
+index ac01a7a..122d385 100644
+--- a/PROGRESS.md
++++ b/PROGRESS.md
+@@ -1755,3 +1755,24 @@ findings, and a real payment + password reset have been tested end to end.
+   the post-mount overlay was verified through the script, hydration safety is by
+   construction (first render uses the default profile). Next: unchanged —
+   Stage 2 (Database) on a `feat/stage-2-*` branch.
++
++- 2026-10-14 — AI dish photos, Phase 1 (mock) DONE (owner-approved feature, spec in
++  AI_MENU_PHOTOS.md). Menu items can carry an approved AI photo: owner dialog (Add photo > Make photo >
++  preview > Use this photo / Make another / Discard) in `components/dashboard/menu-photo-dialog.tsx`,
++  thumbnail + full-screen viewer (Fit default, Fill screen, close, Escape, focus return, scroll lock)
++  in `components/customer-page/menu-screen.tsx` and `photo-viewer.tsx`. Cost controls are mocked the
++  way the real ones will work (`lib/ai-images.ts` shared rules + prompt builder; `lib/mock/ai-images.ts`
++  browser ledger): plan allowance (Free 3 one-time, Starter 15, Pro 40, Enterprise 100; never
++  unlimited), 10/day cap, 3 s cooldown, reserve-before-generate with refund on failure, dialog cannot be
++  closed mid-generation. Photos are drawn placeholders (`components/menu-photo.tsx`); a dish named
++  with "(fail)" simulates a provider failure. Also: `MenuImage` type + `isValidMenuImage` (our key only,
++  never a URL; tampered localStorage is rejected), `plans.page.ai_images`, "AI dish photos" row on the
++  pricing and billing cards, PhoneFrame now contains the full-screen viewer, schema.sql (businesses
++  `ai_images_*` columns, `ai_image_jobs`, `ai_images` setting that ships OFF, plans seed), env.example
++  (AI_IMAGE_*, R2_PUBLIC_DOMAIN), and PRD / business-rules / security / ui-spec updated (the old "no
++  images" rules were reversed on purpose). Verified: `tsc` + `npm run build` pass; browser run
++  (headless Chromium) passed: generate/approve, refund on failure, cooldown, mid-generation close
++  blocked, out-of-credits state, save, public page thumbnail + viewer at 390 px and 1280 px, viewer
++  contained in the dashboard phone preview, tampered image key rejected, no console errors; schema.sql
++  runs in SQLite. NOT done (Phase 2, needs Stage 2/4): real provider, server credits, R2, rate limits,
++  admin spend view, privacy/terms update; launch gates are in AI_MENU_PHOTOS.md section 11.
+diff --git a/business-rules.md b/business-rules.md
+index bc829ae..418ffdb 100644
+--- a/business-rules.md
++++ b/business-rules.md
+@@ -33,7 +33,9 @@ to this spec — do not infer different behavior.
+ Custom link buttons are the same on every plan: the owner adds as many as needed. Only the hard security
+ cap in security-and-reliability.md 4C applies (20 per location).
+ 
+-There is no photo gallery and no image upload on the customer page.
++There is no photo gallery and no owner image upload on the customer page. The only photos are the
++AI-generated menu item photos we create and store (rule 20 and AI_MENU_PHOTOS.md); AI photo
++allowances per plan are in the plan table below.
+ 
+ Social links, contact and hours, announcement, Wi-Fi and the thank-you message have no plan limit
+ (only the field-size caps in 4C). These values are proposals; confirm or edit them in the `plans`
+@@ -371,8 +373,12 @@ Spec: PRD.md section 5.5. Rules that must be built exactly:
+     and no business-type restriction, so a café, salon or restaurant can add "Order online" or "Book now"
+     as custom links. Only the hard cap (security-and-reliability.md 4C) and the https rules apply. Changing
+     business type never hides or removes custom links.
+-20. **The menu is built manually.** There is no menu URL field and no images. A menu config with an
+-    unknown key is rejected. The Menu button is shown only when at least one item has a name.
++20. **The menu is built manually.** There is no menu URL field and no owner-uploaded or owner-linked
++    images. The only image on a menu item is an AI-generated photo that the owner approved (AI_MENU_PHOTOS.md):
++    the item stores OUR image key, never a URL, and a key that does not belong to this business is
++    rejected. AI photos use plan credits (Free 3 one-time, Starter 15/month, Pro 40/month, Enterprise
++    100/month; never unlimited); a failed generation refunds the credit; a downgrade keeps existing
++    photos and stops new generation. A menu config with an unknown key is rejected. The Menu button is shown only when at least one item has a name.
+     Everything except the item name is optional (price, "What's in it", tag, sold out).
+ 21. **Call, WhatsApp and Directions act directly** (tel:, wa.me, Google Maps link built by the server
+     from validated values). Menu, Wi-Fi and Hours and contact open their own screen with a back arrow.
+diff --git a/customer-page-ui-spec.md b/customer-page-ui-spec.md
+index 344fe4d..a812c7e 100644
+--- a/customer-page-ui-spec.md
++++ b/customer-page-ui-spec.md
+@@ -63,7 +63,10 @@ wraps; hidden when none are shown.
+ 
+ ### 1.4 Screens opened by buttons (each has a 44 px back arrow and a title)
+ - **Menu** (or Services and prices, Products): list headings with items. Each item shows name, tag chip
+-  and price; "What's in it" in small text under the name; Sold out items greyed with a chip. No images.
++  and price; "What's in it" in small text under the name; Sold out items greyed with a chip. An item with an AI photo shows a 72 px square thumbnail on the right;
++  tapping it opens the photo full screen (Fit by default, a "Fill screen" button, a 44 px close button,
++  name, price, details and "AI-generated image, for illustration"). A one-line note under the list says
++  photos are AI-generated for illustration.
+ ```
+   <-  Menu
+   Coffee
+@@ -150,7 +153,8 @@ The Menu button is shown to customers.
+ Add category
+ ```
+ Only the item name is needed. Price, "What's in it", tag and sold out are optional. No link field, no
+-image upload. At the plan limit: "Item limit reached. Upgrade for more items." With no named items the
++owner image upload. Each item has a photo square with Add photo / Change photo / Remove photo, which
++opens the AI photo dialog (AI_MENU_PHOTOS.md); the row header shows "AI photos 3 / 3 left (trial)". At the plan limit: "Item limit reached. Upgrade for more items." With no named items the
+ editor shows "The Menu button stays hidden until you add at least one item."
+ 
+ ### 2.6 Top bar
+diff --git a/security-and-reliability.md b/security-and-reliability.md
+index b99ed6e..4fb5366 100644
+--- a/security-and-reliability.md
++++ b/security-and-reliability.md
+@@ -98,6 +98,7 @@ the `x-forwarded-for` header. On limit exceeded, return **429** with a `Retry-Af
+ | Public review page load (`/r/[slug]`) | 60 / minute / IP |
+ | Signup | 5 / hour / IP |
+ | Logo upload | 10 / hour / business |
++| AI dish photo generation | 3 / minute / business, one running job at a time, 10 / day / business on every plan, plus the plan credits and the global daily budget (AI_MENU_PHOTOS.md section 4) |
+ | All other authenticated API routes | 120 / minute / business |
+ 
+ **Bot protection on public forms:** use **Cloudflare Turnstile** (free, no CAPTCHA
+@@ -199,9 +200,10 @@ must stay well under that.
+ | Logo stored version | re-encoded to WebP/PNG, max 512 x 512 px (should end up well under 150 KB) |
+ | Logos per business | 1. A new upload replaces the old one, and the old R2 file is deleted |
+ | QR codes | Generated on demand for PNG/PDF/SVG downloads and not stored per download. At most one stored QR image per review page, overwritten on regenerate |
+-| Total R2 storage per business | 5 MB. Reject uploads beyond it |
++| AI dish photos | Generated by us, never uploaded by owners. Stored as re-encoded WebP: full size about 1080 x 1620 plus a small thumbnail, random names. At most one photo per menu item. Unapproved drafts are deleted after 24 hours. Full rules and cost caps: AI_MENU_PHOTOS.md |
++| Total R2 storage per business | 20 MB (logo + AI dish photos). Reject beyond it |
+ | Upload route body | Stop reading the request stream once it passes 1.5 MB and return 413. Do not trust the `Content-Length` header alone |
+-| Other file uploads | None. The customer page has no image uploads (no gallery). Any new upload feature needs its own limits added here first |
++| Other file uploads | None. Owners cannot upload photos to the customer page (no gallery). The AI dish photos above are the only other images. Any new upload feature needs its own limits added here first |
+ 
+ **Text and request sizes**
+ 
+@@ -323,8 +325,9 @@ the public on OUR domain. That makes it a phishing, XSS and abuse surface. These
+   (`upi://pay?pa=...&pn=...&cu=INR`, every value URL-encoded, no amount). `upi:` is allowed for this
+   one link only; `javascript:`, `data:` and every other scheme stay rejected. The owner never types a link.
+ - MUST NOT load images from owner-supplied URLs (no hotlinking). The customer page has no owner-uploaded
+-  images; the only image is the business logo we re-encoded and stored ourselves, served from one fixed
+-  storage domain; CSP `img-src` allows only `'self'`, `data:` and that domain.
++  images; the only images are the business logo and the AI dish photos, both re-encoded and stored by
++  us, served from one fixed storage domain; CSP `img-src` allows only `'self'`, `data:` and that domain.
++  A menu item stores our image key (`^[a-z0-9-]{8,40}$`), never a URL.
+ - MUST NOT use owner-supplied text in page `<title>`, meta tags or redirects without escaping.
+ - Analytics events (Phase D) accept only allowlisted `event_type` values and only `target_key`s that exist
+   in the saved config; the URL to open is never taken from the request.
