@@ -23,6 +23,7 @@ import { useMockBusiness } from "@/lib/use-business";
 import { BarChart } from "./bar-chart";
 import { ShareQrPlaceholder } from "./empty-state";
 import { Gauge } from "./gauge";
+import { AnalyticsOrderingSection } from "./ordering-cards";
 import { SectionError } from "./section-error";
 import { CardSkeleton, StatCardSkeleton } from "./skeletons";
 import { StatCard } from "./stat-card";
@@ -190,6 +191,9 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
           )}
         </>
       )}
+
+      {/* Merge M9: table/room ordering analytics, below the review content. */}
+      <AnalyticsOrderingSection />
     </div>
   );
 }

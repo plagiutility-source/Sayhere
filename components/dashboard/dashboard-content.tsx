@@ -27,6 +27,7 @@ import { EmptyFeedback, ShareQrPlaceholder } from "./empty-state";
 import { FeedbackList, feedbackDisplayName } from "./feedback-list";
 import { Gauge } from "./gauge";
 import { DownloadIcon, PlusIcon } from "./icons";
+import { DashboardOrderingSection } from "./ordering-cards";
 import { PlanWidget } from "./plan-widget";
 import { ReviewOfTheWeek } from "./review-of-the-week";
 import { SectionError } from "./section-error";
@@ -260,6 +261,9 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
           ) : null}
         </>
       )}
+
+      {/* Merge M9: table/room ordering, below the review content. */}
+      <DashboardOrderingSection />
     </div>
   );
 }
