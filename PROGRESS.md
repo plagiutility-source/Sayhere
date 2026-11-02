@@ -1296,6 +1296,29 @@ cancellation acceptance tests in security-and-reliability.md section 7 pass.
 **Done when:** all five security reviews are logged with no open high-severity
 findings, and a real payment + password reset have been tested end to end.
 
+## Merged feature: Tables & Rooms QR Ordering (2026-11-02)
+Merged from the finished standalone build. Only cafe, restaurant and hotel businesses see it; salon,
+gym, retail and other types are unchanged.
+
+- [x] Gate + sidebar: **Orders** (`/orders`) and **Tables/Rooms** (`/rooms`), 404 for other types.
+- [x] Real SaaS data via `lib/rooms/adapter.ts`: business, locations, saved Customer page menu
+      (prices parsed; unparseable = "Ask staff"), hours, contact and page config. The seed is only a
+      corrupt-storage/test fallback and is never adopted for real location ids.
+- [x] Live layer (request bell, sound toggle, live title), owner orders/rooms/QR/waiters/punch/bill,
+      and the Tables/Rooms tab in the Customer page editor.
+- [x] Public `/r/<slug>/<code>`: menu, cart, checkout, join gate, reorder, service calls, bill, PDF and
+      review flow. Reception `/r/<slug>` has no ordering.
+- [x] Dashboard/analytics ordering sections below existing content; existing cards and numbers unchanged.
+- [x] Demo-only code removed (simulate tool, demo menu, demo invoice details, demo copy, `resetDemo`).
+- [x] Safety: print-only CSS, validated tel/maps/https links, no hex in rooms code, no
+      `dangerouslySetInnerHTML`/`innerHTML`, namespaced non-clashing storage keys.
+- [x] Docs: PRD 5.8, business-rules 14, security 4E, Stage 2 schema proposal. CI runs `rooms-check`.
+- [x] Checks: typecheck, build, category 112, loyalty 97, menu-import 283, rooms 154.
+
+**Not built (Stage 2):** server-side bills/rounds/join codes, realtime, owner authentication on the
+ordering endpoints, email delivery of bills, retention and audit. `_sayhere-ref/` was removed after
+the merge.
+
 ## Open decisions (owner must answer; agent must not guess)
 - DECIDED (2026-10-23): menu PDFs upload directly to a private R2 object with a short-lived signed
   URL, stay at most 24 hours and are deleted after extraction. The 8 MB limit stays; see

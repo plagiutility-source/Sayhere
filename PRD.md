@@ -684,6 +684,43 @@ Rules: business-rules.md section 12. Tables: schema.sql "LOYALTY PROGRAM". Code:
 the `qrcode` package already listed in provider-reference.md), Apple/Google Wallet passes, SMS or WhatsApp verification,
 birthday or win-back messages, stamps for Google reviews.
 
+### 5.8 Table & room QR ordering (café, restaurant, hotel)
+Merged 2026-11-02. Only businesses whose type is `cafe`, `restaurant` or `hotel` see this feature;
+`salon`, `gym`, `retail` and `other` see no new navigation, page, card or QR control.
+
+**Owner**
+- **Orders** (`/orders`) and **Tables/Rooms** (`/rooms`, labelled "Rooms" for a hotel) appear after
+  Locations in the sidebar. The existing dashboard live layer adds the request bell, order-bell sound
+  toggle and a "(N) Live table request" title while requests wait.
+- Each location holds up to 12 tables/rooms. A spot has a name, a permanent code and its own QR
+  (`/r/<slug>/<code>`); it can be paused (the printed code stays valid and shows "not available") and
+  renamed. The Tables/Rooms QR panel lives on **Locations**, and a **Tables/Rooms page** tab in the
+  Customer page editor edits the announcement, thank-you, Wi-Fi, menu title, hours/contact, call,
+  directions and one custom link.
+- Orders screen: accept (`new` → `preparing`), mark served, bill & payment, cancel (only from `new`),
+  direct punch (staff order with no table), add/rename spots and manage waiters.
+- Dashboard and Analytics gain an ordering section **below** the existing cards/charts: orders,
+  earnings, average bill, collected, open tables, a 7/30/90-day bar chart and recent bills. Existing
+  cards, numbers and charts are unchanged.
+
+**Customer**
+- Scanning a spot QR opens that table/room page: the business header, review block, menu from the
+  Customer page, cart and checkout (name, optional phone, guests, waiter choice), or a join gate when
+  a bill is already open.
+- Joining an open bill needs the host's approval and a 6-digit code (5 minutes, 5 attempts); the
+  request itself expires after 2 minutes. A reorder adds a round to the same bill.
+- Calling a waiter or asking for the bill creates one live request for the spot; the owner resolves it
+  from the Orders screen. When the counter sends the bill it appears on the customer's phone; payment is
+  recorded by staff (Cash, UPI or Card) and **no money moves online**. A paid bill can be downloaded as a
+  PDF for 5 minutes and then leads into the review flow.
+- Prices are display text parsed with `parseMenuPrice()`. An item whose price cannot be parsed, or is
+  sold out, cannot be ordered and shows "Ask staff"/"Sold out". Currency is INR (`en-IN`).
+- Per-table scan counts are display-only and do not count against the plan's scan limit.
+
+**Stage 1 boundary:** orders, bills, join requests and service calls live in this browser's
+localStorage (one blob, newest `savedAt` wins); there is no server, email or realtime channel. The
+Stage 2 tables and hardening are in `schema.sql` and security-and-reliability.md section 4E.
+
 ## 6. Billing Behavior
 - Upgrade: unlocks instantly, confirmation email sent immediately
 - Downgrade: takes effect at end of current billing cycle

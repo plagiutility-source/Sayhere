@@ -29,3 +29,5 @@ jobs:
         run: npm run typecheck
       - name: Build
         run: npm run build
+      - name: Rooms rules check
+        run: npm run rooms-check

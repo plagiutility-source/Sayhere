@@ -434,6 +434,59 @@ the public on OUR domain. That makes it a phishing, XSS and abuse surface. These
 
 ---
 
+## 4E. Table & Room Ordering (public QR pages)
+
+The table/room feature (PRD.md 5.8) exposes a public page per spot and lets anonymous customers create
+orders and join requests. The same untrusted-content rules as 4C apply, plus these:
+
+- **Routes and identity.** `/r/<slug>` stays the reception page; `/r/<slug>/<code>` is a spot page. Validate the
+  slug with the existing `^[a-z0-9]{6}$` rule and the spot code against the saved spot list for that location
+  (server-side in Stage 2). An unknown, paused or removed spot returns the same neutral "isn't available" page —
+  never a stack trace, internal id or list of valid codes. A spot code is an address, not an authorization token.
+- **Owner pages.** `/orders`, `/rooms` and every owner action require the authenticated owner in Stage 2. The
+  Stage 1 build is frontend-only mock data; no owner endpoint exists yet. `business_id` and `location_id` are
+  resolved from the session, never from the URL or body; every query filters by them (section 2).
+- **Bills and participants.** A bill is readable and writable only by its host device or an approved participant.
+  Stage 2 replaces the browser `deviceId` with a signed, http-only capability/session cookie; a request body can
+  never name another device, bill or business. Payment verification is an owner action, accepts only Cash/UPI/Card
+  and requires the exact total; customers cannot mark a bill paid.
+- **Join codes.** 6 digits, 5-minute life, 5 attempts, 2-minute request expiry, one request per device per bill.
+  Stage 2 hashes codes at rest, rate-limits request/approve/verify by IP and business, and expires/locks rows in the
+  database, not in the browser. A join code is never an owner credential and is never logged.
+- **Input and output.** Spot names, customer names, phone, notes and order text are untrusted plain text. React
+  escaping is the only renderer (`dangerouslySetInnerHTML` and `innerHTML` are forbidden in `lib/rooms` and
+  `components/rooms`); lengths follow the constants in `lib/rooms/constants.ts` (spot name 40, name 40, phone 20,
+  announcement/thank-you 160, feedback 1000). The menu title, item names, prices and details come from the Customer
+  page and follow 4C. Quantities are clamped to `CART_MAX_QTY`; guests to the allowed list.
+- **Links and QR.** QR art is generated locally from our own URL. The only external links are the validated
+  `tel:`, `https:` and Google Maps links from 4C; the customer page never accepts a `javascript:`, `data:` or
+  `http:` URL. The QR encodes the spot code, not a raw Google review URL, so a code cannot be used to redirect
+  off-site.
+- **No payments and no secrets.** Stage 1 records Cash/UPI/Card at the counter; it never handles card data, UPI
+  credentials or webhooks. No provider key, service-role key or owner token is stored in localStorage or shipped
+  to the customer page.
+- **Local state.** `syehere.mock.rooms.v1` and `syehere.mock.rooms.sound` are the only localStorage keys; the device
+  id is sessionStorage `syehere.mock.rooms.device`; the scan throttle is sessionStorage
+  `syehere.mock.rooms.scan`. Parse every value in try/catch and treat malformed JSON as absent (the store falls back
+  to an empty new-business state).
+- **Stage 2 tables.** `spots`, `waiters`, `bills`, `bill_rounds`, `bill_items`, `join_requests` and `service_calls`
+  are tenant-scoped by `business_id`; `rooms_page_configs` by `business_id` and `location_id`. Never trust an id from
+  the client, and use one data-access module so a missing filter is caught in review.
+
+**Acceptance tests**
+- A salon, gym, retail or other business gets 404 on `/orders` and `/rooms` and sees no ordering section.
+- A customer cannot open or add to another table's bill, even by changing the bill id, device id or spot code.
+- A wrong join code locks after 5 attempts; an expired request or code is refused; a second request from the same
+  device reuses the pending one.
+- A bill cannot be marked paid by the customer, and an amount one paisa off is refused.
+- A spot name or customer name containing `<script>alert(1)</script>` renders as plain text on the customer page and
+  in the owner dashboard/PDF.
+- A paused spot keeps its code but shows the neutral unavailable page; a removed spot shows the same page.
+- A `javascript:` custom link or an invalid phone never renders a live link.
+- Every Stage 2 table query is scoped by the session's `business_id` (tenant-isolation test extended to bills).
+
+---
+
 ## 5. Security Headers, CORS, Errors, Secrets
 
 - **Headers on every response** (configure in `next.config.js` `headers()`):

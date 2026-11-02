@@ -565,3 +565,168 @@ END;
 -- required. Decide which wins (ask a lawyer/accountant) and either drop those cascades
 -- or copy the needed fields into a separate ledger before deletion. The `refunds` table
 -- already avoids foreign keys for this reason.
+
+-- ============================================================
+-- TABLE & ROOM QR ORDERING (STAGE 2 — PROPOSED, NOT BUILT)
+-- ============================================================
+-- Stage 1 merges the ordering UI with browser-local state (one localStorage blob).
+-- These tables are the Stage 2 server model from the feature spec: hashed single-use
+-- join codes, per-record writes in transactions, owner authentication and realtime.
+-- `review_pages.id` is the location (the existing per-location row). Money is stored
+-- as integer paise, like the other billing tables. Every table below is tenant-scoped:
+-- every query MUST filter by the session's business_id (see TENANT ISOLATION above).
+-- `review_pages.spots_page_config` already stores the SaaS page editor's Rooms page;
+-- consolidate it with `rooms_page_configs` before building, rather than keeping two
+-- sources of truth.
+
+-- One table/room per location. `code` is permanent once issued (qr1, qr2, ...); pausing
+-- keeps it reserved. `scans` is display-only and never counts toward scans_used.
+CREATE TABLE spots (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id TEXT NOT NULL REFERENCES review_pages(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  code TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  scans INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (location_id, code)
+);
+
+CREATE INDEX idx_spots_business_id ON spots(business_id);
+CREATE INDEX idx_spots_location ON spots(location_id);
+
+-- Staff who can take tables/rooms. Load is derived from today's active bills, never stored.
+CREATE TABLE waiters (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id TEXT NOT NULL REFERENCES review_pages(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  max_tables INTEGER NOT NULL DEFAULT 3 CHECK (max_tables BETWEEN 1 AND 8),
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_waiters_business_id ON waiters(business_id);
+CREATE INDEX idx_waiters_location ON waiters(location_id);
+CREATE UNIQUE INDEX idx_waiters_location_name ON waiters(location_id, name COLLATE NOCASE);
+
+-- One running tab. `spot_id` is NULL only for a direct staff punch; `code` is NULL then too.
+-- Completion is only through payment verification (amount must equal total_paise exactly).
+CREATE TABLE bills (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id TEXT NOT NULL REFERENCES review_pages(id) ON DELETE CASCADE,
+  spot_id TEXT REFERENCES spots(id) ON DELETE SET NULL,
+  waiter_id TEXT REFERENCES waiters(id) ON DELETE SET NULL,
+  number INTEGER NOT NULL,
+  code TEXT,
+  customer_name TEXT NOT NULL,
+  phone TEXT,
+  guests INTEGER NOT NULL DEFAULT 2 CHECK (guests BETWEEN 1 AND 12),
+  host_device_id TEXT,                  -- Stage 2 replaces this with a signed capability/participant row
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'preparing', 'served', 'completed', 'cancelled')),
+  source TEXT NOT NULL DEFAULT 'customer' CHECK (source IN ('customer', 'punch')),
+  total_paise INTEGER NOT NULL DEFAULT 0,
+  payment_amount_paise INTEGER,
+  payment_mode TEXT CHECK (payment_mode IS NULL OR payment_mode IN ('Cash', 'UPI', 'Card')),
+  accepted_at TEXT,
+  paid_at TEXT,
+  bill_sent_at TEXT,
+  emailed_to TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (location_id, number)
+);
+
+CREATE INDEX idx_bills_business_id ON bills(business_id);
+CREATE INDEX idx_bills_location_status ON bills(location_id, status, created_at);
+CREATE INDEX idx_bills_spot ON bills(spot_id, status);
+CREATE INDEX idx_bills_waiter ON bills(waiter_id, created_at);
+
+-- A bill has one or more rounds; a reorder/punch appends a round. `via` records the source.
+CREATE TABLE bill_rounds (
+  id TEXT PRIMARY KEY,
+  bill_id TEXT NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+  round_no INTEGER NOT NULL,
+  via TEXT NOT NULL CHECK (via IN ('customer', 'reorder', 'punch')),
+  by_name TEXT,
+  participant_id TEXT,
+  total_paise INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (bill_id, round_no)
+);
+
+CREATE INDEX idx_bill_rounds_bill ON bill_rounds(bill_id, round_no);
+
+-- Immutable line snapshots: menu names and prices are copied when ordered, so later
+-- menu edits never rewrite an old bill.
+CREATE TABLE bill_items (
+  id TEXT PRIMARY KEY,
+  bill_id TEXT NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+  round_id TEXT NOT NULL REFERENCES bill_rounds(id) ON DELETE CASCADE,
+  menu_item_id TEXT,                    -- loose reference into page_config JSON; NULL for a free-text punch
+  name TEXT NOT NULL,
+  unit_price_paise INTEGER NOT NULL,
+  qty INTEGER NOT NULL CHECK (qty BETWEEN 1 AND 20),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_bill_items_bill ON bill_items(bill_id);
+CREATE INDEX idx_bill_items_round ON bill_items(round_id);
+
+-- One reusable request per device per bill. Store only a hash of the 6-digit join code;
+-- code life 5 minutes, 5 attempts, request life 2 minutes. Enforced in the database in
+-- Stage 2, not in the browser.
+CREATE TABLE join_requests (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  bill_id TEXT NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+  device_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'joined', 'denied', 'cancelled', 'locked')),
+  join_code_hash TEXT,
+  code_expires_at TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 5,
+  expires_at TEXT NOT NULL,
+  approved_at TEXT,
+  denied_at TEXT,
+  joined_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (bill_id, device_id)
+);
+
+CREATE INDEX idx_join_requests_bill_status ON join_requests(bill_id, status);
+CREATE INDEX idx_join_requests_business ON join_requests(business_id, created_at);
+
+-- One open call per spot: asking for the bill replaces an open waiter call and vice versa.
+CREATE TABLE service_calls (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id TEXT NOT NULL REFERENCES review_pages(id) ON DELETE CASCADE,
+  spot_id TEXT NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
+  bill_id TEXT REFERENCES bills(id) ON DELETE SET NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('waiter', 'bill')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+  customer_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at TEXT
+);
+
+CREATE INDEX idx_service_calls_location_status ON service_calls(location_id, status, created_at);
+CREATE UNIQUE INDEX idx_service_calls_one_open ON service_calls(spot_id) WHERE status = 'open';
+
+-- Stage 2 Rooms/Tables page content. The Stage 1 app stores this in `review_pages.spots_page_config`;
+-- consolidate before building (see note above). `config` is the same validated JSON shape and 100 KB cap.
+CREATE TABLE rooms_page_configs (
+  location_id TEXT PRIMARY KEY REFERENCES review_pages(id) ON DELETE CASCADE,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  config TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_rooms_page_configs_business ON rooms_page_configs(business_id);

@@ -473,3 +473,52 @@ Spec: PRD.md section 5.7. Code: `lib/loyalty/rules.ts` (the ONE place these rule
    rooms plus GSTIN or a local licence for hotel; nothing for general). These are format checks only.
 
 ---
+
+## 14. Table & room QR ordering (café, restaurant, hotel)
+
+Spec: PRD.md section 5.8. Code: `lib/rooms/rules.ts` (the ONE place these rules live) and
+`lib/rooms/adapter.ts` (the SaaS business, locations, menu and hours). Merged 2026-11-02.
+
+1. **Eligibility is fail-closed.** The feature exists only when `supportsTableOrdering(business_type)` is true:
+   `cafe`, `restaurant` or `hotel`. `salon`, `gym`, `retail`, `other` and an unknown type get no Orders or
+   Tables/Rooms nav item, no ordering page, no dashboard/analytics section and no QR panel. Reception (the normal
+   `/r/<slug>` page) never has ordering.
+2. **Spots.** One location has at most 12 tables/rooms. A spot has a name (max 40), a permanent code and its own
+   QR/NFC link `/r/<slug>/<code>`. Adding is refused at 12; renaming changes the name only; pausing keeps the code
+   reserved and shows "not available" to customers; deleting is not offered. A per-spot scan is counted at most once
+   per device per 30 minutes and is display-only — it never counts toward `scans_used` or the plan limit.
+3. **Menu.** Ordering reuses the location's saved Customer page menu and its plan item limit. Only items with a
+   parseable price are orderable; unparseable items show "Ask staff", and sold-out items stay visible but cannot be
+   added. Prices are display text parsed by `parseMenuPrice()`; currency is INR.
+4. **Bills.** A bill is one running tab per spot, with rounds. Status is `new` → `preparing` → `served` →
+   `completed`; `cancelled` is allowed only from `new`. Accepting sets `acceptedAt` once. A reorder or a staff punch
+   on an open bill adds a round and puts the bill back to `new`. Completion happens only through payment
+   verification, where the entered amount must equal the bill total exactly. Payment modes are Cash, UPI and Card;
+   the amount is recorded by staff and **no online payment is collected**. Staff can also punch a direct order with
+   no table; it has no QR code.
+5. **Joining.** The device that created a bill is its host. A second device sees the join gate, asks with a name, and
+   the host approves or denies. Approval issues a 6-digit code valid for 5 minutes with 5 attempts; the request
+   expires after 2 minutes; too many wrong codes lock it until the host issues a new code. One request per device per
+   bill is reused while pending or approved. Only the host device or an approved participant can see or add to the
+   bill. A staff-punched bill with no host is claimed by the first device that opens it (Stage 1 limitation).
+6. **Waiters.** Up to 8 waiters per location, unique names (case-insensitive), each with a capacity of 1 to 8 spots.
+   A waiter's load is the number of distinct spots with an active bill created today. Full or paused waiters are not
+   offered; a waiter cannot be removed while load is above zero. A bill keeps its assigned waiter after creation.
+7. **Service calls.** One open request per spot: asking for a waiter or the bill replaces the other open request.
+   Sending the bill marks that spot's open bill request done. The owner resolves a call with "Done".
+8. **Paid bills.** A completed bill is visible to the host/participant for 5 minutes and can be downloaded as a PDF
+   in that window; after it expires the customer returns to the review flow. A bill that has not been sent by the
+   counter cannot be viewed or downloaded.
+9. **Storage and sync (Stage 1).** The whole rooms state is one localStorage blob (`syehere.mock.rooms.v1`); sound
+   preference is `syehere.mock.rooms.sound`; the device id is sessionStorage `syehere.mock.rooms.device`. The newest
+   `savedAt` wins across tabs, with a 2.5 s poll. The stored blob is adopted only when its location ids match the
+   SaaS locations, so a standalone-demo blob is never shown. These keys do not collide with the existing
+   `syehere.mock.business/pages/loyalty/ai-images/category` keys.
+10. **Links.** The customer page builds `tel:` only from a valid phone (7 to 15 digits, optional leading `+`), maps
+    links only from an encoded address or an allowlisted Google Maps URL, and external/custom/social links only when
+    they are valid `https` URLs. No owner-entered URL is rendered unchecked.
+11. **Stage 2 is not built.** Server-side bills, rounds, join codes (hashed, single-use, rate-limited), realtime
+    delivery, owner authentication, emailing the bill, retention and audit entries remain Stage 2. Proposed tables:
+    schema.sql "TABLE & ROOM QR ORDERING (STAGE 2)"; security rules: security-and-reliability.md section 4E.
+
+---
