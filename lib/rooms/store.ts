@@ -60,20 +60,31 @@ function adopt(candidate: RoomsState): RoomsState {
   return latest;
 }
 
-function sameLocationIds(a: RoomsState, b: RoomsState): boolean {
-  if (a.locations.length !== b.locations.length) return false;
-  return a.locations.every((location, index) => location.id === b.locations[index].id);
+function sharesLocation(stored: RoomsState, initial: RoomsState): boolean {
+  const ids = new Set(stored.locations.map((location) => location.id));
+  return initial.locations.some((location) => ids.has(location.id));
+}
+
+function withMissingLocations(stored: RoomsState, initial: RoomsState): RoomsState {
+  const ids = new Set(stored.locations.map((location) => location.id));
+  const missing = initial.locations.filter((location) => !ids.has(location.id));
+  return missing.length ? { ...stored, locations: [...stored.locations, ...missing] } : stored;
 }
 
 /**
- * The stored state when it belongs to these locations, else `initial`.
- * A merge-time addition: the SaaS passes the real locations in, so a stored
- * blob from the standalone demo (different location ids) is never adopted.
+ * The stored state when it shares a location with the current page, else
+ * `initial`. A stored demo blob with no common id is still never adopted;
+ * locations that were added later are appended so saved tables and orders
+ * are not wiped out.
  */
 export function loadRoomsState(initial?: RoomsState): RoomsState {
   const stored = readStorage();
   if (initial) {
-    if (stored && sameLocationIds(stored, initial)) return adopt(stored);
+    if (stored && sharesLocation(stored, initial)) {
+      const merged = withMissingLocations(stored, initial);
+      if (merged !== stored && (!latest || merged.savedAt >= latest.savedAt)) latest = merged;
+      return adopt(merged);
+    }
     latest = initial;
     return initial;
   }

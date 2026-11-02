@@ -38,7 +38,8 @@ import {
 } from "../lib/rooms/rules";
 import { displaySpotName, parseMenuPrice, spotWord } from "../lib/rooms/format";
 import { freshRounds, freshServiceCalls } from "../lib/rooms/detect";
-import { seedOrStored, stateFromRaw } from "../lib/rooms/store";
+import { loadRoomsState, seedOrStored, stateFromRaw } from "../lib/rooms/store";
+import { STORAGE_KEYS } from "../lib/rooms/constants";
 import { emptyPageConfig } from "../lib/mock/customer-page";
 import {
   fallbackMenuItemId,
@@ -55,6 +56,7 @@ import type {
   OrderItem,
   Room,
   RoomsState,
+  SpotLocation,
   Waiter,
 } from "../lib/rooms/types";
 
@@ -114,6 +116,29 @@ function baseState(overrides: Partial<RoomsState> = {}): RoomsState {
     businessType: "cafe",
     savedAt: 1,
     ...overrides,
+  };
+}
+
+function locationForFix1(id: string): SpotLocation {
+  return {
+    id,
+    name: `Location ${id}`,
+    slug: id,
+    scans: 0,
+    active: true,
+    waiters: [],
+    rooms: [],
+  };
+}
+
+/** Put a state in a minimal fake localStorage for loadRoomsState checks. */
+function storeForLoad(state: RoomsState): void {
+  const values = new Map<string, string>();
+  values.set(STORAGE_KEYS.state, JSON.stringify(state));
+  (globalThis as unknown as {
+    window: { localStorage: { getItem: (key: string) => string | null } };
+  }).window = {
+    localStorage: { getItem: (key) => values.get(key) ?? null },
   };
 }
 
@@ -640,6 +665,47 @@ eq("28 invalid shape is rejected", stateFromRaw(JSON.stringify({ hello: 1 })), n
 const fallback28 = seedOrStored("nope");
 check("28 falls back to the seed", Array.isArray(fallback28.locations) && fallback28.locations.length === 2);
 check("28 seed has orders", seedOrStored(null).orders.length > 0);
+
+/* FIX1 — the public page passes one location, the owner saves all of them. */
+const fix1Locations = ["loc1", "loc2", "loc3"].map(locationForFix1);
+fix1Locations[0].rooms = [room("qr1", "Table 1")];
+const fix1Stored = baseState({ locations: fix1Locations, savedAt: 100 });
+storeForLoad(fix1Stored);
+const fix1Page = loadRoomsState(
+  baseState({ locations: [fix1Locations[0]], savedAt: 0 }),
+);
+eq("28 public page adopts shared-location state", fix1Page.locations.length, 3);
+check(
+  "28 public page keeps the owner's table",
+  fix1Page.locations[0].rooms.some((row) => row.code === "qr1"),
+);
+eq("28 public page table name", fix1Page.locations[0].rooms[0].name, "Table 1");
+
+const fix1FourLocations = [...fix1Locations, locationForFix1("loc4")];
+const fix1Four = loadRoomsState(
+  baseState({ locations: fix1FourLocations, savedAt: 0 }),
+);
+eq("28 later-added location is appended", fix1Four.locations.length, 4);
+eq("28 later-added location id", fix1Four.locations[3].id, "loc4");
+check(
+  "28 later-added location keeps the table",
+  fix1Four.locations[0].rooms.some((row) => row.code === "qr1"),
+);
+
+const fix1Other = loadRoomsState(
+  baseState({ locations: [locationForFix1("unrelated")], savedAt: 200 }),
+);
+eq(
+  "28 unrelated stored ids are not adopted",
+  fix1Other.locations.map((row) => row.id),
+  ["unrelated"],
+);
+check(
+  "28 unrelated state has no owner table",
+  fix1Other.locations.every(
+    (row) => !row.rooms.some((table) => table.code === "qr1"),
+  ),
+);
 
 /* O1 (spec section 17) ---------------------------------------------- */
 eq("O1 parse Rs 180", parseMenuPrice("Rs 180"), 180);
