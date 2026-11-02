@@ -1,10 +1,15 @@
 # Merge progress (Sayhere rooms -> Review SaaS)
 Branch: feat/rooms-merge | Reference: _sayhere-ref/ (read-only)
-- [x] M1 copy namespaced code   - [x] M2 gate + sidebar   - [ ] M3 real data adapter
-- [ ] M4 live provider + topbar - [ ] M5 Orders + Tables pages - [ ] M6 Locations QR panel
+- [x] M1 copy namespaced code   - [x] M2 gate + sidebar   - [x] M3 real data adapter
+- [x] M4 live provider + topbar - [ ] M5 Orders + Tables pages - [ ] M6 Locations QR panel
 - [ ] M7 editor tab   - [ ] M8 public table page - [ ] M9 dashboard + analytics cards
 - [ ] M10 remove demo code - [ ] M11 css/storage/safety - [ ] M12 docs + CI - [ ] M13 final + PR
 ## Notes / stubs / decisions
+- M3: new `lib/rooms/adapter.ts` — business (name, initials, type, tagline, colours via `getBrandTheme`, time zone) from `useBusiness()`; locations from `useMockLocations()` as spots with **empty rooms/waiters keyed by the real location id**; one menu from the stored page config with `parseMenuPrice()`, stable `category+name` fallback ids, unreadable price = "Ask staff" and not orderable; hours/contact/announcement/buttons mapped from the same page config. `initialRoomsState()` = a new business with no spots, no waiters, no orders, no calls.
+- M3: the adapter imports **none** of `DEMO_MENU`/`DEMO_BUSINESS`/`DEMO_WEEK`/`configTemplate`. The copied customer/owner pages still reference those fixtures until M8/M10 replace them, and no route mounts them yet.
+- M3 check: group 20 now builds its Wi-Fi config through the adapter instead of `configTemplate`; added adapter assertions (fallback id, price text, "Ask staff", sold out, duplicate ids, empty new-business state, hours, initials) without adding a 29th group, because the file asserts exactly 28 groups.
+- M4: `components/rooms/owner/DashboardLive.tsx` wraps the dashboard and mounts `OwnerProvider` + `LiveAlerts` + the `(N) Live table request` title **only** when `supportsTableOrdering(business.business_type)`; every other type gets its children untouched (no provider, no polling, no title change). The title is only prefixed while requests wait and restores the page's own title after.
+- M4: new `components/rooms/owner/LiveTopbar.tsx` (not Sayhere's Topbar) adds the live-requests bell panel and the order-bell sound toggle; `components/dashboard/shell.tsx` renders it in place of the static bell for eligible types only, and `app/(dashboard)/layout.tsx` wraps the shell. Orders links point at `/orders` (404 until M5).
 - M2: gate is new `lib/category/ordering.ts` (`supportsTableOrdering` = cafe/restaurant/hotel, fail-closed for salon/gym/retail/other/unknown). Deliberately did **not** add a matrix to `lib/category/features.ts` (spec merge map suggested it, task M2 forbade it); that file is untouched.
 - M2: `DashboardNavItem` gained optional `requires` + `labelByType`; nav has Orders (`/orders`) and Tables (`/rooms`, label "Rooms" for hotel) after Locations; `components/dashboard/shell.tsx` filters by `business.business_type` (both sidebar call sites). Added `OrdersIcon`/`TablesIcon`; links 404 until M5 adds the pages.
 - M2 check: cafe/restaurant -> Orders+Tables, hotel -> Orders+Rooms, salon/gym/retail/other -> neither, unknown -> hidden (verified against the real nav data + gate).

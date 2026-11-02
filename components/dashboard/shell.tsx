@@ -24,7 +24,9 @@ import {
   useState,
 } from "react";
 import { Logo } from "@/components/logo";
+import { LiveTopbarActions } from "@/components/rooms/owner/LiveTopbar";
 import type { BusinessType } from "@/lib/brand/tokens";
+import { supportsTableOrdering } from "@/lib/category/ordering";
 import { getDashboardMock } from "@/lib/mock/dashboard";
 import { displayableLogo } from "@/lib/mock/store";
 import { resolveDemoScenario } from "@/lib/mock/demo";
@@ -295,18 +297,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              aria-label="Notifications"
-              title="Notifications (coming later)"
-              className="relative flex h-10 w-10 items-center justify-center rounded-control text-ink hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
-            >
-              <BellIcon size={18} />
-              <span
-                aria-hidden="true"
-                className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-yellow"
-              />
-            </button>
+            {supportsTableOrdering(business.business_type) ? (
+              // Table/room ordering types get the live requests bell and the
+              // order-bell sound toggle (mounted inside DashboardLive).
+              <LiveTopbarActions />
+            ) : (
+              <button
+                type="button"
+                aria-label="Notifications"
+                title="Notifications (coming later)"
+                className="relative flex h-10 w-10 items-center justify-center rounded-control text-ink hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+              >
+                <BellIcon size={18} />
+                <span
+                  aria-hidden="true"
+                  className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-yellow"
+                />
+              </button>
+            )}
 
             <div className="flex min-w-0 items-center gap-2">
               {logoUrl ? (

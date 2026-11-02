@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/dashboard/shell";
+import { DashboardLive } from "@/components/rooms/owner/DashboardLive";
 
 /**
  * Authed dashboard segment. The product is a signed-in workspace, so these
@@ -13,5 +14,11 @@ export default function DashboardLayout({
 }) {
   // Stage 3 adds the real session check + redirect here, before rendering the
   // shell. Stage 1 is frontend-only mock data (no middleware, no protection).
-  return <DashboardShell>{children}</DashboardShell>;
+  // Table/room ordering types get the live layer (alerts, polling, title,
+  // sound); every other type renders exactly as before.
+  return (
+    <DashboardLive>
+      <DashboardShell>{children}</DashboardShell>
+    </DashboardLive>
+  );
 }
