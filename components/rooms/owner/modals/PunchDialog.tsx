@@ -7,7 +7,7 @@ import { btnOutline, btnPrimary, cx } from "@/components/rooms/shared/ui";
 import { CART_MAX_QTY, GUESTS_OPTIONS, NAME_MAX, PHONE_MAX } from "@/lib/rooms/constants";
 import { displaySpotName, money, orderSpotName } from "@/lib/rooms/format";
 import { createPunchOrder, findOpenBill, waiterName } from "@/lib/rooms/rules";
-import { DEMO_MENU, MENU_ITEMS } from "@/lib/rooms/seed";
+import { useRoomsMenu } from "@/lib/rooms/adapter";
 import { playBell } from "@/lib/rooms/sound";
 import type { OrderItem, SpotLocation } from "@/lib/rooms/types";
 import { useOwner } from "../OwnerProvider";
@@ -45,13 +45,24 @@ export function PunchDialog({
   const openBill = code ? findOpenBill(state, location.id, code) : null;
   const selectedRoom = code ? location.rooms.find((room) => room.code === code) || null : null;
   const waiters = location.waiters || [];
+  // The app's own menu (page config), priced and plan-limited; the standalone
+  // demo menu is gone. Sold-out or unpriced items cannot be punched.
+  const menu = useRoomsMenu(location.slug, "normal");
+  const menuItems: Record<string, { id: string; name: string; price: number }> = {};
+  for (const category of menu.categories) {
+    for (const item of category.items) {
+      if (item.orderable && item.price !== null) {
+        menuItems[item.id] = { id: item.id, name: item.name, price: item.price };
+      }
+    }
+  }
 
   const lines: OrderItem[] = Object.keys(items)
-    .filter((id) => items[id] > 0 && MENU_ITEMS[id])
+    .filter((id) => items[id] > 0 && menuItems[id])
     .map((id) => ({
       id,
-      name: MENU_ITEMS[id].name,
-      price: MENU_ITEMS[id].price,
+      name: menuItems[id].name,
+      price: menuItems[id].price,
       qty: items[id],
     }));
   const total = lines.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -141,55 +152,67 @@ export function PunchDialog({
 
       <p className="mt-4 text-[9px] uppercase tracking-[0.06em] text-ink-muted">Choose items</p>
       <div className="mt-1.5 max-h-[238px] overflow-y-auto rounded-[10px] border border-ink/10 bg-white px-2.5 py-1">
-        {DEMO_MENU.categories.map((category, categoryIndex) => (
-          <div key={category.name}>
-            <p
-              className={cx(
-                "mb-[3px] text-[8.5px] uppercase tracking-[0.06em] text-ink-muted",
-                categoryIndex ? "mt-2" : "mt-1",
-              )}
-            >
-              {category.name}
-            </p>
-            {category.items.map((item) => {
-              const qty = items[item.id] || 0;
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-2.5 border-b border-gray-100 py-[7px] last:border-b-0"
-                >
-                  <div className="min-w-0">
-                    <strong className="block text-[11px] font-medium">{item.name}</strong>
-                    <span className="mt-px block text-[9.5px] text-ink-muted">
-                      {money(item.price)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-[5px]">
-                    {qty ? (
+        {menu.categories.map((category, categoryIndex) => {
+          const rows = category.items.filter(
+            (item) => item.orderable && item.price !== null,
+          );
+          if (!rows.length) return null;
+          return (
+            <div key={category.name}>
+              <p
+                className={cx(
+                  "mb-[3px] text-[8.5px] uppercase tracking-[0.06em] text-ink-muted",
+                  categoryIndex ? "mt-2" : "mt-1",
+                )}
+              >
+                {category.name}
+              </p>
+              {rows.map((item) => {
+                const qty = items[item.id] || 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-2.5 border-b border-gray-100 py-[7px] last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <strong className="block text-[11px] font-medium">{item.name}</strong>
+                      <span className="mt-px block text-[9.5px] text-ink-muted">
+                        {money(item.price ?? 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-[5px]">
+                      {qty ? (
+                        <button
+                          type="button"
+                          className={stepClass}
+                          onClick={() => changeQty(item.id, -1)}
+                          aria-label={`Remove one ${item.name}`}
+                        >
+                          <Icon name="minus" size={12} />
+                        </button>
+                      ) : null}
+                      {qty ? <span className="min-w-4 text-center text-[10px] font-medium">{qty}</span> : null}
                       <button
                         type="button"
-                        className={stepClass}
-                        onClick={() => changeQty(item.id, -1)}
-                        aria-label={`Remove one ${item.name}`}
+                        className={qty ? stepClass : addClass}
+                        onClick={() => changeQty(item.id, 1)}
+                        aria-label={`Add one ${item.name}`}
                       >
-                        <Icon name="minus" size={12} />
+                        {qty ? <Icon name="plus" size={12} /> : "Add"}
                       </button>
-                    ) : null}
-                    {qty ? <span className="min-w-4 text-center text-[10px] font-medium">{qty}</span> : null}
-                    <button
-                      type="button"
-                      className={qty ? stepClass : addClass}
-                      onClick={() => changeQty(item.id, 1)}
-                      aria-label={`Add one ${item.name}`}
-                    >
-                      {qty ? <Icon name="plus" size={12} /> : "Add"}
-                    </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          );
+        })}
+        {!Object.keys(menuItems).length ? (
+          <p className="px-1 py-3 text-[11px] leading-[1.5] text-ink-muted">
+            No orderable menu items yet. Add prices to the menu on the customer page,
+            then punch an order.
+          </p>
+        ) : null}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2.5 rounded-[8px] bg-surface-muted px-2.5 py-[9px] text-[11px]">
         <span>

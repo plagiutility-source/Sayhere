@@ -21,8 +21,6 @@ import {
   cx,
 } from "@/components/rooms/shared/ui";
 import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
-import { LIVE_ALERT_EVENT } from "@/lib/rooms/detect";
-import { simulateOrder } from "@/lib/rooms/simulate";
 import {
   deltaLabel,
   displaySpotName,
@@ -172,32 +170,6 @@ function OrdersContent({
     );
   };
 
-  // DEV-ONLY: the demo's simulate-order tool; deleted at merge.
-  const simulate = () => {
-    const result = simulateOrder(state, location.id);
-    if (!result.ok) {
-      toast(result.error);
-      return;
-    }
-    save(result.state);
-    const order = result.order;
-    const round = orderRounds(order)[0];
-    window.dispatchEvent(
-      new CustomEvent(LIVE_ALERT_EVENT, {
-        detail: {
-          orderId: order.id,
-          kind: "order",
-          roundId: round ? round.id : null,
-          at: order.createdAt,
-        },
-      }),
-    );
-    const room = location.rooms.find((item) => item.code === order.code) || null;
-    toast(
-      `New order · ${displaySpotName(businessType, room)} · ${money(order.total)} from ${order.customerName}`,
-    );
-  };
-
   const toggleGroup = (key: string) => {
     setExpanded((current) =>
       current.indexOf(key) === -1 ? [...current, key] : current.filter((item) => item !== key),
@@ -243,10 +215,6 @@ function OrdersContent({
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={btnPrimary} onClick={() => setPunchCode("")}>
             <Icon name="plus" size={15} /> Punch order
-          </button>
-          {/* DEV-ONLY: simulated customer order; deleted at merge. */}
-          <button type="button" className={btnOutline} onClick={simulate}>
-            <Icon name="sparkles" size={15} /> Simulate customer order
           </button>
           <Link
             href={`/analytics?loc=${location.id}`}
@@ -391,10 +359,6 @@ function OrdersContent({
               Orders placed from a {table.toLowerCase()} QR appear here with the customer&apos;s name
               and a bell at the top of the dashboard.
             </p>
-            {/* DEV-ONLY: simulated customer order; deleted at merge. */}
-            <button type="button" className={cx(btnPrimary, btnSm, "mt-3")} onClick={simulate}>
-              <Icon name="sparkles" size={14} /> Simulate an order
-            </button>
           </section>
         )}
         </div>

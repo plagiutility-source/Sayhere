@@ -1,12 +1,11 @@
 /**
- * The demo's `billPdfBlob`: a one-page, hand-built PDF (no dependency) with the
- * business header, rounds, total and paid strip. Ported without changes to the
- * layout; the business name comes from the demo seed.
+ * `billPdfBlob`: a one-page, hand-built PDF (no dependency) with the business
+ * header, rounds, total and paid strip. The business name and address come
+ * from the app's own profile and page config, never from demo fixtures.
  */
 
 import { formatTime } from "./format";
 import { orderRounds } from "./rules";
-import { DEMO_BUSINESS } from "./seed";
 import type { Order } from "./types";
 
 function pdfSafe(value: string | number | null | undefined): string {
@@ -30,6 +29,10 @@ function pdfMoney(value: number | string | null | undefined): string {
 export type BillPdfContext = {
   spotName: string;
   waiterName: string;
+  /** The app's business name (never a demo brand). */
+  businessName: string;
+  /** The configured address; the line is omitted when it is empty. */
+  address?: string;
 };
 
 export function billPdfBlob(order: Order, context: BillPdfContext): Blob {
@@ -43,9 +46,8 @@ export function billPdfBlob(order: Order, context: BillPdfContext): Blob {
   const rule = (y: number) => commands.push(`0.8 w 40 ${y} m 555 ${y} l S`);
   let y = 800;
 
-  text(DEMO_BUSINESS.name, 20, true, 40, y);
-  text("12 Linking Road, Bandra West, Mumbai", 9, false, 40, y - 16);
-  text("GSTIN 27ABCDE1234F1Z5", 9, false, 40, y - 28);
+  text(context.businessName, 20, true, 40, y);
+  if (context.address) text(context.address, 9, false, 40, y - 16);
   text("BILL", 16, true, 430, y);
   text(`#${order.number}`, 10, false, 430, y - 16);
   text(formatTime(order.createdAt), 9, false, 430, y - 28);

@@ -206,13 +206,9 @@ export function HostPanel({
 
       {!pending.length && !codes.length ? (
         <p className="mt-2 text-[9px] leading-[1.45] text-ink-muted">
-          No one is waiting. Tap “Open guest view” to simulate Rahul’s phone in a new tab.
+          No one is waiting. Share the guest view so another phone can request to join.
         </p>
       ) : null}
-      <p className="mt-2 text-[8px] leading-[1.4] text-slate-400">
-        Demo only: both tabs share this browser&apos;s demo data. On real phones this arrives over
-        the server.
-      </p>
     </section>
   );
 }

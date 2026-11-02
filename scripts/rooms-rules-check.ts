@@ -38,7 +38,6 @@ import {
 } from "../lib/rooms/rules";
 import { displaySpotName, parseMenuPrice, spotWord } from "../lib/rooms/format";
 import { freshRounds, freshServiceCalls } from "../lib/rooms/detect";
-import { simulateOrder } from "../lib/rooms/simulate";
 import { seedOrStored, stateFromRaw } from "../lib/rooms/store";
 import { emptyPageConfig } from "../lib/mock/customer-page";
 import {
@@ -675,32 +674,6 @@ doneCallState.serviceCalls = [
   { ...dCallState.serviceCalls[0], status: "done" } as (typeof doneCallState.serviceCalls)[number],
 ];
 eq("D done call ignored", freshServiceCalls(doneCallState, new Set()).length, 0);
-
-/* DEV-ONLY simulate-order -------------------------------------------- */
-let simSeed = 7;
-const simRandom = () => {
-  simSeed = (simSeed * 1103515245 + 12345) % 2147483648;
-  return simSeed / 2147483648;
-};
-const simD = simulateOrder(baseState(), "loc1", NOW, simRandom);
-check("simulate returns an order", simD.ok);
-if (simD.ok) {
-  eq("simulate source", simD.order.source, "simulated");
-  eq("simulate status", simD.order.status, "new");
-  eq("simulate round via", simD.order.rounds && simD.order.rounds[0] ? simD.order.rounds[0].via : "", "simulated");
-  check(
-    "simulate picks an active spot",
-    baseState().locations[0].rooms.some((room) => room.code === simD.order.code && room.active),
-  );
-  eq("simulate appends one order", simD.state.orders.length, baseState().orders.length + 1);
-}
-const noRoomD = baseState();
-noRoomD.locations[0].rooms = [];
-eq(
-  "simulate needs an active spot",
-  simulateOrder(noRoomD, "loc1", NOW, simRandom).ok ? "ok" : "error",
-  "error",
-);
 
 /* Adapter (merge M3) — the app's own data shapes, no demo values -------- */
 const adapterLocation = {

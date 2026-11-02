@@ -13,7 +13,7 @@ import type { Order, Round, RoomsState, ServiceCall } from "./types";
 
 export type FreshRound = { order: Order; round: Round };
 
-/** DOM event used by the DEV-ONLY simulate tool to raise the alert locally. */
+/** DOM event used by staff actions (e.g. punch) to raise the alert locally. */
 export const LIVE_ALERT_EVENT = "rooms:live-alert";
 export type LiveAlertDetail = {
   orderId: string;

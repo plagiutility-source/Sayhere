@@ -12,7 +12,6 @@ import {
   type ReactNode,
 } from "react";
 import { MAX_ROOMS_PER_LOCATION } from "@/lib/rooms/constants";
-import { seedState } from "@/lib/rooms/seed";
 import { playBell } from "@/lib/rooms/sound";
 import { readSoundOn, saveSoundOn, useRoomsState } from "@/lib/rooms/store";
 import type { RoomsState, SpotBusinessType } from "@/lib/rooms/types";
@@ -37,7 +36,6 @@ type OwnerContextValue = {
   openRename: (locId: string, code: string) => void;
   openQr: (locId: string, code: string) => void;
   closeDialog: () => void;
-  resetDemo: () => void;
   setBusinessType: (type: SpotBusinessType) => void;
   origin: string;
   resetToken: number;
@@ -138,15 +136,6 @@ export function OwnerProvider({
 
   const closeDialog = useCallback(() => setDialog(null), []);
 
-  const resetDemo = useCallback(() => {
-    if (!window.confirm("Reset the demo to its starting state?")) return;
-    save(seedState());
-    setDialog(null);
-    setNavOpen(false);
-    setResetToken((value) => value + 1);
-    toast("Demo reset to its starting state.");
-  }, [save, toast]);
-
   const setBusinessType = useCallback(
     (type: SpotBusinessType) => {
       save({ ...state, businessType: type });
@@ -168,7 +157,6 @@ export function OwnerProvider({
       openRename,
       openQr,
       closeDialog,
-      resetDemo,
       setBusinessType,
       origin,
       resetToken,
@@ -187,7 +175,6 @@ export function OwnerProvider({
       openRename,
       openQr,
       closeDialog,
-      resetDemo,
       setBusinessType,
       origin,
       resetToken,

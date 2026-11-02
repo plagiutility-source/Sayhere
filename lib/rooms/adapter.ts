@@ -177,7 +177,7 @@ export function businessView(profile: BusinessProfile): RoomsBusinessView | null
   };
 }
 
-/** "Brew and Bean" -> "BB" (first + last word); never empty. */
+/** "Green Leaf Cafe" -> "GC" (first + last word); never empty. */
 export function initialsFromBusiness(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return "S";

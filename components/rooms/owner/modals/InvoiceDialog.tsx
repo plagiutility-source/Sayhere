@@ -15,6 +15,8 @@ import {
   waiterName,
 } from "@/lib/rooms/rules";
 import type { Order, PaymentMode, RoundVia } from "@/lib/rooms/types";
+import { useRoomsPage } from "@/lib/rooms/adapter";
+import { useBusiness } from "@/lib/use-business";
 import { useOwner } from "../OwnerProvider";
 
 const sectionHead = "text-[11.5px] leading-[1.55] text-ink-muted";
@@ -25,8 +27,8 @@ function roundViaLabel(via: RoundVia): string {
     customer: "Customer QR",
     reorder: "Added to the same bill",
     punch: "Punched by staff",
-    simulated: "Simulated",
-    seed: "Demo order",
+    simulated: "Staff entry",
+    seed: "Recorded bill",
   };
   return labels[via] || "Customer QR";
 }
@@ -34,6 +36,13 @@ function roundViaLabel(via: RoundVia): string {
 /** The demo's `openBillModal`: invoice paper, send to phone, email (SIM) and payment. */
 export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () => void }) {
   const { state, save, toast, businessType } = useOwner();
+  const business = useBusiness();
+  const location = state.locations.find((item) => item.id === order.locId) ?? null;
+  const page = useRoomsPage(location ? location.slug : null, "normal");
+  const address =
+    page.config?.buttons.hours.address?.trim() ||
+    page.config?.buttons.directions.value?.trim() ||
+    "";
   const [email, setEmail] = useState(order.emailedTo || "");
   const [emailError, setEmailError] = useState("");
   const [mode, setMode] = useState<PaymentMode>("Cash");
@@ -75,7 +84,7 @@ export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () =>
     if (!result) return;
     save(result.state);
     setEmailError("");
-    toast(`Bill #${order.number} sent to ${result.order.emailedTo} (demo).`);
+    toast(`Bill #${order.number} sent to ${result.order.emailedTo}.`);
   };
 
   const verify = () => {
@@ -121,13 +130,10 @@ export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () =>
       <div className="invoice-print-area mt-4 rounded-[10px] border border-black/10 bg-white p-4">
         <div className="flex items-start justify-between gap-3 border-b border-black/10 pb-3">
           <div>
-            <strong className="block text-[13px] font-medium">Brew and Bean</strong>
-            <span className="block text-[10.5px] text-ink-muted">
-              12 Linking Road, Bandra West, Mumbai
-            </span>
-            <span className="block text-[10.5px] text-ink-muted">
-              GSTIN 27ABCDE1234F1Z5 · FSSAI 1234567890123
-            </span>
+            <strong className="block text-[13px] font-medium">{business.name}</strong>
+            {address ? (
+              <span className="block text-[10.5px] text-ink-muted">{address}</span>
+            ) : null}
           </div>
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">
             Invoice
@@ -269,9 +275,6 @@ export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () =>
           </button>
         </div>
         {emailError ? <p className={errorClass}>{emailError}</p> : null}
-        <p className="mt-1.5 text-[10.5px] leading-[1.5] text-ink-muted">
-          Concept demo: email delivery is simulated in the browser; nothing leaves this page.
-        </p>
       </div>
 
       {canPay ? (

@@ -505,6 +505,8 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
     const href = URL.createObjectURL(billPdfBlob(bill, {
       spotName: orderSpotName(state, bill),
       waiterName: waiterName(state, bill.locId, bill.waiterId),
+      businessName: data.business.name,
+      address: data.hours.address,
     }));
     anchor.href = href;
     anchor.download = `syehere-bill-${bill.number}.pdf`;
@@ -1099,7 +1101,7 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
             </span>
           </p>
           <Link href={`/orders?loc=${order.locId}`} className={btnDirect}>
-            See it on the owner dashboard (demo)
+            See it on the owner dashboard
           </Link>
           <div className="mt-2.5 flex flex-col gap-2">
             <button
@@ -1699,7 +1701,7 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
           href={`/rooms?loc=${location.id}`}
           className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink"
         >
-          <Icon name="arrowLeft" size={15} /> Back to demo
+          <Icon name="arrowLeft" size={15} /> Back
         </Link>
         <Badge tone={room ? "blue" : "green"}>
           {room ? `${spot} QR · ${room.code.toUpperCase()}` : "Reception QR"}

@@ -452,7 +452,7 @@ function AnalyticsContent({
         ) : (
           <p className="px-4 py-5 text-[11px] text-ink-muted">
             No bills for {selectedLabel} in {PERIODS[period].range}. Place one from a{" "}
-            {spotLabel.toLowerCase()} QR, use Simulate order, or switch the range.
+            {spotLabel.toLowerCase()} QR or switch the range.
           </p>
         )}
       </section>
