@@ -54,8 +54,15 @@ export function useOwner(): OwnerContextValue {
   return value;
 }
 
-export function OwnerProvider({ children }: { children: ReactNode }) {
-  const { state, save } = useRoomsState();
+export function OwnerProvider({
+  children,
+  initialState,
+}: {
+  children: ReactNode;
+  /** Merge-time addition: the SaaS's real locations as empty spots. */
+  initialState?: RoomsState;
+}) {
+  const { state, save } = useRoomsState(initialState);
 
   /* Toast — the demo shows one message for 3 s. */
   const [toastMessage, setToastMessage] = useState("");

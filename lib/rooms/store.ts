@@ -60,8 +60,23 @@ function adopt(candidate: RoomsState): RoomsState {
   return latest;
 }
 
-export function loadRoomsState(): RoomsState {
+function sameLocationIds(a: RoomsState, b: RoomsState): boolean {
+  if (a.locations.length !== b.locations.length) return false;
+  return a.locations.every((location, index) => location.id === b.locations[index].id);
+}
+
+/**
+ * The stored state when it belongs to these locations, else `initial`.
+ * A merge-time addition: the SaaS passes the real locations in, so a stored
+ * blob from the standalone demo (different location ids) is never adopted.
+ */
+export function loadRoomsState(initial?: RoomsState): RoomsState {
   const stored = readStorage();
+  if (initial) {
+    if (stored && sameLocationIds(stored, initial)) return adopt(stored);
+    latest = initial;
+    return initial;
+  }
   if (stored) return adopt(stored);
   return latest || adopt(seedState());
 }
@@ -165,13 +180,13 @@ export type RoomsStore = {
  * React binding: starts from the seed so SSR and the first client render
  * match, then loads the stored state in an effect.
  */
-export function useRoomsState(): RoomsStore {
-  const [state, setState] = useState<RoomsState>(() => seedState());
+export function useRoomsState(initial?: RoomsState): RoomsStore {
+  const [state, setState] = useState<RoomsState>(() => initial ?? seedState());
 
   useEffect(() => {
-    setState(loadRoomsState());
+    setState(loadRoomsState(initial));
     return subscribe(setState);
-  }, []);
+  }, [initial]);
 
   const save = useCallback((next: RoomsState) => {
     const saved = saveRoomsState(next);

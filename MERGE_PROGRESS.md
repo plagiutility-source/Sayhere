@@ -1,10 +1,13 @@
 # Merge progress (Sayhere rooms -> Review SaaS)
 Branch: feat/rooms-merge | Reference: _sayhere-ref/ (read-only)
 - [x] M1 copy namespaced code   - [x] M2 gate + sidebar   - [x] M3 real data adapter
-- [x] M4 live provider + topbar - [ ] M5 Orders + Tables pages - [ ] M6 Locations QR panel
+- [x] M4 live provider + topbar - [x] M5 Orders + Tables pages - [ ] M6 Locations QR panel
 - [ ] M7 editor tab   - [ ] M8 public table page - [ ] M9 dashboard + analytics cards
 - [ ] M10 remove demo code - [ ] M11 css/storage/safety - [ ] M12 docs + CI - [ ] M13 final + PR
 ## Notes / stubs / decisions
+- M5: thin routes `app/(dashboard)/orders/page.tsx` and `app/(dashboard)/rooms/page.tsx` render the copied `OrdersPage`/`RoomsPage` inside the existing shell (same shape as the 5-line locations route), wrapped in `OrderingGate` which calls `notFound()` for salon/gym/retail/other. No Sayhere AppShell/Topbar/Sidebar and no demo bar is mounted.
+- M5: the provider is now seeded from the SaaS's real locations — `initialStateFromSpots(useRoomsLocations())` (new adapter helper) is passed to `OwnerProvider`, and `loadRoomsState(initial)` only adopts stored state whose location ids match, so the standalone demo blob is never shown. `SpotDialogs` is mounted in `DashboardLive` so add/rename/QR actions work.
+- M5: dev-only "simulate order" button and the demo seed fixtures are still inside the copied pages; M10 removes them.
 - M3: new `lib/rooms/adapter.ts` — business (name, initials, type, tagline, colours via `getBrandTheme`, time zone) from `useBusiness()`; locations from `useMockLocations()` as spots with **empty rooms/waiters keyed by the real location id**; one menu from the stored page config with `parseMenuPrice()`, stable `category+name` fallback ids, unreadable price = "Ask staff" and not orderable; hours/contact/announcement/buttons mapped from the same page config. `initialRoomsState()` = a new business with no spots, no waiters, no orders, no calls.
 - M3: the adapter imports **none** of `DEMO_MENU`/`DEMO_BUSINESS`/`DEMO_WEEK`/`configTemplate`. The copied customer/owner pages still reference those fixtures until M8/M10 replace them, and no route mounts them yet.
 - M3 check: group 20 now builds its Wi-Fi config through the adapter instead of `configTemplate`; added adapter assertions (fallback id, price text, "Ask staff", sold out, duplicate ids, empty new-business state, hours, initials) without adding a 29th group, because the file asserts exactly 28 groups.

@@ -128,6 +128,22 @@ export function initialRoomsState(
   };
 }
 
+/** The same empty state, for callers that already hold adapter spots. */
+export function initialStateFromSpots(
+  spots: readonly SpotLocation[],
+  businessType: SpotBusinessType,
+): RoomsState {
+  return {
+    locations: spots.map((spot) => ({ ...spot, rooms: [], waiters: [] })),
+    configs: {},
+    orders: [],
+    joinRequests: [],
+    serviceCalls: [],
+    businessType,
+    savedAt: 0,
+  };
+}
+
 /* ------------------------------------------------------------------------- */
 /* Menu                                                                      */
 /* ------------------------------------------------------------------------- */
