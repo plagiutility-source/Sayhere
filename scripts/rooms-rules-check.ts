@@ -39,8 +39,17 @@ import {
 import { displaySpotName, parseMenuPrice, spotWord } from "../lib/rooms/format";
 import { freshRounds, freshServiceCalls } from "../lib/rooms/detect";
 import { simulateOrder } from "../lib/rooms/simulate";
-import { configTemplate } from "../lib/rooms/seed";
 import { seedOrStored, stateFromRaw } from "../lib/rooms/store";
+import { emptyPageConfig } from "../lib/mock/customer-page";
+import {
+  fallbackMenuItemId,
+  hoursFromConfig,
+  initialRoomsState,
+  initialsFromBusiness,
+  menuFromConfig,
+  menuItemsById,
+  roomsPageConfigFrom,
+} from "../lib/rooms/adapter";
 import type {
   JoinRequest,
   Order,
@@ -477,7 +486,9 @@ eq("19 cancelled status", cancelled19.order?.status, "cancelled");
 
 /* 20 --------------------------------------------------------------- */
 group(20);
-const wifiConfig = configTemplate("rooms");
+const wifiPage = emptyPageConfig();
+wifiPage.buttons.wifi = { on: true, ssid: "TestGuest", password: "test-pass" };
+const wifiConfig = roomsPageConfigFrom(wifiPage, undefined, "Menu");
 const order20 = makeOrder({ code: "qr1", status: "new" });
 check("20 locked before accept", !wifiUnlockedForOrder(order20, wifiConfig, "cafe"));
 check("20 unlocked when preparing", wifiUnlockedForOrder({ ...order20, status: "preparing" }, wifiConfig, "cafe"));
@@ -690,6 +701,71 @@ eq(
   simulateOrder(noRoomD, "loc1", NOW, simRandom).ok ? "ok" : "error",
   "error",
 );
+
+/* Adapter (merge M3) — the app's own data shapes, no demo values -------- */
+const adapterLocation = {
+  id: "loc_cafe01",
+  business_id: "biz_test",
+  slug: "cafe01",
+  location_name: "Test Cafe",
+  google_review_url: null,
+  nfc_enabled: 1 as const,
+  is_active: 1 as const,
+  created_at: iso(NOW),
+  scans_used: 0,
+};
+const freshState = initialRoomsState([adapterLocation], "hotel");
+eq("adapter keys spots by real location id", freshState.locations[0].id, "loc_cafe01");
+eq("adapter new business has no spots", freshState.locations[0].rooms.length, 0);
+eq("adapter new business has no waiters", freshState.locations[0].waiters.length, 0);
+eq("adapter new business has no orders", freshState.orders.length, 0);
+eq("adapter business type", freshState.businessType, "hotel");
+eq("adapter state is unsaved", freshState.savedAt, 0);
+eq("adapter initials", initialsFromBusiness("Brew and Bean"), "BB");
+eq("adapter initials fallback", initialsFromBusiness("   "), "S");
+
+const adapterPage = emptyPageConfig();
+adapterPage.menu = {
+  categories: [
+    {
+      name: "Coffee",
+      items: [
+        { name: "Cold brew", price: "Rs 180", details: "Slow steeped", tag: "Popular", sold_out: false },
+        { name: "Market fish", price: "Ask staff", details: "", tag: null, sold_out: false },
+        { name: "Brownie", price: "Rs 120", details: "", tag: null, sold_out: true },
+        { name: "Cold brew", price: "from Rs 200", details: "", tag: null, sold_out: false },
+      ],
+    },
+  ],
+};
+const adapterMenu = menuFromConfig(adapterPage);
+const adapterCoffee = adapterMenu.categories[0].items;
+eq("adapter menu keeps the one menu", adapterMenu.categories.length, 1);
+eq("adapter menu fallback id from category + name", adapterCoffee[0].id, fallbackMenuItemId("Coffee", "Cold brew"));
+eq("adapter menu fallback id is stable", adapterCoffee[0].id, "mid_coffee_cold-brew");
+eq("adapter menu parses the price text", adapterCoffee[0].price, 180);
+eq("adapter menu price label", adapterCoffee[0].priceLabel, "\u20b9180");
+check("adapter menu orderable", adapterCoffee[0].orderable);
+eq("adapter unreadable price is null", adapterCoffee[1].price, null);
+eq("adapter unreadable price label", adapterCoffee[1].priceLabel, "Ask staff");
+check("adapter unreadable price is not orderable", !adapterCoffee[1].orderable);
+check("adapter sold-out item is not orderable", !adapterCoffee[2].orderable);
+check("adapter duplicate names get unique ids", adapterCoffee[3].id.endsWith("_2"));
+eq("adapter menu index size", Object.keys(menuItemsById(adapterMenu)).length, 4);
+
+const hoursPage = emptyPageConfig();
+hoursPage.buttons.hours = {
+  ...hoursPage.buttons.hours,
+  on: true,
+  week: {
+    ...hoursPage.buttons.hours.week,
+    mon: { closed: false, ranges: [{ open: "09:00", close: "21:00" }] },
+    sun: { closed: true, ranges: [] },
+  },
+};
+const adapterHours = hoursFromConfig(hoursPage);
+eq("adapter Monday hours", adapterHours.rows[0].hours, "9:00 \u2013 21:00");
+eq("adapter Sunday hours", adapterHours.rows[6].hours, "Closed");
 
 /* ------------------------------------------------------------------ */
 check("all 28 checklist groups are covered", groups.size === 28);
