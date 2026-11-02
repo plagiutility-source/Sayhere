@@ -1,10 +1,11 @@
 # Merge progress (Sayhere rooms -> Review SaaS)
 Branch: feat/rooms-merge | Reference: _sayhere-ref/ (read-only)
 - [x] M1 copy namespaced code   - [x] M2 gate + sidebar   - [x] M3 real data adapter
-- [x] M4 live provider + topbar - [x] M5 Orders + Tables pages - [ ] M6 Locations QR panel
+- [x] M4 live provider + topbar - [x] M5 Orders + Tables pages - [x] M6 Locations QR panel
 - [ ] M7 editor tab   - [ ] M8 public table page - [ ] M9 dashboard + analytics cards
 - [ ] M10 remove demo code - [ ] M11 css/storage/safety - [ ] M12 docs + CI - [ ] M13 final + PR
 ## Notes / stubs / decisions
+- M6: new `components/rooms/owner/RoomsQrSection.tsx` renders the Tables/Rooms QR panel for the location already selected on `/locations` (no second locations list, no change to listing/add/edit/plan limits). Tabs: Reception QR (points at the existing `/r/<slug>` page) and Tables/Rooms QR (per-spot QR, pause/activate, QR, copy, preview, add). Cap is `MAX_ROOMS_PER_LOCATION` (12), enforced by `openAdd` and disabled in the UI. Rendered only when `supportsTableOrdering`.
 - M5: thin routes `app/(dashboard)/orders/page.tsx` and `app/(dashboard)/rooms/page.tsx` render the copied `OrdersPage`/`RoomsPage` inside the existing shell (same shape as the 5-line locations route), wrapped in `OrderingGate` which calls `notFound()` for salon/gym/retail/other. No Sayhere AppShell/Topbar/Sidebar and no demo bar is mounted.
 - M5: the provider is now seeded from the SaaS's real locations — `initialStateFromSpots(useRoomsLocations())` (new adapter helper) is passed to `OwnerProvider`, and `loadRoomsState(initial)` only adopts stored state whose location ids match, so the standalone demo blob is never shown. `SpotDialogs` is mounted in `DashboardLive` so add/rename/QR actions work.
 - M5: dev-only "simulate order" button and the demo seed fixtures are still inside the copied pages; M10 removes them.

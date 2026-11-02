@@ -27,7 +27,9 @@ import {
 import { limitLabel } from "@/lib/mock/plans";
 import { useMockBusiness, useMockLocations } from "@/lib/use-business";
 import { CategoryLockBadge } from "@/components/category/category-lock-badge";
+import { RoomsQrSection } from "@/components/rooms/owner/RoomsQrSection";
 import { normalizeCategory } from "@/lib/category/features";
+import { supportsTableOrdering } from "@/lib/category/ordering";
 import { validateGoogleReviewUrl } from "@/lib/validation";
 import { CopyButton } from "./copy-button";
 import { DownloadIcon, PlusIcon } from "./icons";
@@ -215,6 +217,13 @@ export function LocationsContent() {
           </aside>
         ) : null}
       </div>
+
+      {/* Table/room ordering types only: QR panel for the selected location.
+          The locations list, addition, editing and plan limits above are
+          untouched. */}
+      {selected && supportsTableOrdering(business.business_type) ? (
+        <RoomsQrSection location={selected} />
+      ) : null}
 
       <AddLocationDialog
         open={addOpen}
