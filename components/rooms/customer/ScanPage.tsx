@@ -6,7 +6,7 @@ import { copyText } from "@/components/rooms/shared/clipboard";
 import { Icon } from "@/components/rooms/shared/icons";
 import { HostPanel } from "./HostPanel";
 import { JoinGate } from "./JoinGate";
-import { Badge, btnOutline, cx } from "@/components/rooms/shared/ui";
+import { cx } from "@/components/rooms/shared/ui";
 import { CART_MAX_QTY, GUESTS_OPTIONS, PAID_BILL_WINDOW_MS } from "@/lib/rooms/constants";
 import {
   billWindowText,
@@ -45,10 +45,15 @@ import { MenuPhoto } from "@/components/menu-photo";
 import { FeedbackScreen } from "@/components/customer-page/feedback-screen";
 import { GoogleScreen } from "@/components/customer-page/google-screen";
 import { ReviewScreen } from "@/components/customer-page/review-screen";
+import { ChoiceScreen } from "@/components/customer-page/choice-screen";
+import { HoursScreen } from "@/components/customer-page/hours-screen";
+import { CustomerHomeScreen } from "@/components/customer-page/customer-page";
+import { tileClasses } from "@/components/customer-page/button-grid";
+import { isStretchedTile } from "@/lib/customer-page";
 import type { RoomsPublicData } from "@/lib/rooms/adapter";
 import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
-import { isValidHttpsUrl, isValidPhone } from "@/lib/validation/page-config";
+import { isValidPhone } from "@/lib/validation/page-config";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
@@ -347,14 +352,6 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   }
 
   const url = absoluteUrl(origin, spotPath(slug, code));
-  const otherRoom = location.rooms.find((item) => item.active) ?? null;
-  const otherHref = room
-    ? spotPath(slug, "reception")
-    : otherRoom
-      ? spotPath(slug, otherRoom.code)
-      : `/rooms?loc=${location.id}`;
-  const otherLabel = room ? "View reception page" : `View a ${spot.toLowerCase()} QR`;
-  const activeRooms = location.rooms.filter((item) => item.active).length;
 
   const changeItem = (id: string, delta: number) => {
     if (!data.menuItems[id]?.orderable) return;
@@ -1284,57 +1281,15 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
       </Panel>
     );
   } else if (screen === "chooser") {
+    /* The reception page's screen, unchanged (review-SaaS 1D). */
     body = (
-      <Panel>
-        <ScreenHead
-          title="Thank you!"
-          sub="How would you like to continue?"
-          onBack={() => setScreen("home")}
-        />
-        <div className="px-0 py-4 text-center">
-          <h3 className="font-display text-[19px] font-medium text-[var(--cp-primary)]">
-            Both options help {data.business.name}
-          </h3>
-          <p className="mt-1.5 text-[11.5px] leading-[1.5] text-slate-600">
-            Pick whichever feels right. There is no wrong choice — you can always do both.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-2.5 rounded-[10px] border border-black/10 bg-white/70 p-3 text-left"
-            onClick={() => setScreen("google")}
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-              <Icon name="loyalty" size={17} />
-            </span>
-            <span>
-              <strong className="block text-[11.5px] font-medium">Continue on Google</strong>
-              <p className="mt-0.5 text-[10.5px] leading-[1.5] text-ink-muted">
-                Share your experience publicly in a Google review.
-              </p>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2.5 rounded-[10px] border border-black/10 bg-white/70 p-3 text-left"
-            onClick={() => setScreen("feedback")}
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-              <Icon name="feedback" size={17} />
-            </span>
-            <span>
-              <strong className="block text-[11.5px] font-medium">Contact the owner</strong>
-              <p className="mt-0.5 text-[10.5px] leading-[1.5] text-ink-muted">
-                Send a private message — the owner and our team read every one.
-              </p>
-            </span>
-          </button>
-        </div>
-        <p className="mt-3 text-center text-[10.5px] text-ink-muted">
-          No wrong choice — you can always do both.
-        </p>
-      </Panel>
+      <ChoiceScreen
+        businessName={data.business.name}
+        theme={data.brand}
+        onGoogle={() => setScreen("google")}
+        onContact={() => setScreen("feedback")}
+        onBack={() => setScreen("home")}
+      />
     );
   } else if (screen === "google") {
     body = (
@@ -1393,6 +1348,17 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
         </div>
       </Panel>
     );
+  } else if (screen === "hours" && data.pageHours) {
+    /* The reception page's screen, unchanged (review-SaaS 1D). */
+    body = (
+      <HoursScreen
+        hours={data.pageHours}
+        whatsappPhone={data.whatsappPhone}
+        openNow={data.openNow}
+        theme={data.brand}
+        onBack={() => setScreen("home")}
+      />
+    );
   } else if (screen === "hours") {
     body = (
       <Panel>
@@ -1401,374 +1367,197 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
           sub={config.hours.address}
           onBack={() => setScreen("home")}
         />
-        <div className="mb-2 flex items-center gap-2">
-          <span
-            className={
-              data.openNow
-                ? "rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green-deep"
-                : "rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-ink-muted"
-            }
-          >
-            {data.openNow ? "Open now" : "Closed now"}
-          </span>
-        </div>
-        {data.hours.rows.map((row) => (
-          <div
-            key={row.day}
-            className="flex justify-between border-b border-black/5 py-1.5 text-[11.5px]"
-          >
-            <span>{row.day}</span>
-            <span>{row.hours}</span>
-          </div>
-        ))}
-        <p className="mt-3 text-[11.5px] leading-[1.6] text-ink-muted">
-          {config.hours.address}
-          <br />
-          {config.hours.phone}
+        <p className="text-[12px] leading-[1.6] text-ink-muted">
+          Hours and contact are not set up for this page yet.
         </p>
-        {isValidPhone(config.hours.phone) ? (
-          <a href={`tel:${config.hours.phone.trim()}`} className={cx(btnLink, "mt-2.5")}>
-            <Icon name="phone" size={14} /> Call
-          </a>
-        ) : null}
       </Panel>
-    );
-  } else {
+    );  } else {
+    /* STEP 1 (merge fix): the table/room QR renders the SAME customer page the
+       reception QR renders (components/customer-page). Both QR options show one
+       page, one design and one set of controls; only the table strip and the
+       table tiles below are added. */
     const calls = room ? serviceCallsForSpot(state, location.id, room.code) : [];
     const waiterCall = calls.find((item) => item.kind === "waiter") || null;
     const billCall = calls.find((item) => item.kind === "bill") || null;
+    const tableTiles: {
+      key: string;
+      label: string;
+      icon: "bell" | "receipt" | "wifi";
+      onClick?: () => void;
+    }[] = [];
+    if (openBill) {
+      tableTiles.push({
+        key: "service",
+        label: "Call waiter",
+        icon: "bell",
+        onClick: () => setScreen("service"),
+      });
+    }
+    if (openBill?.billSentAt) {
+      tableTiles.push({
+        key: "bill",
+        label: "Bill",
+        icon: "receipt",
+        onClick: openBillScreen,
+      });
+    }
+    if (!openBill && paidBill) {
+      tableTiles.push({
+        key: "paid-bill",
+        label: "Paid bill",
+        icon: "receipt",
+        onClick: openBillScreen,
+      });
+    }
+    if (wifiReady) {
+      tableTiles.push({ key: "wifi", label: "Wi-Fi", icon: "wifi", onClick: openWifi });
+    }
+
     body = (
-      <Panel>
-        {config.announcement.on && config.announcement.text.trim() ? (
-          <div className="mb-[18px] rounded-control bg-[var(--cp-primary)] px-3 py-2.5 text-center text-[11.5px] leading-[1.45] text-white">
-            {config.announcement.text.slice(0, 160)}
-          </div>
-        ) : null}
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[var(--cp-secondary)] font-display text-xl font-medium tracking-[0.02em] text-[var(--cp-primary)]">
-          {data.business.initials}
-        </div>
-        <h1 className="mt-2.5 text-center font-display text-[22px] font-medium leading-[1.2] text-[var(--cp-primary)]">
-          {data.business.name}
-        </h1>
-        <p className="mt-[3px] text-center text-[12.5px] text-slate-600">{data.business.tagline}</p>
-        {room ? (
-          <div className="mt-4 flex items-center justify-center gap-1.5 rounded-[9px] bg-white/70 px-3 py-2 text-[11.5px] text-ink-muted">
-            <Icon name="qr" size={13} />
-            <span>
-              Ordering for <strong className="font-medium text-ink">{displaySpot}</strong>
-            </span>
-          </div>
-        ) : null}
-        {openBill && participant ? (
-          <div className="mt-3 flex items-start gap-2 rounded-[9px] bg-white/70 p-3 text-[11px]">
-            <Icon name="receipt" size={15} className="mt-0.5 shrink-0 text-[var(--cp-primary)]" />
-            <div>
-              <strong className="block text-[11.5px] font-medium">
-                {openBill.customerName}&apos;s bill is open
-              </strong>
-              <span className="text-[10.5px] leading-[1.5] text-ink-muted">
-                {money(openBill.total)} so far · anything you add joins this same bill. No name or
-                waiter needed.
-              </span>
-            </div>
-          </div>
-        ) : null}
-        {participant && participant.role === "guest" && openBill ? (
-          <div className="mt-2 flex items-center gap-1.5 rounded-[9px] bg-white/70 px-3 py-2 text-[10.5px] text-ink-muted">
-            <Icon name="users" size={13} />
-            <span>
-              You&apos;re ordering as <strong className="font-medium text-ink">{participant.name}</strong>{" "}
-              · joined with {openBill.customerName}
-            </span>
-          </div>
-        ) : null}
-        {paidBill ? (
-          <section
-            aria-label="Paid bill"
-            className="mt-3 rounded-[10px] border border-brand-green/25 bg-white/75 p-3"
-          >
-            <div className="flex items-start gap-2.5">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-green/15 text-brand-green-deep">
-                <Icon name="check" size={16} />
-              </span>
-              <div>
-                <strong className="block text-[11.5px] font-medium">Payment received — thank you!</strong>
-                <span className="text-[10.5px] leading-[1.5] text-ink-muted">
-                  Bill #{paidBill.number} is paid. Download it before the window closes.
+      <CustomerHomeScreen
+        business={{
+          name: data.business.name,
+          tagline: data.business.tagline,
+          business_type: data.business.type,
+          logo_url: null,
+        }}
+        theme={data.brand}
+        announcementText={data.announcementText}
+        socials={data.socials}
+        buttons={data.buttons}
+        onOpenMenu={() => setScreen("menu")}
+        onOpenHours={() => setScreen("hours")}
+        onThumbsUp={() => setScreen("chooser")}
+        onThumbsDown={() => setScreen("chooser")}
+        context={
+          <>
+            {room ? (
+              <div className="mt-lg flex items-center justify-center gap-sm rounded-control border border-black/10 bg-white px-md py-sm text-[13px] text-ink-muted">
+                <Icon name="qr" size={16} />
+                <span>
+                  Ordering for{" "}
+                  <strong className="font-medium text-ink">{displaySpot}</strong>
                 </span>
               </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between border-t border-black/10 pt-2">
-              <span className="text-[11px] text-ink-muted">
-                {orderSpotName(state, paidBill)}
-              </span>
-              <strong className="text-sm font-medium">{money(paidBill.total)}</strong>
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--cp-primary)] px-2.5 py-1.5 text-[10.5px] font-medium text-white"
-                onClick={openBillScreen}
-              >
-                <Icon name="receipt" size={14} /> View &amp; download
-              </button>
-              <span
-                className="text-[9.5px] tabular-nums text-ink-muted"
-                data-bill-expires={new Date(
-                  new Date(paidBill.paidAt as string).getTime() + PAID_BILL_WINDOW_MS,
-                ).toISOString()}
-              >
-                Available for {billWindowText(paidBillRemaining(paidBill))}
-              </span>
-            </div>
-          </section>
-        ) : null}
-        {openBill && participant ? (
-          <div className="mt-3 rounded-[10px] border border-black/10 bg-white/70 p-3">
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-                <Icon name="bell" size={17} />
-              </span>
-              <div>
-                <strong className="block text-[11.5px] font-medium">
-                  Your {spot.toLowerCase()} is open
-                </strong>
-                <span className="text-[10.5px] text-ink-muted">
-                  {participant.role === "guest" ? participant.name : openBill.customerName} · bill #
-                  {openBill.number} · {money(openBill.total)} so far
+            ) : null}
+            {openBill && participant ? (
+              <div className="mt-md flex items-start gap-sm rounded-control border border-black/10 bg-white p-md text-[13px]">
+                <Icon
+                  name="receipt"
+                  size={18}
+                  className="mt-0.5 shrink-0 text-[var(--cp-primary)]"
+                />
+                <div>
+                  <strong className="block font-medium">
+                    {openBill.customerName}&apos;s bill is open
+                  </strong>
+                  <span className="block text-[12px] leading-snug text-ink-muted">
+                    {money(openBill.total)} so far · anything you add joins this same bill.
+                  </span>
+                  {waiterCall ? (
+                    <span className="mt-xs block text-[12px] text-brand-green-deep">
+                      Waiter called at {formatTime(waiterCall.createdAt)} — someone is on the way.
+                    </span>
+                  ) : null}
+                  {billCall ? (
+                    <span className="mt-xs block text-[12px] text-brand-blue">
+                      Bill requested at {formatTime(billCall.createdAt)} — waiting for the counter.
+                    </span>
+                  ) : null}
+                  {openBill.billSentAt ? (
+                    <span className="mt-xs block text-[12px] text-brand-blue">
+                      Bill sent at {formatTime(openBill.billSentAt)} — open it below.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {participant && participant.role === "guest" && openBill ? (
+              <div className="mt-sm flex items-center gap-sm rounded-control bg-white px-md py-sm text-[12px] text-ink-muted">
+                <Icon name="users" size={15} />
+                <span>
+                  You&apos;re ordering as{" "}
+                  <strong className="font-medium text-ink">{participant.name}</strong> · joined
+                  with {openBill.customerName}
                 </span>
               </div>
-            </div>
-            {waiterCall ? (
-              <p className="mt-1.5 text-[10.5px] text-brand-green-deep">
-                Waiter called at {formatTime(waiterCall.createdAt)} — someone is on the way.
-              </p>
             ) : null}
-            {billCall ? (
-              <p className="mt-1.5 text-[10.5px] text-brand-blue">
-                Bill requested at {formatTime(billCall.createdAt)} — waiting for the counter to send
-                it.
-              </p>
-            ) : null}
-            {openBill.billSentAt ? (
-              <p className="mt-1.5 text-[10.5px] text-brand-blue">
-                <Icon name="receipt" size={12} /> Bill sent at {formatTime(openBill.billSentAt)} —
-                open it from the Bill option below.
-              </p>
-            ) : null}
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-[9px] border border-black/10 bg-white px-2 py-2 text-left text-[10.5px] font-medium text-[var(--cp-primary)]"
-                onClick={() => setScreen("service")}
-              >
-                <Icon name="bell" size={16} />
-                <span>
-                  <strong className="block font-medium">Call waiter</strong>
-                  <span className="block text-[9.5px] font-normal text-ink-muted">
-                    {waiterCall || billCall
-                      ? "A request is already with the counter"
-                      : "Waiter or bill — pick next"}
+            {paidBill ? (
+              <div className="mt-md rounded-control border border-brand-green/25 bg-white p-md">
+                <div className="flex items-start gap-sm">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-green/15 text-brand-green-deep">
+                    <Icon name="check" size={16} />
                   </span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-[9px] border border-black/10 bg-white px-2 py-2 text-left text-[10.5px] font-medium text-[var(--cp-primary)]"
-                onClick={() => setScreen("menu")}
-              >
-                <Icon name="utensils" size={16} />
-                <span>
-                  <strong className="block font-medium">Order food</strong>
-                  <span className="block text-[9.5px] font-normal text-ink-muted">
-                    Adds to this same bill
+                  <div>
+                    <strong className="block text-[13px] font-medium">
+                      Payment received — thank you!
+                    </strong>
+                    <span className="block text-[12px] leading-snug text-ink-muted">
+                      Bill #{paidBill.number} · {money(paidBill.total)} · available for{" "}
+                      {billWindowText(paidBillRemaining(paidBill))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        }
+        afterButtons={
+          tableTiles.length ? (
+            <div
+              className={cx(
+                "grid grid-cols-2 gap-md",
+                data.buttons.length ? "mt-md" : "mt-2xl",
+              )}
+            >
+              {tableTiles.map((tile, index) => (
+                <button
+                  key={tile.key}
+                  type="button"
+                  onClick={tile.onClick}
+                  className={tileClasses(isStretchedTile(index, tableTiles.length))}
+                >
+                  <span style={{ color: data.brand.primary }}>
+                    <Icon name={tile.icon} size={26} />
                   </span>
-                </span>
-              </button>
+                  <span className="text-ink">{tile.label}</span>
+                </button>
+              ))}
             </div>
-          </div>
-        ) : null}
-        <p className="mt-[22px] text-center text-[13.5px] font-medium text-slate-700">
-          How was your experience?
-        </p>
-        <div className="mt-2.5 flex flex-col gap-2">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2.5 rounded-[12px] border border-black/10 bg-white/70 p-2.5 text-left"
-            onClick={() => setScreen("chooser")}
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-              <Icon name="thumbUp" size={17} />
-            </span>
-            <span>
-              <strong className="block text-[11.5px] font-medium">Great</strong>
-              <span className="block text-[10.5px] leading-[1.4] text-ink-muted">
-                Continue on Google or message the owner.
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2.5 rounded-[12px] border border-black/10 bg-white/70 p-2.5 text-left"
-            onClick={() => setScreen("chooser")}
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--cp-secondary)] text-[var(--cp-primary)]">
-              <Icon name="thumbDown" size={17} />
-            </span>
-            <span>
-              <strong className="block text-[11.5px] font-medium">Not great</strong>
-              <span className="block text-[10.5px] leading-[1.4] text-ink-muted">
-                Tell the owner privately — we read every message.
-              </span>
-            </span>
-          </button>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          {config.menu.on ? (
-            <Tile icon="utensils" label={config.menu.title.trim() || "Menu"} onClick={() => setScreen("menu")} />
-          ) : null}
-          {openBill && openBill.billSentAt ? (
-            <Tile icon="receipt" label="Bill" onClick={openBillScreen} />
-          ) : null}
-          {!openBill && paidBill ? (
-            <Tile icon="receipt" label="Paid bill" onClick={openBillScreen} />
-          ) : null}
-          {wifiReady ? <Tile icon="wifi" label="Wi-Fi" onClick={openWifi} /> : null}
-          {config.hours.on ? (
-            <Tile icon="clock" label="Hours and contact" onClick={() => setScreen("hours")} />
-          ) : null}
-          {config.call.on && isValidPhone(config.call.phone) ? (
-            <Tile icon="phone" label="Call" href={`tel:${config.call.phone.trim()}`} />
-          ) : null}
-          {config.directions.on && config.directions.value.trim() ? (
-            <Tile
-              icon="map"
-              label="Directions"
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.directions.value)}`}
-            />
-          ) : null}
-          {config.custom.on &&
-          config.custom.label.trim() &&
-          isValidHttpsUrl(config.custom.url) ? (
-            <Tile icon="link" label={config.custom.label} href={config.custom.url} />
-          ) : null}
-        </div>
-        {isValidHttpsUrl(config.socials.instagram ?? "") ||
-        isValidHttpsUrl(config.socials.website ?? "") ? (
-          <div className="mt-4 flex justify-center gap-2">
-            {isValidHttpsUrl(config.socials.instagram ?? "") ? (
-              <a
-                href={config.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="grid h-8 w-8 place-items-center rounded-full border border-black/10 bg-white/70 text-[var(--cp-primary)]"
-              >
-                <Icon name="instagram" size={16} />
-              </a>
-            ) : null}
-            {isValidHttpsUrl(config.socials.website ?? "") ? (
-              <a
-                href={config.socials.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Website"
-                className="grid h-8 w-8 place-items-center rounded-full border border-black/10 bg-white/70 text-[var(--cp-primary)]"
-              >
-                <Icon name="globe" size={16} />
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-        {cartCount ? (
-          <button
-            type="button"
-            className="mt-4 flex w-full items-center justify-between rounded-full bg-white px-3 py-2 text-[11.5px] shadow-soft"
-            onClick={openCart}
-          >
-            <span className="flex items-center gap-1.5">
-              <Icon name="cart" size={16} /> {cartCount} item{cartCount === 1 ? "" : "s"}
-            </span>
-            <strong className="font-medium">{money(cartTotal)}</strong>
-            <Icon name="arrowRight" size={14} />
-          </button>
-        ) : null}
-        <p className="mt-5 text-center text-[9.5px] leading-[1.5] text-ink-muted">
-          Powered by Syehere
-        </p>
-      </Panel>
+          ) : null
+        }
+      />
     );
   }
 
+  const hostPanel =
+    openBill && participant?.role === "host" ? (
+      <HostPanel
+        order={openBill}
+        participant={participant}
+        guestUrl={url}
+        requests={state.joinRequests.filter((request) => request.orderId === openBill.id)}
+        onApprove={approveRequest}
+        onDeny={denyRequest}
+        onRegenerate={regenerateCode}
+      />
+    ) : null;
+
   return (
     <div className="min-h-screen bg-[var(--cp-bg)]" style={theme}>
-      <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2.5 border-b border-black/10 bg-white px-[18px] py-2.5 text-xs">
-        <Link
-          href={`/rooms?loc=${location.id}`}
-          className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink"
-        >
-          <Icon name="arrowLeft" size={15} /> Back
-        </Link>
-        <Badge tone={room ? "blue" : "green"}>
-          {room ? `${spot} QR · ${room.code.toUpperCase()}` : "Reception QR"}
-        </Badge>
-        <span className="font-medium">
-          {room ? `${displaySpot} · ${location.name}` : location.name}
-        </span>
-        <span className="flex-1" />
-        <button
-          type="button"
-          className={cx(btnOutline, "h-8 px-2.5 text-[11.5px]")}
-          onClick={() => copyText(url, () => setToast("Link copied."))}
-        >
-          Copy link
-        </button>
-        <Link
-          href={`/customer-page?loc=${location.id}&kind=${kind}`}
-          className={cx(btnOutline, "h-8 px-2.5 text-[11.5px]")}
-        >
-          Edit {room ? spots : "reception"} page
-        </Link>
-        <Link href={otherHref} className={cx(btnOutline, "h-8 px-2.5 text-[11.5px]")}>
-          {otherLabel}
-        </Link>
-      </div>
+      <div className="mx-auto w-full max-w-[480px] px-lg py-2xl">
+        {screen === "home" ? (
+          <>
+            {hostPanel}
+            {body}
+          </>
+        ) : (
+          <div className="overflow-hidden rounded-control shadow-soft">
+            {hostPanel}
+            {body}
+          </div>
+        )}
 
-      <div className="mx-auto max-w-[480px] px-[18px] pb-14 pt-6">
-        <div className="overflow-hidden rounded-[18px] shadow-soft">
-          {openBill && participant?.role === "host" ? (
-            <HostPanel
-              order={openBill}
-              participant={participant}
-              guestUrl={url}
-              requests={state.joinRequests.filter((request) => request.orderId === openBill.id)}
-              onApprove={approveRequest}
-              onDeny={denyRequest}
-              onRegenerate={regenerateCode}
-            />
-          ) : null}
-          {body}
-        </div>
-        {known && active ? (
-          <p className="mt-3.5 rounded-[9px] bg-white/60 px-3 py-2.5 text-center text-[11px] leading-[1.55] text-slate-600">
-            {room ? (
-              <>
-                <strong className="font-medium text-ink">
-                  {room.code.toUpperCase()} · {displaySpot}
-                </strong>{" "}
-                — this is the shared {spots} page for {location.name}. The other{" "}
-                {Math.max(activeRooms - 1, 0)} {spot.toLowerCase()} QR
-                {activeRooms - 1 === 1 ? "" : "s"} here show exactly the same page, but orders are
-                tagged to {displaySpot}.
-              </>
-            ) : (
-              <>
-                <strong className="font-medium text-ink">Reception QR</strong> — this page is
-                separate from the {spots} pages. Editing it never changes a {spot.toLowerCase()} QR.
-              </>
-            )}
-          </p>
-        ) : null}
       </div>
 
       {toast ? (
@@ -1969,39 +1758,6 @@ function DoneRow({ label, value }: { label: string; value: string }) {
       <span className="text-ink-muted">{label}</span>
       <strong className="font-medium">{value}</strong>
     </div>
-  );
-}
-
-function Tile({
-  icon,
-  label,
-  onClick,
-  href,
-}: {
-  icon: "utensils" | "wifi" | "clock" | "phone" | "map" | "link" | "receipt";
-  label: string;
-  onClick?: () => void;
-  href?: string;
-}) {
-  const className =
-    "flex flex-col items-center gap-1.5 rounded-[10px] border border-black/10 bg-white/70 px-2 py-3 text-center text-[11.5px] text-[var(--cp-primary)]";
-  const content = (
-    <>
-      <Icon name={icon} size={20} />
-      <span>{label}</span>
-    </>
-  );
-  if (href) {
-    return (
-      <a href={href} className={className} target="_blank" rel="noopener noreferrer">
-        {content}
-      </a>
-    );
-  }
-  return (
-    <button type="button" className={className} onClick={onClick}>
-      {content}
-    </button>
   );
 }
 

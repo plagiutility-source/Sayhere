@@ -27,7 +27,11 @@ import {
   isOpenNow,
   isValidReviewUrl,
   limitedMenuCategories,
+  shownButtons,
+  shownSocialIcons,
+  visibleAnnouncementText,
   WEEKDAY_ORDER,
+  type CustomerButton,
 } from "@/lib/customer-page";
 import { getDashboardMock } from "@/lib/mock/dashboard";
 import { getMockReviewPage } from "@/lib/mock/customer-page";
@@ -35,6 +39,7 @@ import { reviewUrlFor } from "@/lib/mock/locations";
 import type {
   MenuItem,
   PageConfig,
+  SocialKey,
   SocialLinks,
   Weekday,
 } from "@/lib/mock/customer-page";
@@ -84,6 +89,13 @@ export type RoomsPublicData = {
   /** False when the menu is off or has nothing orderable. */
   ordering: boolean;
   planMenuLimit: number | null;
+  /** The reception page's home props, so both QR pages render the same page. */
+  announcementText: string | null;
+  buttons: CustomerButton[];
+  socials: { key: SocialKey; url: string }[];
+  /** The reception page's Hours block, so both pages share that screen too. */
+  pageHours: PageConfig["buttons"]["hours"] | null;
+  whatsappPhone: string;
   initialState: RoomsState;
 };
 
@@ -111,6 +123,16 @@ export function publicRoomsData(input: {
   // Menu off or empty = no ordering UI at all.
   page.menu.on = Boolean(input.page.config?.buttons.menu.on) && orderable;
 
+  // The same home-screen data the reception page gets (one set of controls).
+  const home = roomsHomeView({
+    config: input.page.config,
+    socials: input.page.socials,
+    type: view.type,
+    menuOn: page.menu.on,
+    timeZone: view.timeZone,
+    now: input.now,
+  });
+
   const hours = hoursFromConfig(input.page.config);
   const week = input.page.config?.buttons.hours.week;
   const openNow = week
@@ -132,6 +154,11 @@ export function publicRoomsData(input: {
     openNow,
     ordering: page.menu.on,
     planMenuLimit: input.menuItemLimit,
+    announcementText: home.announcementText,
+    buttons: home.buttons,
+    socials: home.socials,
+    pageHours: input.page.config?.buttons.hours ?? null,
+    whatsappPhone: input.page.config?.buttons.whatsapp.phone ?? "",
     initialState: initialStateFromSpots([spot], view.type),
   };
 }
@@ -479,6 +506,47 @@ export function roomsPageConfigFrom(
       ? { on: true, label: custom.label, url: custom.url }
       : { on: false, label: "", url: "" },
     socials: socialsFromConfig(socials),
+  };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Home screen (shared by the reception QR and the table/room QR)            */
+/* ------------------------------------------------------------------------- */
+
+export type RoomsHomeView = {
+  announcementText: string | null;
+  buttons: CustomerButton[];
+  socials: { key: SocialKey; url: string }[];
+};
+
+/**
+ * The home-screen props for the public page, computed with the SAME helpers the
+ * reception page uses (`shownButtons`, `shownSocialIcons`,
+ * `visibleAnnouncementText`), so both QR targets show one page and one set of
+ * controls. The only difference: at a table the menu tile appears only when the
+ * menu can actually be ordered, and the menu's own title is used.
+ */
+export function roomsHomeView(input: {
+  config: PageConfig | null;
+  socials: SocialLinks | undefined;
+  type: SpotBusinessType;
+  menuOn: boolean;
+  timeZone: string;
+  now?: Date;
+}): RoomsHomeView {
+  const buttons = (input.config ? shownButtons(input.config, input.type) : [])
+    // A table has no "Pay now" / loyalty screen; paying is the table's own flow.
+    .filter((button) => button.kind !== "pay" && button.kind !== "loyalty")
+    // The label stays exactly the reception page's label.
+    .filter((button) => button.kind !== "menu" || input.menuOn);
+  return {
+    announcementText: visibleAnnouncementText(
+      input.config,
+      input.now ?? new Date(),
+      input.timeZone,
+    ),
+    buttons,
+    socials: shownSocialIcons(input.socials),
   };
 }
 

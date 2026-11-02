@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { BusinessLogo } from "@/components/business-logo";
 import { getBrandTheme, type BrandTheme } from "@/lib/brand/theme";
 import type { MockBusiness, PageConfig } from "@/lib/mock/customer-page";
@@ -206,7 +206,7 @@ export function CustomerPage(props: CustomerPageProps) {
     >
       <div className="mx-auto w-full max-w-[480px] px-lg py-2xl">
         {screen === "home" ? (
-          <HomeScreen
+          <CustomerHomeScreen
             business={effectiveBusiness}
             theme={theme}
             announcementText={effectiveAnnouncement}
@@ -344,30 +344,48 @@ function stubTitle(screen: CustomerScreen): string {
   return screen === "home" ? "" : STUB_TITLES[screen];
 }
 
-function HomeScreen({
+const noop = () => {};
+
+/**
+ * The home screen of the customer page, shared by BOTH QR targets: the
+ * reception page (`/r/[slug]`) and the table/room page (`/r/[slug]/[code]`).
+ * One design, one set of controls (merge fix, step 1).
+ *
+ * The table page adds only what a table needs: `context` (the "ordering for
+ * Table 1" strip and the open-bill cards) and `afterButtons` (Call waiter /
+ * Bill / Wi-Fi tiles in the same tile style).
+ */
+export function CustomerHomeScreen({
   business,
   theme,
   announcementText,
   socials,
   buttons,
-  onOpenMenu,
-  onOpenHours,
-  onOpenPay,
-  onOpenLoyalty,
-  onThumbsUp,
-  onThumbsDown,
+  context,
+  afterButtons,
+  onOpenMenu = noop,
+  onOpenHours = noop,
+  onOpenPay = noop,
+  onOpenLoyalty = noop,
+  onThumbsUp = noop,
+  onThumbsDown = noop,
 }: {
-  business: MockBusiness;
+  /** Only the fields shown here, so the rooms business view fits too. */
+  business: Pick<MockBusiness, "name" | "tagline" | "business_type" | "logo_url">;
   theme: BrandTheme;
   announcementText: string | null;
   socials: { key: ReturnType<typeof shownSocialIcons>[number]["key"]; url: string }[];
   buttons: CustomerButton[];
-  onOpenMenu: () => void;
-  onOpenHours: () => void;
-  onOpenPay: () => void;
-  onOpenLoyalty: () => void;
-  onThumbsUp: () => void;
-  onThumbsDown: () => void;
+  /** Table page only: content between the header and the review buttons. */
+  context?: ReactNode;
+  /** Table page only: extra tiles right under the page buttons. */
+  afterButtons?: ReactNode;
+  onOpenMenu?: () => void;
+  onOpenHours?: () => void;
+  onOpenPay?: () => void;
+  onOpenLoyalty?: () => void;
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
 }) {
   const logoUrl = displayableLogo(business.logo_url);
   return (
@@ -408,6 +426,8 @@ function HomeScreen({
         ) : null}
       </header>
 
+      {context}
+
       <section className="mt-2xl text-center">
         <h2 className="font-display text-[21px] font-medium leading-tight">
           How was your experience?
@@ -441,6 +461,8 @@ function HomeScreen({
         onOpenPay={onOpenPay}
         onOpenLoyalty={onOpenLoyalty}
       />
+
+      {afterButtons}
 
       <SocialRow icons={socials} color={theme.primary} className="mt-2xl" />
     </>

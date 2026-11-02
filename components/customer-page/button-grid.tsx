@@ -46,7 +46,7 @@ function ButtonIcon({
   }
 }
 
-function tileClasses(stretched: boolean): string {
+export function tileClasses(stretched: boolean): string {
   return [
     "inline-flex w-full flex-col items-center justify-center gap-xs rounded-control",
     "border border-black/10 bg-white px-sm text-center text-[13px] font-medium leading-snug",
