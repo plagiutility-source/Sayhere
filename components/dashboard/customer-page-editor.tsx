@@ -39,10 +39,15 @@ import {
 } from "@/lib/mock/store";
 import { useMockBusiness, useMockLocations } from "@/lib/use-business";
 import {
+  emptyRoomsPageDraft,
   menuLimitIssue,
   namedMenuItemCount,
   pageConfigIssues,
+  roomsPageDraftIssues,
+  type RoomsPageDraft,
 } from "@/lib/validation/page-config";
+import { supportsTableOrdering } from "@/lib/category/ordering";
+import { RoomsPageTab } from "@/components/rooms/owner/RoomsPageTab";
 import {
   ButtonsSection,
   PageContentSection,
@@ -118,6 +123,11 @@ function EditorForLocation({
   const business = useMockBusiness(mockReviewPages.cafe01.business);
   const plan = mock.plan;
 
+  // Merge M7: the second tab exists only for table/room ordering types. The
+  // Reception tab below is the existing editor, unchanged.
+  const supportsOrdering = supportsTableOrdering(business.business_type);
+  const [tab, setTab] = useState<"reception" | "rooms">("reception");
+
   const [draftConfig, setDraftConfig] = useState<PageConfig>(() =>
     cloneConfig(getMockPageConfig(scenario, location.id) ?? emptyPageConfig()),
   );
@@ -130,6 +140,8 @@ function EditorForLocation({
   const [savedSocials, setSavedSocials] = useState<SocialLinks>(() =>
     cloneSocials(getMockSocialLinks(scenario)),
   );
+  // Merge M7: the tables page draft lives inside the same page config.
+  const roomsPage = draftConfig.rooms_page ?? emptyRoomsPageDraft();
 
   // MOCK ONLY, removed in Stage 4: content saved earlier for this slug wins
   // over the scenario default. Read after mount (localStorage is client-only)
@@ -163,6 +175,7 @@ function EditorForLocation({
   const issues = [
     ...pageConfigIssues(draftConfig, draftSocials),
     ...(limitIssue ? [limitIssue] : []),
+    ...(supportsOrdering ? roomsPageDraftIssues(roomsPage) : []),
   ];
   const saveBlocked = issues.length > 0;
 
@@ -173,10 +186,14 @@ function EditorForLocation({
 
   /** Scrolls to a row and flashes it (chips and the Fix-N summary use this). */
   function handleJump(target: string) {
+    // Rooms-page rows live on the other tab, so select it before scrolling.
+    if (target.startsWith("rooms-")) setTab("rooms");
     setHighlight(target);
-    document
-      .getElementById(target)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      document
+        .getElementById(target)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
     window.setTimeout(() => setHighlight(null), 1600);
   }
 
@@ -189,6 +206,10 @@ function EditorForLocation({
 
   function patchMenu(menu: MenuConfig) {
     setDraftConfig((current) => ({ ...current, menu }));
+  }
+
+  function patchRoomsPage(rooms: RoomsPageDraft) {
+    setDraftConfig((current) => ({ ...current, rooms_page: rooms }));
   }
 
   function patchAnnouncement(patch: Partial<PageConfig["announcement"]>) {
@@ -391,6 +412,31 @@ function EditorForLocation({
         </div>
       </header>
 
+      {supportsOrdering ? (
+        <div
+          className="mt-6 flex w-full max-w-[380px] gap-0.5 rounded-control bg-surface-muted p-[3px]"
+          role="tablist"
+          aria-label="Page"
+        >
+          {(["reception", "rooms"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={`inline-flex h-9 flex-1 items-center justify-center rounded-control px-3 text-[12.5px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue ${
+                tab === key
+                  ? "bg-white text-ink shadow-soft"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {key === "reception" ? "Reception page" : "Tables/Rooms page"}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {status ? (
         <p
           role="status"
@@ -408,6 +454,14 @@ function EditorForLocation({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_375px]">
         <div>
+          {supportsOrdering && tab === "rooms" ? (
+            <RoomsPageTab
+              draft={roomsPage}
+              onChange={patchRoomsPage}
+              onOpenReception={() => setTab("reception")}
+            />
+          ) : (
+            <>
           <SuggestionsSection
             businessType={business.business_type}
             onJump={handleJump}
@@ -495,13 +549,32 @@ function EditorForLocation({
               </div>
             </section>
           ) : null}
+            </>
+          )}
         </div>
 
         <aside className="hidden lg:sticky lg:top-20 lg:block lg:self-start">
-          <p className="text-[12px] text-ink-muted">Live preview</p>
-          <div className="mt-2">
-            <PhoneFrame>{preview}</PhoneFrame>
-          </div>
+          {supportsOrdering && tab === "rooms" ? (
+            <div className="rounded-card border border-black/10 bg-white p-4 text-[12px] leading-[1.6] text-ink-muted shadow-soft">
+              <p className="text-[13px] font-medium text-ink">
+                Tables/Rooms page
+              </p>
+              <p className="mt-1">
+                It uses the same menu as the reception page, so dishes are
+                edited once under{" "}
+                <strong className="font-medium text-ink">Menu and hours</strong>.
+                This tab only changes the title and the buttons guests see at a
+                table.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[12px] text-ink-muted">Live preview</p>
+              <div className="mt-2">
+                <PhoneFrame>{preview}</PhoneFrame>
+              </div>
+            </>
+          )}
         </aside>
       </div>
 

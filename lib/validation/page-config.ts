@@ -537,3 +537,187 @@ export function pageConfigIssues(
 
   return issues;
 }
+
+// ---------------------------------------------------------------------------
+// Tables/Rooms page (merge M7) — a second tab on the SAME page config.
+//
+// The reception page keeps owning the one menu; this page only sets its title
+// and the buttons/contact the table QR page shows. Optional on older saved
+// configs, so `rooms_page` absent = the empty draft below.
+// ---------------------------------------------------------------------------
+
+export type RoomsPageDraft = {
+  announcement: { on: boolean; text: string };
+  thank_you: string;
+  wifi: { on: boolean; ssid: string; password: string };
+  menu_title: string;
+  hours: { on: boolean; phone: string; address: string };
+  call: { on: boolean; phone: string };
+  directions: { on: boolean; value: string };
+  custom: { on: boolean; label: string; url: string };
+};
+
+/** Same limits as the feature's own text rules (spec section 6). */
+export const MAX_ROOMS_ANNOUNCEMENT_LENGTH = 160;
+export const MAX_ROOMS_THANK_YOU_LENGTH = 160;
+export const MAX_ROOMS_MENU_TITLE_LENGTH = 60;
+export const MAX_ROOMS_CUSTOM_LABEL_LENGTH = 30;
+
+/** Everything off, nothing filled in — what a new rooms page starts as. */
+export function emptyRoomsPageDraft(): RoomsPageDraft {
+  return {
+    announcement: { on: false, text: "" },
+    thank_you: "",
+    wifi: { on: false, ssid: "", password: "" },
+    menu_title: "",
+    hours: { on: false, phone: "", address: "" },
+    call: { on: false, phone: "" },
+    directions: { on: false, value: "" },
+    custom: { on: false, label: "", url: "" },
+  };
+}
+
+function text(value: unknown, max: number): string {
+  return typeof value === "string" ? value.slice(0, max) : "";
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** Rebuild the draft from untrusted data; invalid values fall back clean. */
+export function sanitizeRoomsPageDraft(
+  raw: unknown,
+  fallback: RoomsPageDraft,
+): RoomsPageDraft {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...fallback };
+  }
+  const row = record(raw);
+  const announcement = record(row.announcement);
+  const wifi = record(row.wifi);
+  const hours = record(row.hours);
+  const call = record(row.call);
+  const directions = record(row.directions);
+  const custom = record(row.custom);
+  const url = text(custom.url, MAX_LINK_LENGTH).trim();
+  return {
+    announcement: {
+      on: announcement.on === true,
+      text: text(announcement.text, MAX_ROOMS_ANNOUNCEMENT_LENGTH),
+    },
+    thank_you: text(row.thank_you, MAX_ROOMS_THANK_YOU_LENGTH),
+    wifi: {
+      on: wifi.on === true,
+      ssid: text(wifi.ssid, 100),
+      password: text(wifi.password, 100),
+    },
+    menu_title: text(row.menu_title, MAX_ROOMS_MENU_TITLE_LENGTH),
+    hours: {
+      on: hours.on === true,
+      phone: text(hours.phone, 20),
+      address: text(hours.address, MAX_MAPS_ADDRESS_LENGTH),
+    },
+    call: { on: call.on === true, phone: text(call.phone, 20) },
+    directions: {
+      on: directions.on === true,
+      value: text(directions.value, MAX_LINK_LENGTH),
+    },
+    custom: {
+      on: custom.on === true,
+      label: text(custom.label, MAX_ROOMS_CUSTOM_LABEL_LENGTH),
+      url: isValidHttpsUrl(url) ? url : "",
+    },
+  };
+}
+
+/** The same "On AND valid" save blocking as the reception tab (rules 11.17). */
+export function roomsPageDraftIssues(draft: RoomsPageDraft): PageConfigIssue[] {
+  const issues: PageConfigIssue[] = [];
+
+  if (draft.announcement.on && !draft.announcement.text.trim()) {
+    issues.push({
+      key: "rooms-announcement",
+      label: "Announcement",
+      message: "Enter the announcement text.",
+    });
+  }
+
+  if (draft.wifi.on && !draft.wifi.ssid.trim()) {
+    issues.push({
+      key: "rooms-wifi",
+      label: "Wi-Fi",
+      message: "Enter the Wi-Fi network name.",
+    });
+  }
+
+  if (draft.hours.on) {
+    const phoneIssue = phoneError(draft.hours.phone);
+    if (phoneIssue) {
+      issues.push({ key: "rooms-hours", label: "Hours and contact", message: phoneIssue });
+    } else if (!draft.hours.phone.trim() && !draft.hours.address.trim()) {
+      issues.push({
+        key: "rooms-hours",
+        label: "Hours and contact",
+        message: "Enter a phone number or an address.",
+      });
+    } else if (addressError(draft.hours.address)) {
+      issues.push({
+        key: "rooms-hours",
+        label: "Hours and contact",
+        message: addressError(draft.hours.address) as string,
+      });
+    }
+  }
+
+  if (draft.call.on) {
+    if (!draft.call.phone.trim()) {
+      issues.push({ key: "rooms-call", label: "Call", message: "Enter a phone number." });
+    } else if (phoneError(draft.call.phone)) {
+      issues.push({
+        key: "rooms-call",
+        label: "Call",
+        message: phoneError(draft.call.phone) as string,
+      });
+    }
+  }
+
+  if (draft.directions.on) {
+    if (!draft.directions.value.trim()) {
+      issues.push({
+        key: "rooms-directions",
+        label: "Directions",
+        message: "Enter an address or a Google Maps link.",
+      });
+    } else if (mapsValueError(draft.directions.value)) {
+      issues.push({
+        key: "rooms-directions",
+        label: "Directions",
+        message: mapsValueError(draft.directions.value) as string,
+      });
+    }
+  }
+
+  if (draft.custom.on) {
+    if (!draft.custom.label.trim()) {
+      issues.push({ key: "rooms-custom", label: "Custom link", message: "Enter a label." });
+    }
+    if (!draft.custom.url.trim()) {
+      issues.push({
+        key: "rooms-custom",
+        label: "Custom link",
+        message: "Paste the link.",
+      });
+    } else if (linkError(draft.custom.url)) {
+      issues.push({
+        key: "rooms-custom",
+        label: "Custom link",
+        message: linkError(draft.custom.url) as string,
+      });
+    }
+  }
+
+  return issues;
+}

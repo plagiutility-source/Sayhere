@@ -24,7 +24,11 @@ import { businessPresets, type BusinessType } from "@/lib/brand/tokens";
 import type { ColorSource } from "@/lib/brand/theme";
 import type { DemoScenario } from "@/lib/mock/demo";
 import type { PlanId } from "@/lib/mock/plans";
-import { MENU_ITEM_ID_PATTERN } from "@/lib/validation/page-config";
+import {
+  emptyRoomsPageDraft,
+  MENU_ITEM_ID_PATTERN,
+  type RoomsPageDraft,
+} from "@/lib/validation/page-config";
 
 export type SocialKey = "instagram" | "facebook" | "youtube" | "x" | "website";
 export type SocialLink = { on: boolean; url: string };
@@ -81,6 +85,8 @@ export type PageConfig = {
     custom_links: { on: boolean; label: string; url: string }[];
   };
   menu: MenuConfig;
+  /** Tables/rooms page content (merge M7; the menu above is shared). */
+  rooms_page?: RoomsPageDraft;
 };
 
 export type MockBusiness = {
@@ -440,6 +446,7 @@ export function emptyPageConfig(): PageConfig {
       custom_links: [],
     },
     menu: { categories: [] },
+    rooms_page: emptyRoomsPageDraft(),
   };
 }
 

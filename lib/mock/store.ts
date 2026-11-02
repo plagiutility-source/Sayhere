@@ -60,6 +60,7 @@ import {
   resetMockLocations,
 } from "@/lib/mock/locations";
 import {
+  emptyRoomsPageDraft,
   isValidHttpsUrl,
   isValidMenuImage,
   isValidPhone,
@@ -70,6 +71,7 @@ import {
   MAX_MENU_CATEGORIES,
   MAX_PAYEE_NAME_LENGTH,
   MAX_UPI_ID_LENGTH,
+  sanitizeRoomsPageDraft,
 } from "@/lib/validation/page-config";
 import {
   MAX_BUSINESS_NAME_LENGTH,
@@ -744,6 +746,10 @@ export function sanitizePageConfig(raw: unknown): PageConfig | null {
       custom_links: customLinks,
     },
     menu: sanitizeMenu(raw.menu),
+    rooms_page: sanitizeRoomsPageDraft(
+      raw.rooms_page,
+      base.rooms_page ?? emptyRoomsPageDraft(),
+    ),
   };
 }
 
