@@ -2,7 +2,7 @@
 Branch: feat/rooms-merge | Reference: _sayhere-ref/ (read-only)
 - [x] M1 copy namespaced code   - [x] M2 gate + sidebar   - [x] M3 real data adapter
 - [x] M4 live provider + topbar - [x] M5 Orders + Tables pages - [x] M6 Locations QR panel
-- [x] M7 editor tab   - [ ] M8 public table page - [ ] M9 dashboard + analytics cards
+- [x] M7 editor tab   - [x] M8 public table page — thin `/r/[slug]/[code]` route; real menu (tags, sold out, Ask staff, photos, plan limit), real weekly hours + Open now, reused customer screens; demo fixtures gone from ScanPage - [ ] M9 dashboard + analytics cards
 - [ ] M10 remove demo code - [ ] M11 css/storage/safety - [ ] M12 docs + CI - [ ] M13 final + PR
 ## Notes / stubs / decisions
 - M7: `components/dashboard/customer-page-editor.tsx` now has a "Reception page" / "Tables/Rooms page" tab pair, shown only when `supportsTableOrdering`. The Reception tab is the existing editor markup, unchanged; the new tab is `components/rooms/owner/RoomsPageTab.tsx` (announcement, thank-you, Wi-Fi, menu **title** only, hours/contact, call, directions, one custom link) with a note + button pointing at the Reception tab's Menu and hours. No second menu editor.

@@ -21,10 +21,17 @@
  */
 
 import { useMemo } from "react";
-import { getBrandTheme } from "@/lib/brand/theme";
+import { getBrandTheme, type BrandTheme } from "@/lib/brand/theme";
 import { supportsTableOrdering } from "@/lib/category/ordering";
-import { WEEKDAY_ORDER } from "@/lib/customer-page";
+import {
+  isOpenNow,
+  isValidReviewUrl,
+  limitedMenuCategories,
+  WEEKDAY_ORDER,
+} from "@/lib/customer-page";
+import { getDashboardMock } from "@/lib/mock/dashboard";
 import { getMockReviewPage } from "@/lib/mock/customer-page";
+import { reviewUrlFor } from "@/lib/mock/locations";
 import type {
   MenuItem,
   PageConfig,
@@ -58,6 +65,97 @@ export type RoomsBusinessView = {
 };
 
 /** The rooms view of a business, or null when the type does not get ordering. */
+/* ------------------------------------------------------------------------- */
+/* Public table page (merge M8)                                              */
+/* ------------------------------------------------------------------------- */
+
+export type RoomsPublicData = {
+  business: RoomsBusinessView;
+  /** The app's own theme, for the reused customer-page screens. */
+  brand: BrandTheme;
+  googleReviewUrl: string;
+  reviewUrlValid: boolean;
+  location: SpotLocation;
+  page: RoomsPageConfig;
+  menu: RoomsMenu;
+  menuItems: Record<string, RoomsMenuItem>;
+  hours: RoomsHours;
+  openNow: boolean;
+  /** False when the menu is off or has nothing orderable. */
+  ordering: boolean;
+  planMenuLimit: number | null;
+  initialState: RoomsState;
+};
+
+export function publicRoomsData(input: {
+  business: BusinessProfile;
+  locations: readonly MockLocation[];
+  page: RoomsPageSource;
+  slug: string;
+  menuItemLimit: number | null;
+  now?: Date;
+}): RoomsPublicData | null {
+  const view = businessView(input.business);
+  const location = input.locations.find((row) => row.slug === input.slug) ?? null;
+  if (!view || !location) return null;
+
+  const menu = menuFromConfig(input.page.config, input.menuItemLimit);
+  const orderable = menu.categories.some((category) =>
+    category.items.some((item) => item.orderable),
+  );
+  const page = roomsPageConfigFrom(
+    input.page.config,
+    input.page.socials,
+    view.type === "hotel" ? "Room service menu" : "Our menu",
+  );
+  // Menu off or empty = no ordering UI at all.
+  page.menu.on = Boolean(input.page.config?.buttons.menu.on) && orderable;
+
+  const hours = hoursFromConfig(input.page.config);
+  const week = input.page.config?.buttons.hours.week;
+  const openNow = week
+    ? isOpenNow(week, input.now ?? new Date(), view.timeZone)
+    : false;
+  const reviewUrl = reviewUrlFor(location, input.business.google_review_url);
+  const spot = locationSpot(location);
+
+  return {
+    business: view,
+    brand: getBrandTheme(input.business),
+    googleReviewUrl: reviewUrl,
+    reviewUrlValid: isValidReviewUrl(reviewUrl),
+    location: spot,
+    page,
+    menu,
+    menuItems: menuItemsById(menu),
+    hours,
+    openNow,
+    ordering: page.menu.on,
+    planMenuLimit: input.menuItemLimit,
+    initialState: initialStateFromSpots([spot], view.type),
+  };
+}
+
+/** The public page's data; null for an unknown slug or an ineligible type. */
+export function useRoomsPublicData(slug: string): RoomsPublicData | null {
+  const business = useBusiness();
+  const scenario: DemoScenario = "normal";
+  const locations = useMockLocations(scenario);
+  const page = useRoomsPage(slug, scenario);
+  const limit = getDashboardMock(scenario).plan.page.menu_items;
+  return useMemo(
+    () =>
+      publicRoomsData({
+        business,
+        locations,
+        page,
+        slug,
+        menuItemLimit: limit,
+      }),
+    [business, locations, page, slug, limit],
+  );
+}
+
 export function businessView(profile: BusinessProfile): RoomsBusinessView | null {
   const type = supportsTableOrdering(profile.business_type)
     ? profile.business_type
@@ -212,11 +310,19 @@ export function menuItemFromMenuItem(
 }
 
 /** The app's one menu (page config) as rooms menu categories. */
-export function menuFromConfig(config: PageConfig | null): RoomsMenu {
+export function menuFromConfig(
+  config: PageConfig | null,
+  menuItemLimit: number | null = null,
+): RoomsMenu {
   if (!config) return { categories: [] };
   const taken = new Set<string>();
   const categories: RoomsMenuCategory[] = [];
-  for (const category of config.menu.categories) {
+  // The plan's item limit is the same one the customer page uses.
+  const source =
+    menuItemLimit === null
+      ? config.menu.categories
+      : limitedMenuCategories(config.menu, menuItemLimit);
+  for (const category of source) {
     const items: RoomsMenuItem[] = [];
     for (const item of category.items) {
       const mapped = menuItemFromMenuItem(item, category.name);

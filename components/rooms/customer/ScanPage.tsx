@@ -41,20 +41,18 @@ import {
   waiterName,
   wifiUnlockedForOrder,
 } from "@/lib/rooms/rules";
-import {
-  configTemplate,
-  DEMO_BUSINESS,
-  DEMO_MENU,
-  DEMO_WEEK,
-  MENU_ITEMS,
-} from "@/lib/rooms/seed";
+import { MenuPhoto } from "@/components/menu-photo";
+import { FeedbackScreen } from "@/components/customer-page/feedback-screen";
+import { GoogleScreen } from "@/components/customer-page/google-screen";
+import { ReviewScreen } from "@/components/customer-page/review-screen";
+import type { RoomsPublicData } from "@/lib/rooms/adapter";
 import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
 
-type ScanPageProps = { slug: string; code: string };
+type ScanPageProps = { slug: string; code: string; data: RoomsPublicData };
 type Screen =
   | "home"
   | "menu"
@@ -67,6 +65,7 @@ type Screen =
   | "wifi"
   | "chooser"
   | "google"
+  | "review"
   | "feedback"
   | "thanks"
   | "hours";
@@ -85,8 +84,8 @@ const noteClass = "mt-3 flex items-start gap-1.5 text-[11px] leading-[1.55] text
  * checkout with the waiter picker, order done, table service, Wi-Fi and the
  * review screens. Bill, join gate and paid bill remain Phase 5 work.
  */
-export function ScanPage({ slug, code }: ScanPageProps) {
-  const { state, save } = useRoomsState();
+export function ScanPage({ slug, code, data }: ScanPageProps) {
+  const { state, save } = useRoomsState(data.initialState);
   const [origin, setOrigin] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [screen, setScreen] = useState<Screen>("home");
@@ -169,7 +168,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const displaySpot = room ? displaySpotName(businessType, room) : "Reception";
 
   const config =
-    (location && state.configs[`${location.id}:${kind}`]) || configTemplate(kind);
+    (location && state.configs[`${location.id}:${kind}`]) || data.page;
 
   const openBill = location && room ? findOpenBill(state, location.id, room.code) : null;
   const participant = openBill && deviceId ? participantFor(openBill, deviceId) : null;
@@ -189,7 +188,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
 
   useEffect(() => {
     if (!location) return;
-    document.title = `${DEMO_BUSINESS.name} · ${displaySpot}`;
+    document.title = `${data.business.name} · ${displaySpot}`;
   }, [location, displaySpot]);
 
   /* Products of the demo's detectJoinEvents / detectBillSent / detectPaidBill.
@@ -261,8 +260,11 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const cartLines = useMemo(
     () =>
       Object.keys(cart)
-        .filter((id) => cart[id] > 0 && MENU_ITEMS[id])
-        .map((id) => ({ ...MENU_ITEMS[id], qty: cart[id] })),
+        .filter((id) => cart[id] > 0 && data.menuItems[id]?.orderable)
+        .map((id) => {
+          const item = data.menuItems[id];
+          return { ...item, price: item.price ?? 0, qty: cart[id] };
+        }),
     [cart],
   );
   const cartCount = cartLines.reduce((sum, item) => sum + item.qty, 0);
@@ -321,9 +323,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   }, [scanKey]);
 
   const theme = {
-    "--cp-primary": DEMO_BUSINESS.theme.primary,
-    "--cp-secondary": DEMO_BUSINESS.theme.secondary,
-    "--cp-bg": DEMO_BUSINESS.theme.bg,
+    "--cp-primary": data.business.theme.primary,
+    "--cp-secondary": data.business.theme.secondary,
+    "--cp-bg": data.business.theme.bg,
   } as CSSProperties;
 
   if (!location) {
@@ -334,8 +336,8 @@ export function ScanPage({ slug, code }: ScanPageProps) {
             <Unavailable
               title={`This link isn't linked to a ${spot.toLowerCase()}`}
               text={`The QR may belong to a ${spot.toLowerCase()} that was removed, or the link was typed incorrectly.`}
-              backHref="/rooms"
-              backLabel={`Back to ${spots}`}
+              backHref="/"
+              backLabel="Back to home"
             />
           </div>
         </div>
@@ -354,7 +356,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   const activeRooms = location.rooms.filter((item) => item.active).length;
 
   const changeItem = (id: string, delta: number) => {
-    if (!MENU_ITEMS[id]) return;
+    if (!data.menuItems[id]?.orderable) return;
     setCart((previous) => {
       const qty = Math.max(0, Math.min(CART_MAX_QTY, (previous[id] || 0) + delta));
       const next = { ...previous };
@@ -610,9 +612,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
 
           <div className="mt-3 rounded-[10px] border border-black/10 bg-white px-3 py-3">
             <div className="border-b border-black/10 pb-2">
-              <strong className="block text-[13px] font-medium">{DEMO_BUSINESS.name}</strong>
+              <strong className="block text-[13px] font-medium">{data.business.name}</strong>
               <span className="block text-[10px] text-ink-muted">
-                12 Linking Road, Bandra West, Mumbai
+                {data.hours.address}
               </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-ink-muted">
@@ -692,7 +694,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         </Panel>
       );
     }
-  } else if (screen === "menu") {
+  } else if (screen === "menu" && data.ordering) {
     body = (
       <Panel>
         <ScreenHead
@@ -707,7 +709,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
             onService={() => setScreen("service")}
           />
         ) : null}
-        {DEMO_MENU.categories.map((category) => (
+        {data.menu.categories.map((category) => (
           <div key={category.name}>
             <p className="mt-[18px] font-display text-[13px] font-medium text-[var(--cp-primary)]">
               {category.name}
@@ -719,33 +721,50 @@ export function ScanPage({ slug, code }: ScanPageProps) {
                   key={item.id}
                   className="flex items-start justify-between gap-3 border-b border-black/10 py-3 last:border-0"
                 >
-                  <div className="min-w-0">
+                  {item.image ? (
+                    <span className="h-14 w-10 shrink-0 overflow-hidden rounded-[7px] border border-black/10">
+                      <MenuPhoto image={item.image} name={item.name} />
+                    </span>
+                  ) : null}
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-medium">
                       {item.name}
                       {item.tag ? <Tag>{item.tag}</Tag> : null}
+                      {item.soldOut ? <Tag>Sold out</Tag> : null}
                     </div>
                     <p className="mt-0.5 text-[11px] leading-[1.5] text-ink-muted">{item.details}</p>
                     <span className="mt-1 block text-[11.5px] text-[var(--cp-primary)]">
-                      {money(item.price)}
+                      {item.priceLabel}
                     </span>
+                    {!item.orderable && !item.soldOut ? (
+                      <span className="mt-0.5 block text-[10px] text-ink-muted">
+                        Ask staff to order this.
+                      </span>
+                    ) : null}
                   </div>
                   {room ? (
                     <div className="shrink-0">
-                      {qty ? (
-                        <Qty
-                          qty={qty}
-                          name={item.name}
-                          onDec={() => changeItem(item.id, -1)}
-                          onAdd={() => changeItem(item.id, 1)}
-                        />
+                      {item.orderable ? (
+                        qty ? (
+                          <Qty
+                            qty={qty}
+                            name={item.name}
+                            onDec={() => changeItem(item.id, -1)}
+                            onAdd={() => changeItem(item.id, 1)}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="h-7 rounded-full border border-[var(--cp-primary)]/25 bg-white px-3 text-[11px] font-medium text-[var(--cp-primary)]"
+                            onClick={() => changeItem(item.id, 1)}
+                          >
+                            Add
+                          </button>
+                        )
                       ) : (
-                        <button
-                          type="button"
-                          className="h-7 rounded-full border border-[var(--cp-primary)]/25 bg-white px-3 text-[11px] font-medium text-[var(--cp-primary)]"
-                          onClick={() => changeItem(item.id, 1)}
-                        >
-                          Add
-                        </button>
+                        <span className="text-[10px] text-ink-muted">
+                          {item.soldOut ? "Sold out" : "Ask staff"}
+                        </span>
                       )}
                     </div>
                   ) : null}
@@ -1018,6 +1037,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
           <HomeHead
             spotName={displaySpot}
             ordering={Boolean(room)}
+            initials={data.business.initials}
+            name={data.business.name}
+            tagline={data.business.tagline}
             announcement={config.announcement.on ? config.announcement.text : ""}
           />
         </Panel>
@@ -1183,6 +1205,9 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         <HomeHead
           spotName={displaySpot}
           ordering={Boolean(room)}
+          initials={data.business.initials}
+          name={data.business.name}
+          tagline={data.business.tagline}
           announcement={config.announcement.on ? config.announcement.text : ""}
         />
       </Panel>
@@ -1265,7 +1290,7 @@ export function ScanPage({ slug, code }: ScanPageProps) {
         />
         <div className="px-0 py-4 text-center">
           <h3 className="font-display text-[19px] font-medium text-[var(--cp-primary)]">
-            Both options help {DEMO_BUSINESS.name}
+            Both options help {data.business.name}
           </h3>
           <p className="mt-1.5 text-[11.5px] leading-[1.5] text-slate-600">
             Pick whichever feels right. There is no wrong choice — you can always do both.
@@ -1311,78 +1336,39 @@ export function ScanPage({ slug, code }: ScanPageProps) {
   } else if (screen === "google") {
     body = (
       <Panel>
-        <ScreenHead
-          title="Google review"
-          sub="Two ways to do it — pick whichever is easier."
+        <GoogleScreen
+          theme={data.brand}
+          reviewUrl={data.googleReviewUrl}
+          reviewUrlValid={data.reviewUrlValid}
+          onWriteForMe={() => setScreen("review")}
           onBack={() => setScreen("chooser")}
         />
-        <p className="text-left text-[13.5px] font-medium text-slate-700">Post a review on Google</p>
-        <p className="mt-1.5 text-left text-[10.5px] leading-[1.5] text-ink-muted">
-          Opens Google — write whatever feels right.
-        </p>
-        <a
-          href={DEMO_BUSINESS.googleReviewUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={btnDirect}
-        >
-          <Icon name="external" size={14} /> Post a review on Google
-        </a>
-        <p className="mt-[22px] text-left text-[13.5px] font-medium text-slate-700">
-          Want us to write it for you?
-        </p>
-        <p className="mt-1.5 text-left text-[10.5px] leading-[1.5] text-ink-muted">
-          Answer a few quick questions and we will write a review you can copy and paste on Google.
-        </p>
-        <button
-          type="button"
-          className={btnLink}
-          onClick={() => setToast("The review writer isn't part of this concept demo.")}
-        >
-          Write it for me
-        </button>
+      </Panel>
+    );
+  } else if (screen === "review") {
+    body = (
+      <Panel>
+        <ReviewScreen
+          slug={slug}
+          businessType={businessType}
+          theme={data.brand}
+          reviewUrl={data.googleReviewUrl}
+          reviewUrlValid={data.reviewUrlValid}
+          mode="normal"
+          answers={{}}
+          onContinue={() => setScreen("thanks")}
+          onBack={() => setScreen("google")}
+        />
       </Panel>
     );
   } else if (screen === "feedback") {
     body = (
       <Panel>
-        <ScreenHead
-          title="What's on your mind?"
-          sub="The owner and our team read every message."
+        <FeedbackScreen
+          theme={data.brand}
+          onSuccess={() => setScreen("thanks")}
           onBack={() => setScreen("chooser")}
         />
-        <p className="text-left text-[10.5px] leading-[1.5] text-ink-muted">
-          We appreciate you taking the time to help us improve.
-        </p>
-        <textarea
-          className={cx(inputClass, "mt-2 h-24 resize-none py-2")}
-          maxLength={1000}
-          placeholder="Tell the owner what happened…"
-          value={feedback}
-          onChange={(event) => setFeedback(event.target.value)}
-        />
-        {feedbackError ? <p className="mt-1 text-[11px] text-red-600">{feedbackError}</p> : null}
-        <input
-          className={cx(inputClass, "mt-2")}
-          type="email"
-          placeholder="Email (optional)"
-          value={feedbackEmail}
-          onChange={(event) => setFeedbackEmail(event.target.value)}
-        />
-        <button
-          type="button"
-          className={btnDirect}
-          onClick={() => {
-            if (!feedback.trim()) {
-              setFeedbackError("Please write a short message.");
-              return;
-            }
-            setFeedbackError("");
-            setScreen("thanks");
-          }}
-        >
-          Send to the owner
-        </button>
       </Panel>
     );
   } else if (screen === "thanks") {
@@ -1413,18 +1399,23 @@ export function ScanPage({ slug, code }: ScanPageProps) {
           onBack={() => setScreen("home")}
         />
         <div className="mb-2 flex items-center gap-2">
-          <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green-deep">
-            Open now
+          <span
+            className={
+              data.openNow
+                ? "rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green-deep"
+                : "rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-ink-muted"
+            }
+          >
+            {data.openNow ? "Open now" : "Closed now"}
           </span>
-          <span className="text-[11px] text-ink-muted">Closes 21:00</span>
         </div>
-        {DEMO_WEEK.map(([day, time]) => (
+        {data.hours.rows.map((row) => (
           <div
-            key={day}
+            key={row.day}
             className="flex justify-between border-b border-black/5 py-1.5 text-[11.5px]"
           >
-            <span>{day}</span>
-            <span>{time}</span>
+            <span>{row.day}</span>
+            <span>{row.hours}</span>
           </div>
         ))}
         <p className="mt-3 text-[11.5px] leading-[1.6] text-ink-muted">
@@ -1449,12 +1440,12 @@ export function ScanPage({ slug, code }: ScanPageProps) {
           </div>
         ) : null}
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[var(--cp-secondary)] font-display text-xl font-medium tracking-[0.02em] text-[var(--cp-primary)]">
-          {DEMO_BUSINESS.initials}
+          {data.business.initials}
         </div>
         <h1 className="mt-2.5 text-center font-display text-[22px] font-medium leading-[1.2] text-[var(--cp-primary)]">
-          {DEMO_BUSINESS.name}
+          {data.business.name}
         </h1>
-        <p className="mt-[3px] text-center text-[12.5px] text-slate-600">{DEMO_BUSINESS.tagline}</p>
+        <p className="mt-[3px] text-center text-[12.5px] text-slate-600">{data.business.tagline}</p>
         {room ? (
           <div className="mt-4 flex items-center justify-center gap-1.5 rounded-[9px] bg-white/70 px-3 py-2 text-[11.5px] text-ink-muted">
             <Icon name="qr" size={13} />
@@ -1788,10 +1779,16 @@ function HomeHead({
   announcement,
   spotName,
   ordering,
+  initials,
+  name,
+  tagline,
 }: {
   announcement: string;
   spotName: string;
   ordering: boolean;
+  initials: string;
+  name: string;
+  tagline: string;
 }) {
   return (
     <>
@@ -1801,12 +1798,12 @@ function HomeHead({
         </div>
       ) : null}
       <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[var(--cp-secondary)] font-display text-xl font-medium tracking-[0.02em] text-[var(--cp-primary)]">
-        {DEMO_BUSINESS.initials}
+        {initials}
       </div>
       <h1 className="mt-2.5 text-center font-display text-[22px] font-medium leading-[1.2] text-[var(--cp-primary)]">
-        {DEMO_BUSINESS.name}
+        {name}
       </h1>
-      <p className="mt-[3px] text-center text-[12.5px] text-slate-600">{DEMO_BUSINESS.tagline}</p>
+      <p className="mt-[3px] text-center text-[12.5px] text-slate-600">{tagline}</p>
       {ordering ? (
         <div className="mt-4 flex items-center justify-center gap-1.5 rounded-[9px] bg-white/70 px-3 py-2 text-[11.5px] text-ink-muted">
           <Icon name="qr" size={13} />
