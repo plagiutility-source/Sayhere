@@ -24,6 +24,7 @@ import {
   useState,
 } from "react";
 import { Logo } from "@/components/logo";
+import type { BusinessType } from "@/lib/brand/tokens";
 import { getDashboardMock } from "@/lib/mock/dashboard";
 import { displayableLogo } from "@/lib/mock/store";
 import { resolveDemoScenario } from "@/lib/mock/demo";
@@ -53,7 +54,13 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function NavList({
+  onNavigate,
+  businessType,
+}: {
+  onNavigate?: () => void;
+  businessType: BusinessType;
+}) {
   const pathname = usePathname();
   return (
     <nav aria-label="Dashboard" className="flex flex-col gap-4">
@@ -63,15 +70,18 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             {group.label}
           </p>
           <ul className="mt-1 flex flex-col gap-1">
-            {group.items.map((item) => {
+            {group.items
+              .filter((item) => !item.requires || item.requires(businessType))
+              .map((item) => {
               const active = isActivePath(pathname, item.href);
+              const label = item.labelByType?.[businessType] ?? item.label;
               const IconCmp = item.icon;
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     onClick={onNavigate}
-                    title={item.label}
+                    title={label}
                     aria-current={active ? "page" : undefined}
                     className={`relative flex h-10 items-center justify-center gap-2.5 rounded-control px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white xl:justify-start xl:px-3 ${
                       active
@@ -86,7 +96,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                       />
                     ) : null}
                     <IconCmp size={18} />
-                    <span className="hidden xl:inline">{item.label}</span>
+                    <span className="hidden xl:inline">{label}</span>
                   </Link>
                 </li>
               );
@@ -116,7 +126,13 @@ function UpgradeCard() {
   );
 }
 
-function SidebarChrome({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarChrome({
+  onNavigate,
+  businessType,
+}: {
+  onNavigate?: () => void;
+  businessType: BusinessType;
+}) {
   return (
     <>
       <Link
@@ -134,7 +150,7 @@ function SidebarChrome({ onNavigate }: { onNavigate?: () => void }) {
           </span>
         </span>
       </Link>
-      <NavList onNavigate={onNavigate} />
+      <NavList onNavigate={onNavigate} businessType={businessType} />
       <div className="mt-auto">
         <UpgradeCard />
       </div>
@@ -215,7 +231,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop sidebar: full at xl (>=1280px), icon rail at lg (1024–1279px). */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-4 bg-brand-blue p-2 lg:flex xl:w-60 xl:p-3 print:hidden">
-        <SidebarChrome />
+        <SidebarChrome businessType={business.business_type} />
       </aside>
 
       {/* Off-canvas drawer for <1024px. */}
@@ -243,7 +259,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             >
               <CloseIcon size={20} />
             </button>
-            <SidebarChrome onNavigate={() => setDrawerOpen(false)} />
+            <SidebarChrome
+              onNavigate={() => setDrawerOpen(false)}
+              businessType={business.business_type}
+            />
           </div>
         </div>
       ) : null}

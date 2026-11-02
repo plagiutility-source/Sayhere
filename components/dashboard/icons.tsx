@@ -254,3 +254,21 @@ export function PhotoIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function OrdersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+      <path d="M9 8h6M9 12h6" />
+    </Icon>
+  );
+}
+
+export function TablesIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="18" height="6" rx="1.5" />
+      <path d="M6 10v10M18 10v10M6 15h12" />
+    </Icon>
+  );
+}
