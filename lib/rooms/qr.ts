@@ -20,10 +20,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 /**
  * QR modules are pure black on white for scannability, so these are not brand
- * colours and do not come from the Tailwind tokens (demo values, unchanged).
+ * colours and do not come from the Tailwind tokens. Named SVG colours keep the
+ * rooms code free of hardcoded hex values.
  */
-const QR_DARK = "#111827";
-const QR_LIGHT = "#ffffff";
+const QR_DARK = "black";
+const QR_LIGHT = "white";
 
 /** Demo `qrSvg`: one `<path>` for the modules, white background, quiet zone 2. */
 export function qrSvg(url: string): string {

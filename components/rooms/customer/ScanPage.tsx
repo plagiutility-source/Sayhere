@@ -48,6 +48,7 @@ import { ReviewScreen } from "@/components/customer-page/review-screen";
 import type { RoomsPublicData } from "@/lib/rooms/adapter";
 import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
+import { isValidHttpsUrl, isValidPhone } from "@/lib/validation/page-config";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
 import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
@@ -1425,9 +1426,11 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
           <br />
           {config.hours.phone}
         </p>
-        <a href={`tel:${config.hours.phone}`} className={cx(btnLink, "mt-2.5")}>
-          <Icon name="phone" size={14} /> Call
-        </a>
+        {isValidPhone(config.hours.phone) ? (
+          <a href={`tel:${config.hours.phone.trim()}`} className={cx(btnLink, "mt-2.5")}>
+            <Icon name="phone" size={14} /> Call
+          </a>
+        ) : null}
       </Panel>
     );
   } else {
@@ -1634,8 +1637,8 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
           {config.hours.on ? (
             <Tile icon="clock" label="Hours and contact" onClick={() => setScreen("hours")} />
           ) : null}
-          {config.call.on ? (
-            <Tile icon="phone" label="Call" href={`tel:${config.call.phone}`} />
+          {config.call.on && isValidPhone(config.call.phone) ? (
+            <Tile icon="phone" label="Call" href={`tel:${config.call.phone.trim()}`} />
           ) : null}
           {config.directions.on && config.directions.value.trim() ? (
             <Tile
@@ -1644,13 +1647,16 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.directions.value)}`}
             />
           ) : null}
-          {config.custom.on && config.custom.label.trim() ? (
+          {config.custom.on &&
+          config.custom.label.trim() &&
+          isValidHttpsUrl(config.custom.url) ? (
             <Tile icon="link" label={config.custom.label} href={config.custom.url} />
           ) : null}
         </div>
-        {config.socials.instagram || config.socials.website ? (
+        {isValidHttpsUrl(config.socials.instagram ?? "") ||
+        isValidHttpsUrl(config.socials.website ?? "") ? (
           <div className="mt-4 flex justify-center gap-2">
-            {config.socials.instagram ? (
+            {isValidHttpsUrl(config.socials.instagram ?? "") ? (
               <a
                 href={config.socials.instagram}
                 target="_blank"
@@ -1661,7 +1667,7 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
                 <Icon name="instagram" size={16} />
               </a>
             ) : null}
-            {config.socials.website ? (
+            {isValidHttpsUrl(config.socials.website ?? "") ? (
               <a
                 href={config.socials.website}
                 target="_blank"
