@@ -56,7 +56,7 @@ import { claimSpotScan } from "@/lib/rooms/scans";
 import { isValidPhone } from "@/lib/validation/page-config";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
-import type { Order, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
+import type { Order, Room, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
 
 type ScanPageProps = { slug: string; code: string; data: RoomsPublicData };
 type Screen =
@@ -164,10 +164,27 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   const location =
     state.locations.find((item) => item.slug === slug || item.id === slug) ?? null;
   const isReception = code === "reception";
-  const room =
+  const configuredRoom: Room | null =
     location && !isReception
       ? location.rooms.find((item) => item.code === code) ?? null
       : null;
+  /*
+   * A location with no table rows at all is one nobody has set up yet: a demo
+   * business, or a phone that never opened the dashboard. Open the scanned code
+   * as that table instead of dead-ending. Once the owner has real tables, an
+   * unknown code still shows "This link isn't linked to a table".
+   */
+  const firstRoom: Room | null =
+    location && !isReception && !location.rooms.length && code.trim()
+      ? {
+          id: `rm_${location.id}_${code.trim()}`,
+          code: code.trim(),
+          name: roomLabelFromCode(spot, code),
+          active: true,
+          scans: 0,
+        }
+      : null;
+  const room: Room | null = configuredRoom ?? firstRoom;
   const known = isReception || Boolean(room);
   const active = isReception || Boolean(room?.active);
   const kind = isReception ? "reception" : "rooms";
@@ -1750,6 +1767,12 @@ function OrderSummary({
       </div>
     </div>
   );
+}
+
+/** "qr2" -> "Table 2" / "Room 2"; any other code keeps its own label. */
+function roomLabelFromCode(spot: string, code: string): string {
+  const match = /^qr(\d+)$/i.exec(code.trim());
+  return match ? `${spot} ${Number(match[1])}` : code.trim().toUpperCase();
 }
 
 function DoneRow({ label, value }: { label: string; value: string }) {

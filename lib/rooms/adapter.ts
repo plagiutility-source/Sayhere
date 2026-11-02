@@ -38,6 +38,7 @@ import { getMockReviewPage } from "@/lib/mock/customer-page";
 import { reviewUrlFor } from "@/lib/mock/locations";
 import type {
   MenuItem,
+  MockReviewPage,
   PageConfig,
   SocialKey,
   SocialLinks,
@@ -99,6 +100,25 @@ export type RoomsPublicData = {
   initialState: RoomsState;
 };
 
+/**
+ * A demo page as a rooms location. Slugs like `hotel1`, `full01` and `salon1`
+ * render on the reception route but have no row in the owner's location list,
+ * so the table route derives a location from the page itself instead of 404ing.
+ */
+function demoLocationFrom(page: MockReviewPage): MockLocation {
+  return {
+    id: `loc_${page.slug}`,
+    business_id: page.business_id,
+    slug: page.slug,
+    location_name: page.location_name ?? page.business.name,
+    google_review_url: page.google_review_url,
+    nfc_enabled: 1,
+    is_active: 1,
+    created_at: "2026-09-12T09:00:00.000Z",
+    scans_used: 0,
+  };
+}
+
 export function publicRoomsData(input: {
   business: BusinessProfile;
   locations: readonly MockLocation[];
@@ -107,43 +127,70 @@ export function publicRoomsData(input: {
   menuItemLimit: number | null;
   now?: Date;
 }): RoomsPublicData | null {
-  const view = businessView(input.business);
-  const location = input.locations.find((row) => row.slug === input.slug) ?? null;
+  /*
+   * The reception route renders any mock page by slug (`/r/hotel1`), so the
+   * table route has to accept those slugs too. When the slug is a demo page
+   * rather than one of the owner's locations, derive the location and the page
+   * content from that same page — otherwise `/r/hotel1/qr1` is a plain 404 and
+   * no table QR works on a demo business.
+   */
+  const ownLocation =
+    input.locations.find((row) => row.slug === input.slug) ?? null;
+  const demoPage = ownLocation ? null : getMockReviewPage(input.slug);
+  const location = ownLocation ?? (demoPage ? demoLocationFrom(demoPage) : null);
+  const ownerProfile: BusinessProfile = demoPage
+    ? {
+        ...input.business,
+        name: demoPage.business.name,
+        tagline: demoPage.business.tagline ?? "",
+        business_type: demoPage.business.business_type,
+        google_review_url: demoPage.business.google_review_url,
+        primary_color: demoPage.business.primary_color,
+        secondary_color: demoPage.business.secondary_color,
+        color_source: demoPage.business.color_source,
+      }
+    : input.business;
+  const view = businessView(ownerProfile);
   if (!view || !location) return null;
 
-  const menu = menuFromConfig(input.page.config, input.menuItemLimit);
+  /** The demo page's own content wins over the owner's saved page. */
+  const source: RoomsPageSource = demoPage
+    ? { config: demoPage.page_config, socials: demoPage.business.social_links }
+    : input.page;
+
+  const menu = menuFromConfig(source.config, input.menuItemLimit);
   const orderable = menu.categories.some((category) =>
     category.items.some((item) => item.orderable),
   );
   const page = roomsPageConfigFrom(
-    input.page.config,
-    input.page.socials,
+    source.config,
+    source.socials,
     view.type === "hotel" ? "Room service menu" : "Our menu",
   );
   // Menu off or empty = no ordering UI at all.
-  page.menu.on = Boolean(input.page.config?.buttons.menu.on) && orderable;
+  page.menu.on = Boolean(source.config?.buttons.menu.on) && orderable;
 
   // The same home-screen data the reception page gets (one set of controls).
   const home = roomsHomeView({
-    config: input.page.config,
-    socials: input.page.socials,
+    config: source.config,
+    socials: source.socials,
     type: view.type,
     menuOn: page.menu.on,
     timeZone: view.timeZone,
     now: input.now,
   });
 
-  const hours = hoursFromConfig(input.page.config);
-  const week = input.page.config?.buttons.hours.week;
+  const hours = hoursFromConfig(source.config);
+  const week = source.config?.buttons.hours.week;
   const openNow = week
     ? isOpenNow(week, input.now ?? new Date(), view.timeZone)
     : false;
-  const reviewUrl = reviewUrlFor(location, input.business.google_review_url);
+  const reviewUrl = reviewUrlFor(location, ownerProfile.google_review_url);
   const spot = locationSpot(location);
 
   return {
     business: view,
-    brand: getBrandTheme(input.business),
+    brand: getBrandTheme(ownerProfile),
     googleReviewUrl: reviewUrl,
     reviewUrlValid: isValidReviewUrl(reviewUrl),
     location: spot,
@@ -157,8 +204,8 @@ export function publicRoomsData(input: {
     announcementText: home.announcementText,
     buttons: home.buttons,
     socials: home.socials,
-    pageHours: input.page.config?.buttons.hours ?? null,
-    whatsappPhone: input.page.config?.buttons.whatsapp.phone ?? "",
+    pageHours: source.config?.buttons.hours ?? null,
+    whatsappPhone: source.config?.buttons.whatsapp.phone ?? "",
     initialState: initialStateFromSpots([spot], view.type),
   };
 }
