@@ -18,7 +18,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/card";
-import { useOwner } from "@/components/rooms/owner/OwnerProvider";
+import { useOwner, useOwnerOptional } from "@/components/rooms/owner/OwnerProvider";
 import { PeriodBar } from "@/components/rooms/owner/PeriodBar";
 import { LocalTime } from "@/components/rooms/shared/LocalTime";
 import { getBrandTheme } from "@/lib/brand/theme";
@@ -320,6 +320,12 @@ function BillList({
 }
 
 function DashboardOrderingBody() {
+  const owner = useOwnerOptional();
+  if (!owner) return null;
+  return <DashboardOrderingContent />;
+}
+
+function DashboardOrderingContent() {
   const { state, hydrated } = useOwner();
   const business = useBusiness();
   const theme = useMemo(() => getBrandTheme(business), [business]);
@@ -426,6 +432,12 @@ export function DashboardOrderingSection() {
 }
 
 function AnalyticsOrderingBody() {
+  const owner = useOwnerOptional();
+  if (!owner) return null;
+  return <AnalyticsOrderingContent />;
+}
+
+function AnalyticsOrderingContent() {
   const { state, hydrated } = useOwner();
   const business = useBusiness();
   const theme = useMemo(() => getBrandTheme(business), [business]);

@@ -32,12 +32,18 @@ import {
   serviceCallSpotName,
 } from "@/lib/rooms/rules";
 import type { Order } from "@/lib/rooms/types";
-import { useOwner } from "./OwnerProvider";
+import { useOwner, useOwnerOptional } from "./OwnerProvider";
 
 const ICON_BUTTON =
   "relative flex h-10 w-10 items-center justify-center rounded-control text-ink hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue";
 
 export function LiveTopbarActions() {
+  const owner = useOwnerOptional();
+  if (!owner) return null;
+  return <LiveTopbarActionsContent />;
+}
+
+function LiveTopbarActionsContent() {
   const { state, save, toast, soundOn, toggleSound, businessType } = useOwner();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);

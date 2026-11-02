@@ -52,6 +52,15 @@ export function useOwner(): OwnerContextValue {
   return value;
 }
 
+/**
+ * Null-safe variant for components that can briefly outlive the provider while
+ * the business type changes (e.g. café -> salon). They render nothing instead
+ * of crashing the page.
+ */
+export function useOwnerOptional(): OwnerContextValue | null {
+  return useContext(OwnerContext);
+}
+
 export function OwnerProvider({
   children,
   initialState,
