@@ -27,6 +27,7 @@ import {
   saveMockSocialLinks,
   type MenuConfig,
   type PageConfig,
+  type PageConfigContent,
   type SocialLinks,
 } from "@/lib/mock/customer-page";
 import { reviewUrlFor, type MockLocation } from "@/lib/mock/locations";
@@ -36,18 +37,16 @@ import { limitLabel } from "@/lib/mock/plans";
 import {
   getStoredPageData,
   saveStoredPageData,
+  subscribePageStorage,
 } from "@/lib/mock/store";
+import { useFirstRoomCode } from "@/lib/rooms/store";
 import { useMockBusiness, useMockLocations } from "@/lib/use-business";
 import {
-  emptyRoomsPageDraft,
   menuLimitIssue,
   namedMenuItemCount,
   pageConfigIssues,
-  roomsPageDraftIssues,
-  type RoomsPageDraft,
 } from "@/lib/validation/page-config";
 import { supportsTableOrdering } from "@/lib/category/ordering";
-import { RoomsPageTab } from "@/components/rooms/owner/RoomsPageTab";
 import {
   ButtonsSection,
   PageContentSection,
@@ -127,46 +126,119 @@ function EditorForLocation({
   // Reception tab below is the existing editor, unchanged.
   const supportsOrdering = supportsTableOrdering(business.business_type);
   const [tab, setTab] = useState<"reception" | "rooms">("reception");
+  // The first real table code for this location, so "View live page" opens the
+  // same kind of page the active tab is editing. Falls back to qr1 for a
+  // location with no tables yet (that route opens the code as its first table).
+  const tableCode = useFirstRoomCode(location.slug);
 
-  const [draftConfig, setDraftConfig] = useState<PageConfig>(() =>
-    cloneConfig(getMockPageConfig(scenario, location.id) ?? emptyPageConfig()),
+  /*
+   * The two tabs are fully independent pages. Both start from the same saved
+   * content (or the reception page for pages saved before this split), but
+   * every edit below only touches the active tab's copy.
+   */
+  const initialConfig =
+    getMockPageConfig(scenario, location.id) ?? emptyPageConfig();
+  const initialDrafts: PageDrafts = {
+    reception: pageContent(initialConfig),
+    rooms: roomsSeedFrom(initialConfig),
+  };
+  const initialSocials = cloneSocials(getMockSocialLinks(scenario));
+  const initialSocialDrafts: SocialDrafts = {
+    reception: cloneSocials(initialSocials),
+    rooms: cloneSocials(initialSocials),
+  };
+  const [drafts, setDrafts] = useState<PageDrafts>(() =>
+    cloneDrafts(initialDrafts),
   );
-  const [savedConfig, setSavedConfig] = useState<PageConfig>(() =>
-    cloneConfig(getMockPageConfig(scenario, location.id) ?? emptyPageConfig()),
+  const [savedDrafts, setSavedDrafts] = useState<PageDrafts>(() =>
+    cloneDrafts(initialDrafts),
   );
-  const [draftSocials, setDraftSocials] = useState<SocialLinks>(() =>
-    cloneSocials(getMockSocialLinks(scenario)),
+  const [socialDrafts, setSocialDrafts] = useState<SocialDrafts>(() =>
+    cloneSocialDrafts(initialSocialDrafts),
   );
-  const [savedSocials, setSavedSocials] = useState<SocialLinks>(() =>
-    cloneSocials(getMockSocialLinks(scenario)),
+  const [savedSocialDrafts, setSavedSocialDrafts] = useState<SocialDrafts>(() =>
+    cloneSocialDrafts(initialSocialDrafts),
   );
-  // Merge M7: the tables page draft lives inside the same page config.
-  const roomsPage = draftConfig.rooms_page ?? emptyRoomsPageDraft();
-
+  const draftConfig = drafts[tab];
+  const draftSocials = socialDrafts[tab];
   // MOCK ONLY, removed in Stage 4: content saved earlier for this slug wins
   // over the scenario default. Read after mount (localStorage is client-only)
   // so the server render and hydration use the scenario default.
   useEffect(() => {
     const stored = getStoredPageData(location.slug);
     if (!stored) return;
-    const config = cloneConfig(stored.page_config ?? emptyPageConfig());
-    setDraftConfig(config);
-    setSavedConfig(cloneConfig(config));
-    if (stored.social_links) {
-      const socials = cloneSocials(stored.social_links);
-      setDraftSocials(socials);
-      setSavedSocials(cloneSocials(socials));
-    }
-  }, [location.slug]);
+    const config = stored.page_config ?? emptyPageConfig();
+    const nextDrafts: PageDrafts = {
+      reception: pageContent(config),
+      rooms: roomsSeedFrom(config),
+    };
+    const fallbackSocials = getMockSocialLinks(scenario);
+    const nextSocialDrafts: SocialDrafts = {
+      reception: cloneSocials(stored.social_links ?? fallbackSocials),
+      rooms: cloneSocials(
+        stored.rooms_social_links ?? stored.social_links ?? fallbackSocials,
+      ),
+    };
+    setDrafts(nextDrafts);
+    setSavedDrafts(cloneDrafts(nextDrafts));
+    setSocialDrafts(nextSocialDrafts);
+    setSavedSocialDrafts(cloneSocialDrafts(nextSocialDrafts));
+  }, [location.slug, scenario]);
   const [status, setStatus] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
 
-  const dirty =
-    !configsEqual(draftConfig, savedConfig) ||
-    !socialsEqual(draftSocials, savedSocials);
+  const activeDirty =
+    JSON.stringify(drafts[tab]) !== JSON.stringify(savedDrafts[tab]) ||
+    JSON.stringify(socialDrafts[tab]) !== JSON.stringify(savedSocialDrafts[tab]);
+  const anyDirty =
+    !draftsEqual(drafts, savedDrafts) ||
+    !socialDraftsEqual(socialDrafts, savedSocialDrafts);
+
+  // Latest dirty value for the storage listener, which can fire between
+  // renders. A second dashboard tab must never overwrite edits in this one,
+  // including edits on the page that is not currently visible.
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    dirtyRef.current = anyDirty;
+  }, [anyDirty]);
+
+  // A Save in another dashboard tab updates localStorage. Reflect it here:
+  // never clobber unsaved edits, but move the saved baseline so Discard loads
+  // the latest version.
+  useEffect(() => {
+    return subscribePageStorage(() => {
+      const stored = getStoredPageData(location.slug);
+      const fallbackConfig =
+        getMockPageConfig(scenario, location.id) ?? emptyPageConfig();
+      const nextConfig = stored?.page_config ?? fallbackConfig;
+      const nextDrafts: PageDrafts = {
+        reception: pageContent(nextConfig),
+        rooms: roomsSeedFrom(nextConfig),
+      };
+      const fallbackSocials = getMockSocialLinks(scenario);
+      const nextSocialDrafts: SocialDrafts = {
+        reception: cloneSocials(stored?.social_links ?? fallbackSocials),
+        rooms: cloneSocials(
+          stored?.rooms_social_links ?? stored?.social_links ?? fallbackSocials,
+        ),
+      };
+
+      setSavedDrafts(cloneDrafts(nextDrafts));
+      setSavedSocialDrafts(cloneSocialDrafts(nextSocialDrafts));
+      if (dirtyRef.current) {
+        setStatus(
+          "Another tab saved changes. Your unsaved edits are still here — Discard to load the latest.",
+        );
+        return;
+      }
+      setDrafts(nextDrafts);
+      setSocialDrafts(nextSocialDrafts);
+      setStatus("Updated with changes saved in another tab.");
+    });
+  }, [location.slug, location.id, scenario]);
 
   // Rules 11.17: Save is blocked while an On item is empty or invalid, and
   // 11.5: after a downgrade Save is blocked until the menu fits the plan limit
@@ -175,19 +247,33 @@ function EditorForLocation({
   const issues = [
     ...pageConfigIssues(draftConfig, draftSocials),
     ...(limitIssue ? [limitIssue] : []),
-    ...(supportsOrdering ? roomsPageDraftIssues(roomsPage) : []),
   ];
+  const otherTab = tab === "reception" ? "rooms" : "reception";
+  const otherConfig = drafts[otherTab];
+  const otherSocials = socialDrafts[otherTab];
+  const otherLimitIssue = menuLimitIssue(otherConfig, plan.page.menu_items);
+  const otherIssues = [
+    ...pageConfigIssues(otherConfig, otherSocials),
+    ...(otherLimitIssue ? [otherLimitIssue] : []),
+  ];
+  // Each page saves independently. An invalid field on the other page must not
+  // freeze this one: that was leaving phone/menu edits unsaved while the
+  // page-specific data stayed frozen on every live tab.
   const saveBlocked = issues.length > 0;
 
   const reviewUrl = reviewUrlFor(location, business.google_review_url);
+  // Keep the live link in step with the active tab. Tables/Rooms opens a real
+  // table page (the first table code), not the reception page.
+  const liveHref =
+    tab === "rooms"
+      ? `/r/${location.slug}/${tableCode ?? "qr1"}`
+      : `/r/${location.slug}`;
   const menuItems = namedMenuItemCount(draftConfig.menu);
   const otherLocation =
     locations.find((row) => row.id !== location.id) ?? null;
 
   /** Scrolls to a row and flashes it (chips and the Fix-N summary use this). */
   function handleJump(target: string) {
-    // Rooms-page rows live on the other tab, so select it before scrolling.
-    if (target.startsWith("rooms-")) setTab("rooms");
     setHighlight(target);
     window.setTimeout(() => {
       document
@@ -197,36 +283,46 @@ function EditorForLocation({
     window.setTimeout(() => setHighlight(null), 1600);
   }
 
+  function patchActive(
+    update: (current: PageConfigContent) => PageConfigContent,
+  ) {
+    setDrafts((current) => ({ ...current, [tab]: update(current[tab]) }));
+  }
+
   function patchButtons(patch: Partial<PageConfig["buttons"]>) {
-    setDraftConfig((current) => ({
+    patchActive((current) => ({
       ...current,
       buttons: { ...current.buttons, ...patch },
     }));
   }
 
   function patchMenu(menu: MenuConfig) {
-    setDraftConfig((current) => ({ ...current, menu }));
-  }
-
-  function patchRoomsPage(rooms: RoomsPageDraft) {
-    setDraftConfig((current) => ({ ...current, rooms_page: rooms }));
+    patchActive((current) => ({ ...current, menu }));
   }
 
   function patchAnnouncement(patch: Partial<PageConfig["announcement"]>) {
-    setDraftConfig((current) => ({
+    patchActive((current) => ({
       ...current,
       announcement: { ...current.announcement, ...patch },
     }));
   }
 
   function setThankYou(value: string) {
-    setDraftConfig((current) => ({ ...current, thank_you: value }));
+    patchActive((current) => ({ ...current, thank_you: value }));
+  }
+
+  function patchLoyalty(on: boolean) {
+    patchActive((current) => ({ ...current, loyalty: { on } }));
+  }
+
+  function setActiveSocials(next: SocialLinks) {
+    setSocialDrafts((current) => ({ ...current, [tab]: next }));
   }
 
   // Unsaved-changes guard: tab close (beforeunload) and in-app link clicks
   // (sidebar etc.). Stage 4 can replace the click catcher with router events.
   useEffect(() => {
-    if (!dirty) return;
+    if (!anyDirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -249,65 +345,185 @@ function EditorForLocation({
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("click", onClickCapture, true);
     };
-  }, [dirty]);
+  }, [anyDirty]);
 
-  function handleSave() {
-    saveMockPageConfig(scenario, location.id, cloneConfig(draftConfig));
-    saveMockSocialLinks(scenario, cloneSocials(draftSocials));
-    // MOCK ONLY: the live page reads this store after mount.
+  /**
+   * The saved version of both pages, used as the base when only one page is
+   * saved. Never use the other tab's draft here: it may contain unsaved edits
+   * that this Save must not publish.
+   */
+  function savedPageForMerge(): PageConfig {
+    const stored = getStoredPageData(location.slug);
+    if (stored?.page_config) return cloneConfig(stored.page_config);
+    return {
+      ...cloneContent(savedDrafts.reception),
+      rooms_config: cloneContent(savedDrafts.rooms),
+    };
+  }
+
+  /**
+   * Write the active page. When the other page has no validation errors, its
+   * draft is saved too (the long-standing Save-all behaviour); when it does,
+   * its last saved version is preserved instead of blocking this page.
+   */
+  function pageForSave(
+    content: PageConfigContent,
+    includeOther: boolean,
+  ): PageConfig {
+    const base = savedPageForMerge();
+    const receptionContent =
+      tab === "reception"
+        ? content
+        : includeOther
+          ? drafts.reception
+          : null;
+    const roomsContent =
+      tab === "rooms" ? content : includeOther ? drafts.rooms : null;
+
+    const next: PageConfig = {
+      ...(receptionContent
+        ? cloneContent(receptionContent)
+        : pageContent(base)),
+      ...(base.rooms_page ? { rooms_page: base.rooms_page } : {}),
+    };
+    if (roomsContent) {
+      next.rooms_config = cloneContent(roomsContent);
+    } else if (base.rooms_config) {
+      next.rooms_config = cloneContent(base.rooms_config);
+    }
+    return next;
+  }
+
+  function saveSocialsPatch(includeOther: boolean) {
+    return {
+      ...(tab === "reception" || includeOther
+        ? { social_links: cloneSocials(socialDrafts.reception) }
+        : {}),
+      ...(tab === "rooms" || includeOther
+        ? { rooms_social_links: cloneSocials(socialDrafts.rooms) }
+        : {}),
+    };
+  }
+
+  function handleSave(): boolean {
+    const includeOther = otherIssues.length === 0;
+    const combined = pageForSave(drafts[tab], includeOther);
+    saveMockPageConfig(scenario, location.id, combined);
+    if (tab === "reception" || includeOther) {
+      saveMockSocialLinks(scenario, cloneSocials(socialDrafts.reception));
+    }
+    // MOCK ONLY: the live pages read this store after mount.
     const result = saveStoredPageData(location.slug, {
-      page_config: cloneConfig(draftConfig),
-      social_links: cloneSocials(draftSocials),
+      page_config: combined,
+      ...saveSocialsPatch(includeOther),
     });
-    setSavedConfig(cloneConfig(draftConfig));
-    setSavedSocials(cloneSocials(draftSocials));
+    if (includeOther) {
+      setSavedDrafts(cloneDrafts(drafts));
+      setSavedSocialDrafts(cloneSocialDrafts(socialDrafts));
+    } else {
+      setSavedDrafts((current) => ({
+        ...current,
+        [tab]: cloneContent(drafts[tab]),
+      }));
+      setSavedSocialDrafts((current) => ({
+        ...current,
+        [tab]: cloneSocials(socialDrafts[tab]),
+      }));
+    }
     setStatus(
       result.ok
-        ? "Saved. Your live page now shows this."
+        ? includeOther
+          ? "Saved. Both pages and every open live tab are up to date."
+          : "Saved this page. The other page keeps its last saved version until its errors are fixed."
         : "Saved for this session only — it will not survive a reload.",
     );
+    return result.ok;
+  }
+
+  function handleViewLive(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    if (activeDirty) {
+      if (saveBlocked) {
+        setStatus(
+          "Fix the highlighted items before opening the live page. Nothing was saved.",
+        );
+        return;
+      }
+      if (!handleSave()) return;
+    }
+    window.open(liveHref, "_blank", "noopener,noreferrer");
   }
 
   function handleDiscard() {
-    setDraftConfig(cloneConfig(savedConfig));
-    setDraftSocials(cloneSocials(savedSocials));
-    setStatus("Changes discarded.");
+    setDrafts((current) => ({
+      ...current,
+      [tab]: cloneContent(savedDrafts[tab]),
+    }));
+    setSocialDrafts((current) => ({
+      ...current,
+      [tab]: cloneSocials(savedSocialDrafts[tab]),
+    }));
+    setStatus("Changes discarded for this page.");
   }
 
   function handleReset() {
-    saveMockPageConfig(scenario, location.id, null);
-    // MOCK ONLY: the live page goes back to the default page too. Social icons
-    // are business-level and are kept.
-    saveStoredPageData(location.slug, {
-      page_config: null,
-      social_links: cloneSocials(draftSocials),
+    const empty = pageContent(emptyPageConfig());
+    const combined = pageForSave(empty, false);
+    saveMockPageConfig(scenario, location.id, combined);
+    const result = saveStoredPageData(location.slug, {
+      page_config: combined,
+      ...(tab === "reception"
+        ? { social_links: {} }
+        : { rooms_social_links: {} }),
     });
-    const empty = emptyPageConfig();
-    setDraftConfig(cloneConfig(empty));
-    setSavedConfig(cloneConfig(empty));
-    // Social icons are business-level and are intentionally kept.
+    setDrafts((current) => ({ ...current, [tab]: empty }));
+    setSavedDrafts((current) => ({ ...current, [tab]: cloneContent(empty) }));
+    setSocialDrafts((current) => ({ ...current, [tab]: {} }));
+    setSavedSocialDrafts((current) => ({ ...current, [tab]: {} }));
     setResetOpen(false);
-    setStatus("Reset to default. Social icons are kept.");
+    setStatus(
+      result.ok
+        ? "Reset this page to default. The other page is unchanged."
+        : "Reset for this session only — it will not survive a reload.",
+    );
   }
 
   function handleCopyFromOther() {
     if (!otherLocation) return;
     const storedOther = getStoredPageData(otherLocation.slug);
-    const source = storedOther
-      ? storedOther.page_config
-      : getMockPageConfig(scenario, otherLocation.id);
-    setDraftConfig(cloneConfig(source ?? emptyPageConfig()));
+    const source =
+      storedOther?.page_config ??
+      getMockPageConfig(scenario, otherLocation.id) ??
+      emptyPageConfig();
+    const sourceSocials =
+      tab === "rooms"
+        ? storedOther?.rooms_social_links ??
+          storedOther?.social_links ??
+          getMockSocialLinks(scenario)
+        : storedOther?.social_links ?? getMockSocialLinks(scenario);
+    setDrafts((current) => ({
+      ...current,
+      [tab]: tab === "rooms" ? roomsSeedFrom(source) : pageContent(source),
+    }));
+    setSocialDrafts((current) => ({
+      ...current,
+      [tab]: cloneSocials(sourceSocials),
+    }));
     setCopyOpen(false);
-    setStatus(`Copied the page content from ${otherLocation.location_name}.`);
+    setStatus(
+      `Copied the ${tab === "rooms" ? "tables/rooms" : "reception"} page from ${otherLocation.location_name}.`,
+    );
   }
 
   function handleLocationChange(nextId: string) {
     if (nextId === location.id) return;
-    if (dirty && !window.confirm(DISCARD_MESSAGE)) return;
+    if (anyDirty && !window.confirm(DISCARD_MESSAGE)) return;
     setStatus(null);
     onSelectLocation(nextId);
   }
 
+  // The preview always renders the active tab's own draft, so every change is
+  // reflected immediately without leaking into the other page.
   const preview = (
     <CustomerPagePreview
       slug={location.slug}
@@ -356,7 +572,8 @@ function EditorForLocation({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!dirty || saveBlocked}
+              disabled={!activeDirty || saveBlocked}
+              title={`Save the ${tab === "rooms" ? "Tables/Rooms" : "Reception"} page settings.`}
               className="inline-flex h-10 items-center rounded-control bg-brand-blue px-3 text-[13px] font-medium text-white hover:bg-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save changes
@@ -364,7 +581,7 @@ function EditorForLocation({
             <button
               type="button"
               onClick={handleDiscard}
-              disabled={!dirty}
+              disabled={!activeDirty}
               className="inline-flex h-10 items-center rounded-control border border-black/15 bg-white px-3 text-[13px] font-medium text-ink hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Discard
@@ -377,9 +594,15 @@ function EditorForLocation({
               Reset to default
             </button>
             <a
-              href={`/r/${location.slug}`}
+              href={liveHref}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleViewLive}
+              title={
+                tab === "rooms"
+                  ? "Open the live table page"
+                  : "Open the live reception page"
+              }
               className="inline-flex h-10 items-center rounded-control border border-black/15 bg-white px-3 text-[13px] font-medium text-ink hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
             >
               View live page
@@ -405,9 +628,12 @@ function EditorForLocation({
               onClick={() => handleJump(issues[0].key)}
               className="text-[12px] text-red-700 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
             >
-              Fix {issues.length} {issues.length === 1 ? "item" : "items"} to
-              save
+              {`Fix ${issues.length} ${issues.length === 1 ? "item" : "items"} to save this page`}
             </button>
+          ) : otherIssues.length > 0 ? (
+            <p className="text-[12px] text-amber-800">
+              {`The ${otherTab === "rooms" ? "Tables/Rooms" : "Reception"} page has ${otherIssues.length} ${otherIssues.length === 1 ? "fix" : "fixes"}. Saving this page will keep that page's last saved version.`}
+            </p>
           ) : null}
         </div>
       </header>
@@ -455,13 +681,17 @@ function EditorForLocation({
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_375px]">
         <div>
           {supportsOrdering && tab === "rooms" ? (
-            <RoomsPageTab
-              draft={roomsPage}
-              onChange={patchRoomsPage}
-              onOpenReception={() => setTab("reception")}
-            />
-          ) : (
-            <>
+            <div className="mb-6 rounded-card border border-brand-blue/20 bg-brand-blue/[0.04] p-4 text-[12px] leading-[1.6] text-ink">
+              <p className="font-medium">A separate page for tables and rooms.</p>
+              <p className="mt-1 text-ink-muted">
+                Guests who scan a table QR see this page, plus table tiles for
+                ordering, Call waiter, Bill and Wi-Fi. Its menu, buttons and
+                social icons are independent, so turning something on here does
+                not turn it on for the reception page.
+              </p>
+            </div>
+          ) : null}
+
           <SuggestionsSection
             businessType={business.business_type}
             onJump={handleJump}
@@ -491,6 +721,8 @@ function EditorForLocation({
               menuItemLimit={plan.page.menu_items}
               aiAllowance={plan.page.ai_images}
               planName={plan.name}
+              loyaltyOn={draftConfig.loyalty?.on ?? true}
+              onToggleLoyalty={patchLoyalty}
               highlight={highlight}
             />
           </section>
@@ -501,7 +733,7 @@ function EditorForLocation({
             </h2>
             <SocialSection
               socials={draftSocials}
-              onChange={setDraftSocials}
+              onChange={setActiveSocials}
               highlight={highlight}
             />
           </section>
@@ -549,32 +781,13 @@ function EditorForLocation({
               </div>
             </section>
           ) : null}
-            </>
-          )}
         </div>
 
         <aside className="hidden lg:sticky lg:top-20 lg:block lg:self-start">
-          {supportsOrdering && tab === "rooms" ? (
-            <div className="rounded-card border border-black/10 bg-white p-4 text-[12px] leading-[1.6] text-ink-muted shadow-soft">
-              <p className="text-[13px] font-medium text-ink">
-                Tables/Rooms page
-              </p>
-              <p className="mt-1">
-                It uses the same menu as the reception page, so dishes are
-                edited once under{" "}
-                <strong className="font-medium text-ink">Menu and hours</strong>.
-                This tab only changes the title and the buttons guests see at a
-                table.
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-[12px] text-ink-muted">Live preview</p>
-              <div className="mt-2">
-                <PhoneFrame>{preview}</PhoneFrame>
-              </div>
-            </>
-          )}
+          <p className="text-[12px] text-ink-muted">Live preview</p>
+          <div className="mt-2">
+            <PhoneFrame>{preview}</PhoneFrame>
+          </div>
         </aside>
       </div>
 
@@ -607,9 +820,10 @@ function EditorForLocation({
         }
       >
         <p className="text-[13px] text-ink">
-          This replaces the page content for {location.location_name} with the
-          saved content from {otherLocation?.location_name ?? "your other location"}.
-          Social icons are kept.
+          This replaces this page&apos;s content and social icons for{" "}
+          {location.location_name} with the saved page from{" "}
+          {otherLocation?.location_name ?? "your other location"}. Your other
+          page is unchanged.
         </p>
       </Modal>
 
@@ -637,8 +851,8 @@ function EditorForLocation({
         }
       >
         <p className="text-[13px] text-ink">
-          This clears the page customization for {location.location_name}.
-          Social icons are kept.
+          This clears this page&apos;s content and social icons for{" "}
+          {location.location_name}. The other page is unchanged.
         </p>
       </Modal>
     </div>
@@ -752,19 +966,118 @@ function EditorShellSkeleton() {
   );
 }
 
+type PageDrafts = {
+  reception: PageConfigContent;
+  rooms: PageConfigContent;
+};
+
+type SocialDrafts = {
+  reception: SocialLinks;
+  rooms: SocialLinks;
+};
+
 function cloneConfig(config: PageConfig): PageConfig {
   return JSON.parse(JSON.stringify(config)) as PageConfig;
+}
+
+/** One complete page, without the nested Tables/Rooms copy. */
+function pageContent(config: PageConfig): PageConfigContent {
+  const copy = cloneConfig(config);
+  delete copy.rooms_config;
+  delete copy.rooms_page;
+  return copy;
+}
+
+function cloneContent(config: PageConfigContent): PageConfigContent {
+  return JSON.parse(JSON.stringify(config)) as PageConfigContent;
+}
+
+function cloneDrafts(drafts: PageDrafts): PageDrafts {
+  return {
+    reception: cloneContent(drafts.reception),
+    rooms: cloneContent(drafts.rooms),
+  };
 }
 
 function cloneSocials(socials: SocialLinks): SocialLinks {
   return JSON.parse(JSON.stringify(socials)) as SocialLinks;
 }
 
-function configsEqual(a: PageConfig, b: PageConfig): boolean {
+function cloneSocialDrafts(socials: SocialDrafts): SocialDrafts {
+  return {
+    reception: cloneSocials(socials.reception),
+    rooms: cloneSocials(socials.rooms),
+  };
+}
+
+function draftsEqual(a: PageDrafts, b: PageDrafts): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function socialsEqual(a: SocialLinks, b: SocialLinks): boolean {
+function socialDraftsEqual(a: SocialDrafts, b: SocialDrafts): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * What the Tables/Rooms tab starts from: its own saved copy when present, or
+ * the reception page. Legacy `rooms_page` values (the old trimmed tab) are
+ * folded in once so owners who already configured that tab keep their work.
+ */
+function roomsSeedFrom(config: PageConfig): PageConfigContent {
+  if (config.rooms_config) return cloneContent(config.rooms_config);
+  const base = pageContent(config);
+  const legacy = config.rooms_page;
+  if (!legacy || !legacyHasContent(legacy)) return cloneContent(base);
+  const custom = legacy.custom;
+  return {
+    ...cloneContent(base),
+    announcement: {
+      ...base.announcement,
+      on: legacy.announcement.on,
+      text: legacy.announcement.text,
+    },
+    thank_you: legacy.thank_you || base.thank_you,
+    buttons: {
+      ...base.buttons,
+      wifi: { ...legacy.wifi },
+      menu: {
+        ...base.buttons.menu,
+        title: legacy.menu_title || base.buttons.menu.title,
+      },
+      hours: {
+        ...base.buttons.hours,
+        on: legacy.hours.on,
+        phone: legacy.hours.phone,
+        address: legacy.hours.address,
+      },
+      call: { ...legacy.call },
+      directions: { ...legacy.directions },
+      custom_links: custom.on ? [{ ...custom }] : base.buttons.custom_links,
+    },
+    loyalty: base.loyalty,
+  };
+}
+
+function legacyHasContent(
+  legacy: NonNullable<PageConfig["rooms_page"]>,
+): boolean {
+  return [
+    legacy.announcement.on,
+    legacy.announcement.text.trim(),
+    legacy.thank_you.trim(),
+    legacy.wifi.on,
+    legacy.wifi.ssid.trim(),
+    legacy.menu_title.trim(),
+    legacy.hours.on,
+    legacy.hours.phone.trim(),
+    legacy.hours.address.trim(),
+    legacy.call.on,
+    legacy.call.phone.trim(),
+    legacy.directions.on,
+    legacy.directions.value.trim(),
+    legacy.custom.on,
+    legacy.custom.label.trim(),
+    legacy.custom.url.trim(),
+  ].some(Boolean);
 }
 

@@ -51,6 +51,7 @@ import {
   mockReviewPages,
   type MenuConfig,
   type PageConfig,
+  type PageConfigContent,
   type SocialKey,
   type SocialLinks,
   type WeekHours,
@@ -63,6 +64,7 @@ import {
   emptyRoomsPageDraft,
   isValidHttpsUrl,
   isValidMenuImage,
+  isValidMenuItemId,
   isValidPhone,
   isValidSocialUrl,
   MAX_CUSTOM_LINKS,
@@ -557,6 +559,8 @@ const SOCIAL_KEYS: SocialKey[] = [
 export type StoredPageData = {
   page_config: PageConfig | null;
   social_links: SocialLinks | null;
+  /** Social icons for the independent Tables/Rooms page. */
+  rooms_social_links?: SocialLinks | null;
 };
 
 type PageRecord = Record<string, StoredPageData>;
@@ -624,6 +628,10 @@ function sanitizeMenu(raw: unknown): MenuConfig {
           details: safeText(item.details, MAX_MENU_ITEM_DETAILS_LENGTH),
           tag,
           sold_out: item.sold_out === true,
+          // Keep the ordering id so a guest's cart keeps pointing at the same
+          // dish after a save/reload. Old saved items without one still work:
+          // the adapter derives a stable id from the list + item name.
+          ...(isValidMenuItemId(item.id) ? { id: item.id } : {}),
           // Rebuilt field by field: no extra keys survive (AI_MENU_PHOTOS.md).
           ...(isValidMenuImage(item.image)
             ? {
@@ -703,6 +711,27 @@ export function sanitizePageConfig(raw: unknown): PageConfig | null {
     return isValidPhone(trimmed) ? trimmed : "";
   };
 
+  /*
+   * The Tables/Rooms page is a complete, independent page. Sanitize it with
+   * the same rules as the reception page, then drop the nested keys so the
+   * shape stays one level deep.
+   */
+  const roomsRaw = raw.rooms_config;
+  let roomsConfig: PageConfigContent | undefined;
+  if (isRecord(roomsRaw)) {
+    const nested = sanitizePageConfig({
+      ...roomsRaw,
+      rooms_config: undefined,
+      rooms_page: undefined,
+    });
+    if (nested) {
+      const content: PageConfig = { ...nested };
+      delete content.rooms_config;
+      delete content.rooms_page;
+      roomsConfig = content;
+    }
+  }
+
   return {
     announcement: {
       on: announcement.on === true,
@@ -746,6 +775,10 @@ export function sanitizePageConfig(raw: unknown): PageConfig | null {
       custom_links: customLinks,
     },
     menu: sanitizeMenu(raw.menu),
+    ...(isRecord(raw.loyalty)
+      ? { loyalty: { on: raw.loyalty.on === true } }
+      : {}),
+    ...(roomsConfig ? { rooms_config: roomsConfig } : {}),
     rooms_page: sanitizeRoomsPageDraft(
       raw.rooms_page,
       base.rooms_page ?? emptyRoomsPageDraft(),
@@ -774,9 +807,75 @@ export function sanitizeSocialLinks(raw: unknown): SocialLinks | null {
 let memoryPages: PageRecord | null = null;
 
 const pageListeners = new Set<() => void>();
+const PAGE_CHANNEL_NAME = "syehere.mock.pages.changes.v1";
+const PAGE_CHANNEL_MESSAGE = "pages-changed";
+const PAGE_TAB_ID =
+  typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let pageWriterChannel: BroadcastChannel | null = null;
+
+/**
+ * A second delivery path for cross-tab saves. The `storage` event is enough in
+ * most browsers, but it can be delayed or dropped while a background tab is
+ * frozen; BroadcastChannel wakes the other tabs immediately. Guarded because
+ * older/private-mode browsers can throw when the channel is constructed.
+ */
+function writerChannel(): BroadcastChannel | null {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return null;
+  }
+  if (!pageWriterChannel) {
+    try {
+      pageWriterChannel = new BroadcastChannel(PAGE_CHANNEL_NAME);
+    } catch {
+      pageWriterChannel = null;
+    }
+  }
+  return pageWriterChannel;
+}
+
+function subscribePageChannel(listener: () => void): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+  let channel: BroadcastChannel;
+  try {
+    channel = new BroadcastChannel(PAGE_CHANNEL_NAME);
+  } catch {
+    return () => {};
+  }
+  channel.onmessage = (event) => {
+    const message = event.data as
+      | { type?: string; source?: string }
+      | null;
+    // A BroadcastChannel can echo into another channel object in this same
+    // document; ignore our own save so the editor does not treat it as a
+    // remote update.
+    if (
+      message?.type === PAGE_CHANNEL_MESSAGE &&
+      message.source !== PAGE_TAB_ID
+    ) {
+      listener();
+    }
+  };
+  return () => {
+    channel.onmessage = null;
+    channel.close();
+  };
+}
 
 function emitPages(): void {
   for (const listener of pageListeners) listener();
+  writerChannel()?.postMessage({
+    type: PAGE_CHANNEL_MESSAGE,
+    source: PAGE_TAB_ID,
+  });
+}
+
+/** Forget the session fallback so the next read sees the saved localStorage. */
+function refreshPageMemory(): void {
+  memoryPages = null;
 }
 
 function readPageRecord(): PageRecord {
@@ -792,6 +891,7 @@ function readPageRecord(): PageRecord {
       record[slug] = {
         page_config: sanitizePageConfig(value.page_config),
         social_links: sanitizeSocialLinks(value.social_links),
+        rooms_social_links: sanitizeSocialLinks(value.rooms_social_links),
       };
     }
     return record;
@@ -836,7 +936,11 @@ export function getStoredPageData(slug: string): StoredPageData | null {
 /** Merge one slug's saved page data (partial: only the keys given change). */
 export function saveStoredPageData(
   slug: string,
-  patch: { page_config?: PageConfig | null; social_links?: SocialLinks | null },
+  patch: {
+    page_config?: PageConfig | null;
+    social_links?: SocialLinks | null;
+    rooms_social_links?: SocialLinks | null;
+  },
 ): { ok: boolean; data: StoredPageData | null } {
   if (!SLUG_PATTERN.test(slug)) return { ok: false, data: null };
   const record = { ...(memoryPages ?? readPageRecord()) };
@@ -850,6 +954,10 @@ export function saveStoredPageData(
       patch.social_links !== undefined
         ? sanitizeSocialLinks(patch.social_links)
         : existing.social_links,
+    rooms_social_links:
+      patch.rooms_social_links !== undefined
+        ? sanitizeSocialLinks(patch.rooms_social_links)
+        : existing.rooms_social_links ?? null,
   };
   record[slug] = next;
   const ok = writePageRecord(record);
@@ -872,12 +980,49 @@ export function subscribePageData(listener: () => void): () => void {
   if (typeof window === "undefined") {
     return () => pageListeners.delete(listener);
   }
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key === PAGE_STORAGE_KEY) listener();
+  const refresh = () => {
+    refreshPageMemory();
+    listener();
   };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === PAGE_STORAGE_KEY) refresh();
+  };
+  const onVisible = () => {
+    if (document.visibilityState === "visible") refresh();
+  };
+  const stopChannel = subscribePageChannel(refresh);
   window.addEventListener("storage", onStorage);
+  window.addEventListener("focus", onVisible);
+  window.addEventListener("pageshow", onVisible);
+  document.addEventListener("visibilitychange", onVisible);
   return () => {
     pageListeners.delete(listener);
+    stopChannel();
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener("focus", onVisible);
+    window.removeEventListener("pageshow", onVisible);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+}
+
+/**
+ * Subscribe only to page saves made by another tab. The editor uses this so a
+ * save in a second dashboard tab refreshes the first, without its own Save
+ * re-triggering a draft reload.
+ */
+export function subscribePageStorage(listener: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const refresh = () => {
+    refreshPageMemory();
+    listener();
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === PAGE_STORAGE_KEY) refresh();
+  };
+  const stopChannel = subscribePageChannel(refresh);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    stopChannel();
     window.removeEventListener("storage", onStorage);
   };
 }

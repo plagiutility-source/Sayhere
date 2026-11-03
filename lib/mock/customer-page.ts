@@ -69,8 +69,8 @@ export type TimeRange = { open: string; close: string };
 export type DayHours = { closed: boolean; ranges: TimeRange[] };
 export type WeekHours = Record<Weekday, DayHours>;
 
-/** The `page_config` JSON shape from PRD.md 5.5.13 (strict; no extra keys). */
-export type PageConfig = {
+/** Every page-content field, shared by both page drafts. */
+type PageConfigBase = {
   announcement: { on: boolean; text: string; end_date: string | null };
   thank_you: string;
   buttons: {
@@ -85,7 +85,28 @@ export type PageConfig = {
     custom_links: { on: boolean; label: string; url: string }[];
   };
   menu: MenuConfig;
-  /** Tables/rooms page content (merge M7; the menu above is shared). */
+  /**
+   * Per-page loyalty card visibility. Absent on old saved configs, which keep
+   * the previous behaviour (follow the loyalty program).
+   */
+  loyalty?: { on: boolean };
+};
+
+/** One complete page without the nested Tables/Rooms copy. */
+export type PageConfigContent = PageConfigBase;
+
+/**
+ * The `page_config` JSON shape from PRD.md 5.5.13. The Tables/Rooms page is a
+ * fully independent copy under `rooms_config`, so changing one page never
+ * changes the other.
+ */
+export type PageConfig = PageConfigBase & {
+  /** Tables/Rooms page content (independent from the reception page). */
+  rooms_config?: PageConfigContent;
+  /**
+   * Legacy trimmed table-page draft from merge M7. Kept so old saved data can
+   * seed `rooms_config`; no UI reads it any more.
+   */
   rooms_page?: RoomsPageDraft;
 };
 
@@ -446,6 +467,7 @@ export function emptyPageConfig(): PageConfig {
       custom_links: [],
     },
     menu: { categories: [] },
+    loyalty: { on: true },
     rooms_page: emptyRoomsPageDraft(),
   };
 }

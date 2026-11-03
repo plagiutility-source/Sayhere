@@ -147,7 +147,10 @@ export function CustomerPage(props: CustomerPageProps) {
   // MOCK ONLY: the program is read from localStorage after mount and applies to
   // the current mock business's slugs only (same rule as the saved page content).
   const loyaltyState = useLoyaltyState();
-  const loyaltyOn = ownsSlug && loyaltyState?.program.enabled === true;
+  // The program is business-wide; each page decides whether its card shows.
+  const loyaltyVisible = effectiveConfig?.loyalty?.on ?? true;
+  const loyaltyOn =
+    ownsSlug && loyaltyVisible && loyaltyState?.program.enabled === true;
   const buttons: CustomerButton[] = loyaltyOn
     ? [
         {

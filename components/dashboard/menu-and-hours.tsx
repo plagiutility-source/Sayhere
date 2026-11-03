@@ -115,6 +115,12 @@ export function MenuRow({
   const [entryMode, setEntryMode] = useState<"upload" | "manual">(() =>
     menu.categories.length > 0 ? "manual" : "upload",
   );
+  // The editor starts empty and loads the saved page after mount. If that
+  // saved page already has menu items, show the manual builder instead of
+  // leaving the owner on the "Upload PDF" screen with the items hidden.
+  useEffect(() => {
+    if (menu.categories.length > 0) setEntryMode("manual");
+  }, [menu.categories.length]);
   const [importOpen, setImportOpen] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
@@ -298,7 +304,12 @@ export function MenuRow({
           <p className="text-[12px] text-ink-muted">
             The Menu button stays hidden until you add at least one item.
           </p>
-        ) : null}
+        ) : (
+          <p className="text-[12px] text-ink-muted">
+            Add a price to each item to let guests order from a table. Items without a price show
+            “Ask staff” and cannot be added to a cart.
+          </p>
+        )}
 
         {menu.categories.map((category, categoryIndex) => (
           <div

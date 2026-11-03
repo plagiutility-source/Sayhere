@@ -49,6 +49,7 @@ import { ChoiceScreen } from "@/components/customer-page/choice-screen";
 import { DetailsScreen } from "@/components/customer-page/details-screen";
 import { ThanksScreen } from "@/components/customer-page/thanks-screen";
 import { HoursScreen } from "@/components/customer-page/hours-screen";
+import { LoyaltyScreen } from "@/components/customer-page/loyalty-screen";
 import { CustomerHomeScreen } from "@/components/customer-page/customer-page";
 import { tileClasses } from "@/components/customer-page/button-grid";
 import { isStretchedTile } from "@/lib/customer-page";
@@ -59,7 +60,16 @@ import { isValidPhone } from "@/lib/validation/page-config";
 import type { ReviewAnswers } from "@/lib/mock/review";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
-import type { Order, Room, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
+import { useLoyaltyState } from "@/lib/use-loyalty";
+import type {
+  Order,
+  Room,
+  RoomsState,
+  Round,
+  ServiceCall,
+  ServiceKind,
+  SpotLocation,
+} from "@/lib/rooms/types";
 
 type ScanPageProps = { slug: string; code: string; data: RoomsPublicData };
 type Screen =
@@ -78,7 +88,8 @@ type Screen =
   | "review"
   | "feedback"
   | "thanks"
-  | "hours";
+  | "hours"
+  | "loyalty";
 
 const btnDirect =
   "mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--cp-primary)] px-3 py-3 text-center text-xs font-medium text-white";
@@ -197,11 +208,29 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   const room: Room | null = configuredRoom ?? firstRoom;
   const known = isReception || Boolean(room);
   const active = isReception || Boolean(room?.active);
-  const kind = isReception ? "reception" : "rooms";
   const displaySpot = room ? displaySpotName(businessType, room) : "Reception";
 
-  const config =
-    (location && state.configs[`${location.id}:${kind}`]) || data.page;
+  /*
+   * The dashboard's independent Tables/Rooms page is the source of truth. An
+   * old rooms-store config may still exist from before the split; preferring it
+   * here would keep showing stale menu, Wi-Fi and thank-you content on the live
+   * page after the owner saves a new setting.
+   */
+  const config = data.page;
+  const loyaltyState = useLoyaltyState();
+  const loyaltyOn =
+    data.loyaltyOn && loyaltyState?.program.enabled === true;
+  const homeButtons = loyaltyOn
+    ? [
+        {
+          key: "loyalty",
+          kind: "loyalty" as const,
+          label: "Loyalty card",
+          screen: "loyalty" as const,
+        },
+        ...data.buttons,
+      ]
+    : data.buttons;
 
   const openBill = location && room ? findOpenBill(state, location.id, room.code) : null;
   const participant = openBill && deviceId ? participantFor(openBill, deviceId) : null;
@@ -304,13 +333,23 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   const cartTotal = cartLines.reduce((sum, item) => sum + item.price * item.qty, 0);
   const wifiReady = wifiUnlockedForOrder(openBill, config, businessType);
 
-  // E1 + O4 — claim a staff-created bill, and count this active spot scan once
-  // per device per 30 minutes. One save keeps the two updates from clobbering
-  // each other.
+  // E1 + O4 — claim a staff-created bill, register a scanned first table, and
+  // count this active spot scan once per device per 30 minutes. One save keeps
+  // these updates from clobbering each other.
   useEffect(() => {
     if (!deviceId || !location || !room) return;
     let next = state;
     let changed = false;
+
+    // A location with no configured tables still lets the first QR be scanned
+    // (see firstRoom above). Persist that implied table before an order is
+    // placed, otherwise the dashboard has no table to attach the order to and
+    // `placeOrder` rejects the scan as unavailable.
+    const registered = withScannedRoom(next, location, room);
+    if (registered !== next) {
+      next = registered;
+      changed = true;
+    }
 
     if (openBill && !openBill.hostDeviceId && !openBill.participants.length) {
       const resolved = resolveScanParticipation(openBill, deviceId);
@@ -415,7 +454,9 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
       setCheckoutError("Your cart is empty. Add something from the menu.");
       return;
     }
-    const result = placeOrder(state, {
+    // Cover the short window before the registration effect runs (for example
+    // a guest who adds and submits very quickly after opening the QR).
+    const result = placeOrder(withScannedRoom(state, location, room), {
       locId: location.id,
       code: room.code,
       deviceId,
@@ -1389,6 +1430,16 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
         }}
       />
     );
+  } else if (screen === "loyalty" && loyaltyOn) {
+    body = (
+      <Panel>
+        <LoyaltyScreen
+          businessName={data.business.name}
+          theme={data.brand}
+          onBack={() => setScreen("home")}
+        />
+      </Panel>
+    );
   } else if (screen === "hours" && data.pageHours) {
     /* The reception page's screen, unchanged (review-SaaS 1D). */
     body = (
@@ -1465,9 +1516,10 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
         theme={data.brand}
         announcementText={data.announcementText}
         socials={data.socials}
-        buttons={data.buttons}
+        buttons={homeButtons}
         onOpenMenu={() => setScreen("menu")}
         onOpenHours={() => setScreen("hours")}
+        onOpenLoyalty={() => setScreen("loyalty")}
         onThumbsUp={() => setScreen("chooser")}
         onThumbsDown={() => setScreen("chooser")}
         context={
@@ -1602,6 +1654,22 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
       ) : null}
     </div>
   );
+}
+
+/** Add the first scanned table to the persisted rooms state, once. */
+function withScannedRoom(
+  state: RoomsState,
+  location: SpotLocation,
+  room: Room,
+): RoomsState {
+  const row = state.locations.find((item) => item.id === location.id);
+  if (!row || row.rooms.some((item) => item.code === room.code)) return state;
+  return {
+    ...state,
+    locations: state.locations.map((item) =>
+      item.id === location.id ? { ...item, rooms: [...item.rooms, room] } : item,
+    ),
+  };
 }
 
 function HomeHead({

@@ -207,3 +207,37 @@ export function useRoomsState(initial?: RoomsState): RoomsStore {
 
   return { state, save };
 }
+
+/**
+ * The first active table/room code for a location, read after mount. This is
+ * deliberately not `useRoomsState`: the editor only needs the live URL, and the
+ * full rooms seed would make the server and client renders disagree.
+ * `null` until the stored state is read (or when the location has no rooms yet).
+ */
+export function useFirstRoomCode(slug: string | null): string | null {
+  const [code, setCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) {
+      setCode(null);
+      return;
+    }
+    const sync = () => {
+      const state = readStorage();
+      const location = state?.locations.find(
+        (row) => row.slug === slug || row.id === slug,
+      );
+      const room =
+        location?.rooms.find((row) => row.active) ?? location?.rooms[0] ?? null;
+      setCode(room?.code ?? null);
+    };
+    sync();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === STORAGE_KEYS.state) sync();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [slug]);
+
+  return code;
+}

@@ -42,9 +42,7 @@ import {
   upiIdError,
 } from "@/lib/validation/page-config";
 import { MAX_CUSTOM_LINK_LABEL_LENGTH } from "@/lib/customer-page";
-import { setProgram } from "@/lib/loyalty/rules";
 import type { AiImageAllowance } from "@/lib/mock/plans";
-import { tryLoyalty } from "@/lib/mock/loyalty-store";
 import { useLoyaltyState } from "@/lib/use-loyalty";
 import { EditorItemRow, type ItemBadge } from "./editor-item-row";
 import { LoyaltyIcon } from "./icons";
@@ -233,28 +231,35 @@ export function PageContentSection({
  * row flips the SAME switch as Loyalty → Settings and applies immediately
  * (no Save needed; the program lives in the mock loyalty store).
  */
-function LoyaltyRow() {
+function LoyaltyRow({
+  on,
+  onToggle,
+}: {
+  on: boolean;
+  onToggle: (next: boolean) => void;
+}) {
   const state = useLoyaltyState();
-  const enabled = state?.program.enabled === true;
+  const programOn = state?.program.enabled === true;
   return (
     <EditorItemRow
       id="row-loyalty"
       icon={<LoyaltyIcon size={18} />}
       name="Loyalty card"
       badge={null}
-      on={enabled}
-      onToggle={(next) =>
-        tryLoyalty((current) => ({
-          ok: true as const,
-          state: setProgram(current, { ...current.program, enabled: next }),
-        }))
-      }
+      on={on}
+      onToggle={onToggle}
       disabled={state === null}
     >
       <p className="text-[12px] text-ink-muted">
-        Shown first on your customer page. The same switch as Loyalty →
-        Settings.
+        Shown first on this page. This switch controls this page only — the
+        other page keeps its own setting.
       </p>
+      {!programOn ? (
+        <p className="mt-2 text-[12px] text-amber-700">
+          Loyalty is off in Loyalty → Settings, so the card stays hidden to
+          guests until it is turned on there.
+        </p>
+      ) : null}
     </EditorItemRow>
   );
 }
@@ -267,6 +272,8 @@ export function ButtonsSection({
   menuItemLimit,
   aiAllowance,
   planName,
+  loyaltyOn,
+  onToggleLoyalty,
   highlight,
 }: {
   businessType: BusinessType;
@@ -278,6 +285,8 @@ export function ButtonsSection({
   /** Plan AI dish photo allowance; from lib/mock/plans.ts. */
   aiAllowance: AiImageAllowance;
   planName: string;
+  loyaltyOn: boolean;
+  onToggleLoyalty: (next: boolean) => void;
   highlight: string | null;
 }) {
   const b = config.buttons;
@@ -302,7 +311,7 @@ export function ButtonsSection({
   return (
     <>
       <ul className="mt-3 flex flex-col gap-3">
-        <LoyaltyRow />
+        <LoyaltyRow on={loyaltyOn} onToggle={onToggleLoyalty} />
 
         <MenuRow
           businessType={businessType}

@@ -41,6 +41,7 @@ import type {
   MenuItem,
   MockReviewPage,
   PageConfig,
+  PageConfigContent,
   SocialKey,
   SocialLinks,
   Weekday,
@@ -90,9 +91,11 @@ export type RoomsPublicData = {
   menuItems: Record<string, RoomsMenuItem>;
   hours: RoomsHours;
   openNow: boolean;
-  /** False when the menu is off or has nothing orderable. */
+  /** True when the table menu is on and has at least one named item. */
   ordering: boolean;
   planMenuLimit: number | null;
+  /** The Tables/Rooms page loyalty switch; the program state is added client-side. */
+  loyaltyOn: boolean;
   /** The reception page's home props, so both QR pages render the same page. */
   announcementText: string | null;
   buttons: CustomerButton[];
@@ -161,33 +164,46 @@ export function publicRoomsData(input: {
 
   /** The demo page's own content wins over the owner's saved page. */
   const source: RoomsPageSource = demoPage
-    ? { config: demoPage.page_config, socials: demoPage.business.social_links }
+    ? {
+        config: demoPage.page_config,
+        socials: demoPage.business.social_links,
+        roomsConfig: demoPage.page_config?.rooms_config ?? null,
+        roomsSocials: demoPage.business.social_links,
+      }
     : input.page;
 
-  const menu = menuFromConfig(source.config, input.menuItemLimit);
-  const orderable = menu.categories.some((category) =>
-    category.items.some((item) => item.orderable),
-  );
+  /*
+   * A table renders the independent Tables/Rooms page when the editor saved
+   * one. Older pages have no rooms_config, so they keep rendering the
+   * reception page exactly as before.
+   */
+  const tableConfig = source.roomsConfig ?? source.config;
+  const tableSocials = source.roomsSocials ?? source.socials;
+
+  const menu = menuFromConfig(tableConfig, input.menuItemLimit);
+  const hasMenuItems = menu.categories.some((category) => category.items.length > 0);
   const page = roomsPageConfigFrom(
-    source.config,
-    source.socials,
+    tableConfig,
+    tableSocials,
     view.type === "hotel" ? "Room service menu" : "Our menu",
   );
-  // Menu off or empty = no ordering UI at all.
-  page.menu.on = Boolean(source.config?.buttons.menu.on) && orderable;
+  // The tile stays visible whenever the owner has named menu items. Items with
+  // no parseable price remain display-only ("Ask staff") inside the menu; they
+  // must not hide the whole menu from a table.
+  page.menu.on = Boolean(tableConfig?.buttons.menu.on) && hasMenuItems;
 
-  // The same home-screen data the reception page gets (one set of controls).
+  // The table's own home-screen data; reception keeps its own copy.
   const home = roomsHomeView({
-    config: source.config,
-    socials: source.socials,
+    config: tableConfig,
+    socials: tableSocials,
     type: view.type,
     menuOn: page.menu.on,
     timeZone: view.timeZone,
     now: input.now,
   });
 
-  const hours = hoursFromConfig(source.config);
-  const week = source.config?.buttons.hours.week;
+  const hours = hoursFromConfig(tableConfig);
+  const week = tableConfig?.buttons.hours.week;
   const openNow = week
     ? isOpenNow(week, input.now ?? new Date(), view.timeZone)
     : false;
@@ -207,12 +223,13 @@ export function publicRoomsData(input: {
     openNow,
     ordering: page.menu.on,
     planMenuLimit: input.menuItemLimit,
+    loyaltyOn: tableConfig?.loyalty?.on ?? true,
     announcementText: home.announcementText,
     buttons: home.buttons,
     socials: home.socials,
     customLinks: home.customLinks,
-    pageHours: source.config?.buttons.hours ?? null,
-    whatsappPhone: source.config?.buttons.whatsapp.phone ?? "",
+    pageHours: tableConfig?.buttons.hours ?? null,
+    whatsappPhone: tableConfig?.buttons.whatsapp.phone ?? "",
     initialState: initialStateFromSpots([spot], view.type),
   };
 }
@@ -579,8 +596,8 @@ export type RoomsHomeView = {
  * The home-screen props for the public page, computed with the SAME helpers the
  * reception page uses (`shownButtons`, `shownSocialIcons`,
  * `visibleAnnouncementText`), so both QR targets show one page and one set of
- * controls. The only difference: at a table the menu tile appears only when the
- * menu can actually be ordered, and the menu's own title is used.
+ * controls. The only difference: at a table the menu tile appears when the
+ * owner has saved menu items, and the menu's own title is used.
  */
 export function roomsHomeView(input: {
   config: PageConfig | null;
@@ -626,6 +643,10 @@ export function useRoomsLocations(scenario: DemoScenario): SpotLocation[] {
 export type RoomsPageSource = {
   config: PageConfig | null;
   socials: SocialLinks | undefined;
+  /** The independent Tables/Rooms page content, when saved. */
+  roomsConfig?: PageConfigContent | null;
+  /** Social icons for the independent Tables/Rooms page. */
+  roomsSocials?: SocialLinks;
 };
 
 /**
@@ -642,7 +663,12 @@ export function useRoomsPage(
   const fallback = slug ? getMockReviewPage(slug) : null;
   const config = stored ? stored.page_config : fallback?.page_config ?? null;
   const socials = stored?.social_links ?? fallback?.business.social_links;
-  return { config, socials };
+  return {
+    config,
+    socials,
+    roomsConfig: config?.rooms_config ?? null,
+    roomsSocials: stored?.rooms_social_links ?? socials,
+  };
 }
 
 /** The one menu, mapped and priced, for one location slug. */
@@ -651,5 +677,8 @@ export function useRoomsMenu(
   scenario: DemoScenario,
 ): RoomsMenu {
   const page = useRoomsPage(slug, scenario);
-  return useMemo(() => menuFromConfig(page.config), [page.config]);
+  return useMemo(
+    () => menuFromConfig(page.roomsConfig ?? page.config),
+    [page.config, page.roomsConfig],
+  );
 }
