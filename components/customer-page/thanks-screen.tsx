@@ -11,7 +11,8 @@ const DEFAULT_UNHAPPY =
   "Thank you for telling us. Your message goes straight to the owner and our team — we read every one. We truly appreciate you taking the time to help us improve.";
 
 type ThanksScreenProps = {
-  business: MockBusiness;
+  /** Only the fields shown here, so the rooms business view fits too. */
+  business: Pick<MockBusiness, "name" | "business_type" | "logo_url">;
   theme: BrandTheme;
   /** Owner's optional thank-you message (already clamped to 160). */
   thankYou: string;

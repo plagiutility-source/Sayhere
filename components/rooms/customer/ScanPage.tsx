@@ -46,6 +46,8 @@ import { FeedbackScreen } from "@/components/customer-page/feedback-screen";
 import { GoogleScreen } from "@/components/customer-page/google-screen";
 import { ReviewScreen } from "@/components/customer-page/review-screen";
 import { ChoiceScreen } from "@/components/customer-page/choice-screen";
+import { DetailsScreen } from "@/components/customer-page/details-screen";
+import { ThanksScreen } from "@/components/customer-page/thanks-screen";
 import { HoursScreen } from "@/components/customer-page/hours-screen";
 import { CustomerHomeScreen } from "@/components/customer-page/customer-page";
 import { tileClasses } from "@/components/customer-page/button-grid";
@@ -54,6 +56,7 @@ import type { RoomsPublicData } from "@/lib/rooms/adapter";
 import { billPdfBlob } from "@/lib/rooms/bill-pdf";
 import { claimSpotScan } from "@/lib/rooms/scans";
 import { isValidPhone } from "@/lib/validation/page-config";
+import type { ReviewAnswers } from "@/lib/mock/review";
 import { currentDeviceId, readSoundOn, useRoomsState } from "@/lib/rooms/store";
 import { playBell } from "@/lib/rooms/sound";
 import type { Order, Room, Round, ServiceCall, ServiceKind } from "@/lib/rooms/types";
@@ -71,6 +74,7 @@ type Screen =
   | "wifi"
   | "chooser"
   | "google"
+  | "details"
   | "review"
   | "feedback"
   | "thanks"
@@ -115,6 +119,10 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   const [feedback, setFeedback] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
+  /* The reception page's "write it for me" answers, shared by the questions
+     and review screens (same state shape as components/customer-page). */
+  const [reviewAnswers, setReviewAnswers] = useState<ReviewAnswers>({});
+  const [reviewPath, setReviewPath] = useState<"happy" | "unhappy" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -141,6 +149,8 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
     setFeedback("");
     setFeedbackEmail("");
     setFeedbackError("");
+    setReviewAnswers({});
+    setReviewPath(null);
     setToast(null);
   }, [routeKey]);
 
@@ -349,6 +359,7 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
     "--cp-primary": data.business.theme.primary,
     "--cp-secondary": data.business.theme.secondary,
     "--cp-bg": data.business.theme.bg,
+    "--cp-on-primary": data.brand.onPrimary,
   } as CSSProperties;
 
   if (!location) {
@@ -1303,67 +1314,80 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
       <ChoiceScreen
         businessName={data.business.name}
         theme={data.brand}
-        onGoogle={() => setScreen("google")}
-        onContact={() => setScreen("feedback")}
+        onGoogle={() => {
+          setReviewPath("happy");
+          setScreen("google");
+        }}
+        onContact={() => {
+          setReviewPath("unhappy");
+          setScreen("feedback");
+        }}
         onBack={() => setScreen("home")}
       />
     );
   } else if (screen === "google") {
     body = (
-      <Panel>
-        <GoogleScreen
-          theme={data.brand}
-          reviewUrl={data.googleReviewUrl}
-          reviewUrlValid={data.reviewUrlValid}
-          onWriteForMe={() => setScreen("review")}
-          onBack={() => setScreen("chooser")}
-        />
-      </Panel>
+      <GoogleScreen
+        theme={data.brand}
+        reviewUrl={data.googleReviewUrl}
+        reviewUrlValid={data.reviewUrlValid}
+        onWriteForMe={() => setScreen("details")}
+        onBack={() => setScreen("chooser")}
+      />
+    );
+  } else if (screen === "details") {
+    /* "Write it for me" questions, exactly as the reception page asks them. */
+    body = (
+      <DetailsScreen
+        businessType={businessType}
+        theme={data.brand}
+        answers={reviewAnswers}
+        onChange={setReviewAnswers}
+        onGenerate={() => setScreen("review")}
+        onBack={() => setScreen("google")}
+      />
     );
   } else if (screen === "review") {
     body = (
-      <Panel>
-        <ReviewScreen
-          slug={slug}
-          businessType={businessType}
-          theme={data.brand}
-          reviewUrl={data.googleReviewUrl}
-          reviewUrlValid={data.reviewUrlValid}
-          mode="normal"
-          answers={{}}
-          onContinue={() => setScreen("thanks")}
-          onBack={() => setScreen("google")}
-        />
-      </Panel>
+      <ReviewScreen
+        slug={slug}
+        businessType={businessType}
+        theme={data.brand}
+        reviewUrl={data.googleReviewUrl}
+        reviewUrlValid={data.reviewUrlValid}
+        mode="normal"
+        answers={reviewAnswers}
+        onContinue={() => setScreen("thanks")}
+        onBack={() => setScreen("details")}
+      />
     );
   } else if (screen === "feedback") {
     body = (
-      <Panel>
-        <FeedbackScreen
-          theme={data.brand}
-          onSuccess={() => setScreen("thanks")}
-          onBack={() => setScreen("chooser")}
-        />
-      </Panel>
+      <FeedbackScreen
+        theme={data.brand}
+        onSuccess={() => setScreen("thanks")}
+        onBack={() => setScreen("chooser")}
+      />
     );
   } else if (screen === "thanks") {
+    /* The reception page's thank-you screen, unchanged (review-SaaS 1D). */
     body = (
-      <Panel>
-        <div className="py-10 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-green/15 text-brand-green-deep">
-            <Icon name="check" size={24} />
-          </div>
-          <h3 className="mt-2 font-display text-lg font-medium text-[var(--cp-primary)]">
-            Thank you!
-          </h3>
-          <p className="mx-auto mt-1 max-w-[280px] text-[11.5px] leading-[1.6] text-ink-muted">
-            {config.thankYou.slice(0, 160) || "We appreciate you taking the time to help us improve."}
-          </p>
-          <button type="button" className={cx(btnLink, "mt-4")} onClick={() => setScreen("home")}>
-            Back to the page
-          </button>
-        </div>
-      </Panel>
+      <ThanksScreen
+        business={{
+          name: data.business.name,
+          business_type: data.business.type,
+          logo_url: data.business.logoUrl,
+        }}
+        theme={data.brand}
+        thankYou={config.thankYou.slice(0, 160)}
+        socials={data.socials}
+        links={data.customLinks}
+        path={reviewPath}
+        onHome={() => {
+          setReviewPath(null);
+          setScreen("home");
+        }}
+      />
     );
   } else if (screen === "hours" && data.pageHours) {
     /* The reception page's screen, unchanged (review-SaaS 1D). */
@@ -1436,7 +1460,7 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
           name: data.business.name,
           tagline: data.business.tagline,
           business_type: data.business.type,
-          logo_url: null,
+          logo_url: data.business.logoUrl,
         }}
         theme={data.brand}
         announcementText={data.announcementText}
@@ -1563,17 +1587,8 @@ export function ScanPage({ slug, code, data }: ScanPageProps) {
   return (
     <div className="min-h-screen bg-[var(--cp-bg)]" style={theme}>
       <div className="mx-auto w-full max-w-[480px] px-lg py-2xl">
-        {screen === "home" ? (
-          <>
-            {hostPanel}
-            {body}
-          </>
-        ) : (
-          <div className="overflow-hidden rounded-control shadow-soft">
-            {hostPanel}
-            {body}
-          </div>
-        )}
+        {hostPanel}
+        {body}
 
       </div>
 

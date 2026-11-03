@@ -28,6 +28,7 @@ import {
   isValidReviewUrl,
   limitedMenuCategories,
   shownButtons,
+  shownCustomLinks,
   shownSocialIcons,
   visibleAnnouncementText,
   WEEKDAY_ORDER,
@@ -65,6 +66,8 @@ export type RoomsBusinessView = {
   initials: string;
   type: SpotBusinessType;
   tagline: string;
+  /** The owner's logo; render it only through `displayableLogo()`. */
+  logoUrl: string | null;
   theme: { primary: string; secondary: string; bg: string };
   timeZone: string;
   slug: string;
@@ -94,6 +97,8 @@ export type RoomsPublicData = {
   announcementText: string | null;
   buttons: CustomerButton[];
   socials: { key: SocialKey; url: string }[];
+  /** The reception page's custom links, for the shared thank-you screen. */
+  customLinks: CustomerButton[];
   /** The reception page's Hours block, so both pages share that screen too. */
   pageHours: PageConfig["buttons"]["hours"] | null;
   whatsappPhone: string;
@@ -143,6 +148,7 @@ export function publicRoomsData(input: {
         ...input.business,
         name: demoPage.business.name,
         tagline: demoPage.business.tagline ?? "",
+        logo_url: demoPage.business.logo_url,
         business_type: demoPage.business.business_type,
         google_review_url: demoPage.business.google_review_url,
         primary_color: demoPage.business.primary_color,
@@ -204,6 +210,7 @@ export function publicRoomsData(input: {
     announcementText: home.announcementText,
     buttons: home.buttons,
     socials: home.socials,
+    customLinks: home.customLinks,
     pageHours: source.config?.buttons.hours ?? null,
     whatsappPhone: source.config?.buttons.whatsapp.phone ?? "",
     initialState: initialStateFromSpots([spot], view.type),
@@ -241,6 +248,7 @@ export function businessView(profile: BusinessProfile): RoomsBusinessView | null
     initials: initialsFromBusiness(profile.name),
     type,
     tagline: profile.tagline,
+    logoUrl: profile.logo_url,
     theme: {
       primary: profile.primary_color,
       secondary: profile.secondary_color,
@@ -564,6 +572,7 @@ export type RoomsHomeView = {
   announcementText: string | null;
   buttons: CustomerButton[];
   socials: { key: SocialKey; url: string }[];
+  customLinks: CustomerButton[];
 };
 
 /**
@@ -594,6 +603,7 @@ export function roomsHomeView(input: {
     ),
     buttons,
     socials: shownSocialIcons(input.socials),
+    customLinks: input.config ? shownCustomLinks(input.config, input.type) : [],
   };
 }
 
