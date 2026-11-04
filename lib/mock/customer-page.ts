@@ -278,6 +278,70 @@ const demoFullConfig: PageConfig = {
   },
 };
 
+/**
+ * The default café demo's page. It ships with a real menu so the merged
+ * Tables/Rooms ordering flow works from the first scan: the owner's saved page
+ * (or this one) is the single source for the table menu, prices and hours.
+ */
+const demoCafeConfig: PageConfig = {
+  announcement: {
+    on: true,
+    text: "Buy 1 get 1 free on cold brew, this week only.",
+    end_date: "2027-12-31",
+  },
+  thank_you: "Thank you for the feedback — we would love to see you again soon!",
+  buttons: {
+    menu: { on: true, title: "Our menu" },
+    wifi: { on: false, ssid: "", password: "" },
+    hours: {
+      on: true,
+      phone: "+919876543210",
+      address: "12 Linking Road, Bandra West, Mumbai",
+      week: standardWeek(),
+      note: "",
+    },
+    call: { on: true, phone: "+919876543210" },
+    whatsapp: { on: true, phone: "+919876543210" },
+    directions: { on: true, value: "12 Linking Road, Bandra West, Mumbai" },
+    pay: { on: false, upi_id: "", name: "" },
+    custom_links: [
+      { on: true, label: "Order online", url: "https://brewandbean.example/order" },
+    ],
+  },
+  menu: {
+    categories: [
+      {
+        name: "Coffee",
+        items: [
+          {
+            name: "Cold brew",
+            price: "Rs 180",
+            details: "Cold-steeped 12 hours, served over ice",
+            tag: "Popular",
+            sold_out: false,
+          },
+          { name: "Cappuccino", price: "Rs 160", details: "Double shot, silky milk", tag: null, sold_out: false },
+          { name: "Filter coffee", price: "Rs 120", details: "House blend, bottomless before 11 am", tag: null, sold_out: false },
+        ],
+      },
+      {
+        name: "Bites",
+        items: [
+          {
+            name: "Veg sandwich",
+            price: "Rs 140",
+            details: "Grilled bread, cucumber, tomato, cheese, chutney",
+            tag: "Veg",
+            sold_out: false,
+          },
+          { name: "Brownie", price: "Rs 120", details: "Warm, with a scoop of vanilla", tag: null, sold_out: false },
+        ],
+      },
+    ],
+  },
+  loyalty: { on: true },
+};
+
 // ---------------------------------------------------------------------------
 // Scenario 3 — `salon1`: salon with exactly 3 shown buttons (Services and
 // prices, Hours and contact, one custom link) to prove the odd-count re-flow.
@@ -389,7 +453,7 @@ export const mockReviewPages: Record<string, MockReviewPage> = {
     google_review_url: null,
     is_active: true,
     page_custom_hidden: false,
-    page_config: null,
+    page_config: demoCafeConfig,
     business: brewAndBean,
   },
   full01: {
@@ -573,9 +637,19 @@ export function getMockPageConfig(
       ? overLimitConfig()
       : scenario === "enterprise" && locationId === "loc_cafe02"
         ? enterpriseCopyConfig()
-        : null;
+        : staticPageConfigFor(locationId);
   configStore.set(key, initial);
   return initial;
+}
+
+/**
+ * The static demo page for a location id (`loc_<slug>`), so the editor starts
+ * from the same content the public page shows instead of an empty page. A
+ * location that has no static page (one the owner added) starts empty.
+ */
+function staticPageConfigFor(locationId: string): PageConfig | null {
+  const slug = locationId.startsWith("loc_") ? locationId.slice(4) : locationId;
+  return mockReviewPages[slug]?.page_config ?? null;
 }
 
 /** Save replaces the location's whole config (PRD 5.5.2: no draft state). */

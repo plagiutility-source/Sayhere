@@ -663,12 +663,19 @@ export function useRoomsPage(
   const fallback = slug ? getMockReviewPage(slug) : null;
   const config = stored ? stored.page_config : fallback?.page_config ?? null;
   const socials = stored?.social_links ?? fallback?.business.social_links;
-  return {
-    config,
-    socials,
-    roomsConfig: config?.rooms_config ?? null,
-    roomsSocials: stored?.rooms_social_links ?? socials,
-  };
+  const roomsSocials = stored?.rooms_social_links ?? socials;
+  // Memoised: every downstream memo (the public page data and its initial
+  // rooms state) depends on this object, so a fresh one each render would make
+  // them recompute on every render.
+  return useMemo(
+    () => ({
+      config,
+      socials,
+      roomsConfig: config?.rooms_config ?? null,
+      roomsSocials,
+    }),
+    [config, socials, roomsSocials],
+  );
 }
 
 /** The one menu, mapped and priced, for one location slug. */

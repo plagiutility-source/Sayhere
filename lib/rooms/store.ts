@@ -10,7 +10,7 @@
  * - The device id lives in `sessionStorage`, so two tabs act as two phones (E3).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { POLL_INTERVAL_MS, STORAGE_KEYS } from "./constants";
 import { ensureShape, seedState } from "./seed";
 import type { RoomsState } from "./types";
@@ -188,16 +188,34 @@ export type RoomsStore = {
 };
 
 /**
+ * Stable identity for an initial state. Pages rebuild their initial state on
+ * every render, so keying the load effect on object identity re-ran it forever
+ * (and, with nothing stored yet, set a new object each time: an endless render
+ * loop on the public table page). The locations plus `savedAt` are what the
+ * load actually depends on.
+ */
+function initialStateKey(initial?: RoomsState): string {
+  if (!initial) return "";
+  const locations = initial.locations
+    .map((location) => `${location.id}:${location.slug}:${location.active ? 1 : 0}`)
+    .join(",");
+  return `${initial.savedAt}|${initial.businessType}|${locations}`;
+}
+
+/**
  * React binding: starts from the seed so SSR and the first client render
  * match, then loads the stored state in an effect.
  */
 export function useRoomsState(initial?: RoomsState): RoomsStore {
   const [state, setState] = useState<RoomsState>(() => initial ?? seedState());
+  const initialRef = useRef(initial);
+  initialRef.current = initial;
+  const key = initialStateKey(initial);
 
   useEffect(() => {
-    setState(loadRoomsState(initial));
+    setState(loadRoomsState(initialRef.current));
     return subscribe(setState);
-  }, [initial]);
+  }, [key]);
 
   const save = useCallback((next: RoomsState) => {
     const saved = saveRoomsState(next);
