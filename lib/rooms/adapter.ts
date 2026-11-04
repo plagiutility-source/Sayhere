@@ -661,7 +661,9 @@ export function useRoomsPage(
   void scenario;
   const stored: StoredPageData | null = useStoredPageData(slug);
   const fallback = slug ? getMockReviewPage(slug) : null;
-  const config = stored ? stored.page_config : fallback?.page_config ?? null;
+  // A saved record with no config (an explicit reset) still shows the static
+  // default page, so a returning browser keeps the demo menu.
+  const config = stored?.page_config ?? fallback?.page_config ?? null;
   const socials = stored?.social_links ?? fallback?.business.social_links;
   const roomsSocials = stored?.rooms_social_links ?? socials;
   // Memoised: every downstream memo (the public page data and its initial

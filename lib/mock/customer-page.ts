@@ -342,6 +342,118 @@ const demoCafeConfig: PageConfig = {
   loyalty: { on: true },
 };
 
+/**
+ * The restaurant demo's default page: the same shape as the café, with a menu
+ * a table can order from. `resto1` is the slug onboarding issues for a
+ * restaurant, so its table QRs have to work on a browser with no saved data.
+ */
+const demoRestoConfig: PageConfig = {
+  ...demoCafeConfig,
+  announcement: { on: false, text: "", end_date: null },
+  thank_you: "Thanks for dining with us — see you again soon!",
+  buttons: {
+    ...demoCafeConfig.buttons,
+    menu: { on: true, title: "Our menu" },
+    hours: {
+      on: true,
+      phone: "+919820011223",
+      address: "7 Carter Road, Bandra West, Mumbai",
+      week: standardWeek(),
+      note: "",
+    },
+    call: { on: true, phone: "+919820011223" },
+    whatsapp: { on: true, phone: "+919820011223" },
+    directions: { on: true, value: "7 Carter Road, Bandra West, Mumbai" },
+    custom_links: [],
+  },
+  menu: {
+    categories: [
+      {
+        name: "Starters",
+        items: [
+          {
+            name: "Paneer tikka",
+            price: "Rs 320",
+            details: "Charred, with mint chutney",
+            tag: "Popular",
+            sold_out: false,
+          },
+          { name: "Masala papad", price: "Rs 90", details: "", tag: null, sold_out: false },
+        ],
+      },
+      {
+        name: "Mains",
+        items: [
+          {
+            name: "Dal makhani",
+            price: "Rs 280",
+            details: "Slow-cooked overnight",
+            tag: "Veg",
+            sold_out: false,
+          },
+          { name: "Butter naan", price: "Rs 60", details: "", tag: null, sold_out: false },
+        ],
+      },
+      {
+        name: "Desserts",
+        items: [
+          { name: "Gulab jamun", price: "Rs 120", details: "Two pieces, warm", tag: null, sold_out: false },
+        ],
+      },
+    ],
+  },
+};
+
+/** The hotel demo's default page: room service, so `/r/hotel1/qr1` can order. */
+const demoHotelConfig: PageConfig = {
+  ...demoRestoConfig,
+  thank_you: "Thank you for staying with us.",
+  buttons: {
+    ...demoRestoConfig.buttons,
+    menu: { on: true, title: "Room service" },
+    hours: {
+      on: true,
+      phone: "+919820044556",
+      address: "Near the station, Bandra East, Mumbai",
+      week: standardWeek(),
+      note: "Room service 7 am to 11 pm",
+    },
+    call: { on: true, phone: "+919820044556" },
+    whatsapp: { on: true, phone: "+919820044556" },
+    directions: { on: true, value: "Near the station, Bandra East, Mumbai" },
+  },
+  menu: {
+    categories: [
+      {
+        name: "All day",
+        items: [
+          {
+            name: "Club sandwich",
+            price: "Rs 320",
+            details: "With fries",
+            tag: "Popular",
+            sold_out: false,
+          },
+          { name: "Masala chai", price: "Rs 90", details: "", tag: null, sold_out: false },
+        ],
+      },
+      {
+        name: "Breakfast",
+        items: [
+          {
+            name: "Breakfast platter",
+            price: "Rs 450",
+            details: "Eggs, toast, fruit, juice",
+            tag: null,
+            sold_out: false,
+          },
+          { name: "Poha", price: "Rs 140", details: "", tag: "Veg", sold_out: false },
+        ],
+      },
+    ],
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Scenario 3 — `salon1`: salon with exactly 3 shown buttons (Services and
 // prices, Hours and contact, one custom link) to prove the odd-count re-flow.
@@ -408,8 +520,11 @@ const demoSalonConfig: PageConfig = {
 // friends must exist even in a browser with no saved profile: the server
 // renders the type's demo business below, and a browser that DOES have the
 // saved profile overlays the owner's own business on top
-// (components/customer-page/customer-page.tsx). These pages have no
-// customization (page_config null), exactly like the fresh cafe01 demo.
+// (components/customer-page/customer-page.tsx).
+//
+// The three ordering types get a default menu so their table QRs work on a
+// fresh browser; salon, gym, retail and other stay null because they do not
+// get table ordering (lib/category/ordering.ts).
 // ---------------------------------------------------------------------------
 
 function typeDemoPage(
@@ -417,6 +532,7 @@ function typeDemoPage(
   type: BusinessType,
   name: string,
   googleReviewUrl: string,
+  pageConfig: PageConfig | null = null,
 ): MockReviewPage {
   return {
     id: `page_${slug}`,
@@ -426,7 +542,7 @@ function typeDemoPage(
     google_review_url: null,
     is_active: true,
     page_custom_hidden: false,
-    page_config: null,
+    page_config: pageConfig,
     business: business(type, {
       id: `biz_${slug}`,
       name,
@@ -491,8 +607,14 @@ export const mockReviewPages: Record<string, MockReviewPage> = {
   },
   // Reserved per-type slugs: what the mock onboarding issues, so the URL a new
   // business is shown always resolves (lib/mock/business.ts).
-  resto1: typeDemoPage("resto1", "restaurant", "The Green Table", REVIEW_URL_RESTAURANT),
-  hotel1: typeDemoPage("hotel1", "hotel", "Hotel Sai Palace", REVIEW_URL_MAPS),
+  resto1: typeDemoPage(
+    "resto1",
+    "restaurant",
+    "The Green Table",
+    REVIEW_URL_RESTAURANT,
+    demoRestoConfig,
+  ),
+  hotel1: typeDemoPage("hotel1", "hotel", "Hotel Sai Palace", REVIEW_URL_MAPS, demoHotelConfig),
   glam01: typeDemoPage("glam01", "salon", "Glow Studio", REVIEW_URL_MAPS),
   gym001: typeDemoPage("gym001", "gym", "Iron Yard Gym", REVIEW_URL_MAPS),
   store1: typeDemoPage("store1", "retail", "Northside Supply", REVIEW_URL_MAPS),
