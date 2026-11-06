@@ -10,7 +10,7 @@
  *   error                       — analytics fail; each card/section offers inline Retry
  *   limit                       — scans used = plan limit (paused + banner + upgrade)
  *   long-name                   — very long business name + email (overflow/truncation)
- *   free | starter | pro        — the same café on that plan (1 location, that plan's limits)
+ *   free | starter | pro | growth — the same café on that plan (1 location, that plan's limits)
  *   enterprise                  — Enterprise: unlimited limits and 2 locations
  *   over-limit                  — menu items above the plan limit after a downgrade (T4)
  *   cancel-pending              — cancellation requested, waiting for support (business-rules 5.1)
@@ -34,6 +34,7 @@ export const demoScenarios = [
   "free",
   "starter",
   "pro",
+  "growth",
   "enterprise",
   "over-limit",
   "cancel-pending",

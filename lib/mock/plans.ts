@@ -9,7 +9,7 @@
  * (price). Money is an integer number of paise (INR minor units).
  */
 
-export type PlanId = "free" | "starter" | "pro" | "enterprise";
+export type PlanId = "free" | "starter" | "pro" | "growth" | "enterprise";
 
 /**
  * AI dish photo allowance (AI_MENU_PHOTOS.md). ALWAYS a number, never null:
@@ -62,7 +62,7 @@ export const plans: Record<PlanId, Plan> = {
   starter: {
     id: "starter",
     name: "Starter",
-    price_inr_paise: 49900,
+    price_inr_paise: 19900,
     locations: 1,
     monthly_scans: 1000,
     self_serve: true,
@@ -76,7 +76,7 @@ export const plans: Record<PlanId, Plan> = {
   pro: {
     id: "pro",
     name: "Pro",
-    price_inr_paise: 69900,
+    price_inr_paise: 29900,
     locations: 1,
     monthly_scans: 10000,
     self_serve: true,
@@ -85,6 +85,20 @@ export const plans: Record<PlanId, Plan> = {
       menu_items: 150,
       custom_links: null,
       ai_images: { limit: 40, period: "month" },
+    },
+  },
+  growth: {
+    id: "growth",
+    name: "Growth",
+    price_inr_paise: 49900,
+    locations: 1,
+    monthly_scans: 25000,
+    self_serve: true,
+    google_auto_reply: true,
+    page: {
+      menu_items: 200,
+      custom_links: null,
+      ai_images: { limit: 60, period: "month" },
     },
   },
   enterprise: {
@@ -104,7 +118,7 @@ export const plans: Record<PlanId, Plan> = {
 };
 
 /** Plan display order (Free, Starter, Pro, Enterprise). */
-export const planOrder: PlanId[] = ["free", "starter", "pro", "enterprise"];
+export const planOrder: PlanId[] = ["free", "starter", "pro", "growth", "enterprise"];
 
 /** Deterministic Indian digit grouping (no Intl, so SSR and client match). */
 function groupIndian(value: number): string {

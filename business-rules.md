@@ -8,11 +8,12 @@ to this spec — do not infer different behavior.
 | Plan | Price (INR) | Locations | Monthly Scans | Google review auto-reply |
 |---|---|---|---|---|
 | Free | ₹0 | 1 | 10 | Yes |
-| Starter | ₹499 | 1 | 1,000 | No |
-| Pro | ₹699 | 1 | 10,000 | Yes |
+| Starter | ₹199 | 1 | 1,000 | No |
+| Pro | ₹299 | 1 | 10,000 | Yes |
+| Growth | ₹499 | 1 | 25,000 | Yes |
 | Enterprise | Custom | Unlimited | Unlimited | Yes |
 
-- Only Enterprise can have more than 1 location. Free, Starter and Pro are all 1 location.
+- Only Enterprise can have more than 1 location. Free, Starter, Pro and Growth are all 1 location.
 - The auto-reply column is the plan's `google_auto_reply` flag in the `plans` setting (true/false).
 - **Adding a location:** the "Add location" route checks `locations_used < plans.<plan>.locations` on the server, using the
   plan from the session and `getPlans()` (never from the request). Over the limit returns 403 with "Extra locations are
@@ -28,6 +29,7 @@ to this spec — do not infer different behavior.
 | Free | 10 | No plan limit |
 | Starter | 60 | No plan limit |
 | Pro | 150 | No plan limit |
+| Growth | 200 | No plan limit |
 | Enterprise | Unlimited (hard caps in security-and-reliability.md 4C still apply) | No plan limit |
 
 Custom link buttons are the same on every plan: the owner adds as many as needed. Only the hard security
@@ -228,7 +230,7 @@ Because a finalized cancellation moves the owner to Free (5.4), most data simply
 - **Contact and connect (decided):** our team contacts the owner by email or phone call within 48 hours of the request
   (`contact_method` = `email` or `phone` is recorded). The owner signs in to Google themselves during that contact. The
   **Connect Google** button is shown only while the request is `contacted` and the plan still includes auto-reply.
-- **Plan gate:** auto-reply runs only for plans with `google_auto_reply = true` (Free, Pro, Enterprise).
+- **Plan gate:** auto-reply runs only for plans with `google_auto_reply = true` (Free, Pro, Growth, Enterprise).
   Starter does not get it.
   - The daily cron skips any business whose current plan has the flag off, even if `auto_reply_enabled = 1`.
   - Any route that turns auto-reply on or saves templates returns 403 for a plan without the flag.

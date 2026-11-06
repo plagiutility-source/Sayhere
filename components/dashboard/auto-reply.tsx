@@ -73,7 +73,7 @@ function UpgradePrompt({ scenario }: { scenario: DemoScenario }) {
   );
 }
 
-/** PRD.md 5.4.3: Free, Pro and Enterprise see this instead of a form. */
+/** PRD.md 5.4.3: Free, Pro, Growth and Enterprise see this instead of a form. */
 function ContactSupportPrompt({ scenario }: { scenario: DemoScenario }) {
   return (
     <div>

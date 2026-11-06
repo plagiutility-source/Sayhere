@@ -335,13 +335,13 @@ CREATE TABLE system_settings (
 -- `page.ai_images` is {limit, period} and is NEVER null: every AI image costs real money, so there is no unlimited AI photo tier (period `lifetime` = one-time trial that never refills, `month` = refills each billing cycle; AI_MENU_PHOTOS.md). `null` for locations/monthly_scans (and for the other `page` limits) means unlimited within the hard security caps in security-and-reliability.md 4C. `self_serve: false` means the
 -- plan can never be bought through checkout (Free is assigned at signup; Enterprise
 -- is arranged manually by an admin).
--- `google_auto_reply` (boolean) gates the Google review auto-reply feature: true on free, pro and enterprise,
--- false on starter (business-rules.md section 6). Enforced server-side in the cron and in the auto-reply routes.
+-- `google_auto_reply` (boolean) gates the Google review auto-reply feature: true on free, pro, growth and
+-- enterprise, false on starter (business-rules.md section 6). Enforced server-side in the cron and in the auto-reply routes.
 -- International / USD paid billing is deferred (PRD.md section 2), so only INR exists.
 INSERT INTO system_settings (id, key, value) VALUES (
   'setting_plans',
   'plans',
-  '{"free":{"price_inr_paise":0,"locations":1,"monthly_scans":10,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":10,"custom_links":null,"ai_images":{"limit":3,"period":"lifetime"}}},"starter":{"price_inr_paise":49900,"locations":1,"monthly_scans":1000,"self_serve":true,"google_auto_reply":false,"page":{"menu_items":60,"custom_links":null,"ai_images":{"limit":15,"period":"month"}}},"pro":{"price_inr_paise":69900,"locations":1,"monthly_scans":10000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":150,"custom_links":null,"ai_images":{"limit":40,"period":"month"}}},"enterprise":{"price_inr_paise":null,"locations":null,"monthly_scans":null,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":null,"custom_links":null,"ai_images":{"limit":100,"period":"month"}}}}'
+  '{"free":{"price_inr_paise":0,"locations":1,"monthly_scans":10,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":10,"custom_links":null,"ai_images":{"limit":3,"period":"lifetime"}}},"starter":{"price_inr_paise":19900,"locations":1,"monthly_scans":1000,"self_serve":true,"google_auto_reply":false,"page":{"menu_items":60,"custom_links":null,"ai_images":{"limit":15,"period":"month"}}},"pro":{"price_inr_paise":29900,"locations":1,"monthly_scans":10000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":150,"custom_links":null,"ai_images":{"limit":40,"period":"month"}}},"growth":{"price_inr_paise":49900,"locations":1,"monthly_scans":25000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":200,"custom_links":null,"ai_images":{"limit":60,"period":"month"}}},"enterprise":{"price_inr_paise":null,"locations":null,"monthly_scans":null,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":null,"custom_links":null,"ai_images":{"limit":100,"period":"month"}}}}'
 );
 
 -- SEED: global AI dish photo switches (AI_MENU_PHOTOS.md section 5). Read on EVERY

@@ -54,7 +54,8 @@ const planRank: Record<PlanId, number> = {
   free: 0,
   starter: 1,
   pro: 2,
-  enterprise: 3,
+  growth: 3,
+  enterprise: 4,
 };
 
 type PlanAction = "current" | "upgrade" | "downgrade" | "contact";
@@ -133,7 +134,8 @@ export function BillingContent({ demo }: { demo: DemoScenario }) {
   const cancelOpen =
     cancellation?.status === "pending" || cancellation?.status === "contacted";
   const cancelFinalized = cancellation?.status === "finalized";
-  const paidPlan = plan.id === "starter" || plan.id === "pro";
+  const paidPlan =
+    plan.id === "starter" || plan.id === "pro" || plan.id === "growth";
   const canStartCancellation =
     paidPlan && (!cancellation || cancellation.status === "retained" || cancellation.status === "withdrawn");
 
@@ -334,7 +336,7 @@ export function BillingContent({ demo }: { demo: DemoScenario }) {
         <h2 id="compare-heading" className="text-[16px] font-medium text-ink">
           Plan comparison
         </h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {planOrder.map((id) => {
             const row = plans[id];
             const action = planAction(row, plan.id);

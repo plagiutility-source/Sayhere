@@ -104,7 +104,7 @@ The review block always stays first.
 - AI (Groq, primary; Gemini as fallback if Groq errors or times out) generates
   a reply based on star rating / sentiment
 - **v1: set up through support.** The owner clicks Google review auto-reply, taps **Contact support** and fills a short request form; our team then connects it with them (PRD.md 5.4.3). Self-serve on/off and reply templates come later (5.4.3A)
-- **Plan-gated:** available on Free, Pro and Enterprise only. On Starter the owner sees "Please upgrade your plan" and no form (see 5.4.3 and business-rules.md section 6)
+- **Plan-gated:** available on Free, Pro, Growth and Enterprise only. On Starter the owner sees "Please upgrade your plan" and no form (see 5.4.3 and business-rules.md section 6)
 - Requires two Google approvals (Basic API Access + OAuth verification) and a public homepage and Privacy Policy; see google-approval.md
 
 ## 4. Pricing (max 5 features shown per plan; free tier = all features, tightly limited usage)
@@ -112,16 +112,17 @@ The review block always stays first.
 | Plan | Price | Locations | Monthly Scans | Google review auto-reply |
 |---|---|---|---|---|
 | Free | $0 / ₹0 | 1 | 10 | Yes |
-| Starter | $9.99 / ₹499 | 1 | 1,000 | **No** |
-| Pro | $13.99 / ₹699 | 1 | 10,000 | Yes |
+| Starter | $3.99 / ₹199 | 1 | 1,000 | **No** |
+| Pro | $5.99 / ₹299 | 1 | 10,000 | Yes |
+| Growth | $9.99 / ₹499 | 1 | 25,000 | Yes |
 | Enterprise | Custom | Unlimited | Unlimited | Yes |
 
 **When a business uses all its monthly scans, everything pauses: its QR code, NFC tag and review page (customers see a
 neutral "temporarily unavailable" page), Google auto-reply and the weekly report, until the count resets on the billing
 date or the owner upgrades.** Only the owner's dashboard and billing stay open. See business-rules.md section 1.
 
-Only Enterprise has more than 1 location. **Google review auto-reply is available only on Free, Pro
-and Enterprise; Starter does not include it** (rules: business-rules.md section 6).
+Only Enterprise has more than 1 location. **Google review auto-reply is available only on Free, Pro,
+Growth and Enterprise; Starter does not include it** (rules: business-rules.md section 6).
 
 All plans include: AI review generation, weekly email reports, and a customizable customer page
 (menu/price list, links, contact and hours; quantity limits per plan, see business-rules.md
@@ -352,7 +353,7 @@ business that has hit its scan limit, or whose plan no longer includes auto-repl
 **5.4.3A Self-serve auto-reply settings (later, NOT built in v1)**
 Kept for when Google approval is done and support no longer has to set each business up (google-approval.md). Do not build in v1.
 0. **Pauses at the scan limit.** While the business has used all its scans, auto-reply is paused (business-rules.md section 1).
-   Plan gate: available on Free, Pro and Enterprise only (`plans.<plan>.google_auto_reply`). On Starter the whole
+   Plan gate: available on Free, Pro, Growth and Enterprise only (`plans.<plan>.google_auto_reply`). On Starter the whole
    Auto-reply screen is read-only with a "Google auto-reply is available on the Pro plan" message and an Upgrade button;
    the master switch and templates cannot be changed. Enforced on the server too (business-rules.md section 6).
 1. **Master switch** (`businesses.auto_reply_enabled`). Disabled with "Connect Google first" if Google is not connected.

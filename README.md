@@ -42,7 +42,7 @@ dashboard URL:
 | `empty` | Brand-new business, zero scans and feedback |
 | `loading` / `error` | Skeleton and failure states |
 | `limit` | Scan limit reached; customer side paused |
-| `free` / `starter` / `pro` / `enterprise` | The same café on each plan |
+| `free` / `starter` / `pro` / `growth` / `enterprise` | The same café on each plan |
 | `long-name` | Long business name and email overflow |
 | `over-limit` | 65 menu items after a downgrade to Starter |
 | `cancel-pending` / `cancel-finalized` / `past-due` | Billing lifecycle states |

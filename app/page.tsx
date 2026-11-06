@@ -202,7 +202,7 @@ export default function HomePage() {
           title="Simple pricing"
           subtitle="Every plan includes the review funnel, the customer page and the dashboard. Google review auto-reply is on every plan except Starter."
         >
-          <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
             {planOrder.map((id) => {
               const plan = plans[id];
               const cta = planCta(plan);

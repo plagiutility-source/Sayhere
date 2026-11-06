@@ -297,6 +297,8 @@ export function planForScenario(scenario: DemoScenario): PlanId {
       return "free";
     case "pro":
       return "pro";
+    case "growth":
+      return "growth";
     case "enterprise":
       return "enterprise";
     case "auto-reply-pending":

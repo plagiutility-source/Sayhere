@@ -1,6 +1,6 @@
 # Build Progress Tracker
 
-Last updated: 2026-10-26
+Last updated: 2026-11-06
 Build environment: Freebuff (DeepSeek V4.1 Flash). Sessions: owner 48h, admin 24h + 30 min idle.
 
 ## Rules for the AI coding agent
@@ -1879,3 +1879,14 @@ the merge.
   Kept the category lock, customer page, loyalty, feedback, analytics, billing and settings.
   Verified: `tsc`, `npm run build`, category-check (112), menu-import-check (283),
   loyalty-rules-check (97) and `schema.sql` in SQLite (24 tables, 1 trigger).
+
+- 2026-11-06 — Pricing restructure (owner request): Starter is now ₹199 (was ₹499), Pro ₹299
+  (was ₹699), and a new self-serve **Growth** plan sits between Pro and Enterprise at ₹499
+  (1 location, 25,000 scans, 200 menu items, 60 AI photos/month, auto-reply on). Enterprise stays
+  "Contact us" and remains the only plan with more than one location; Free is unchanged at ₹0.
+  Updated `lib/mock/plans.ts` (the single source), the `plans` seed in `schema.sql`, the `?demo=`
+  list (`growth`), billing plan ranking + paid-plan check, the pricing grids (5 cards, 3-up on
+  desktop), and the PRD/business-rules/README tables and auto-reply plan lists. The PRD's USD
+  figures are display-only approximations at the same ~₹50/$ ratio (international billing is
+  deferred). Verified: `tsc`, `npm run build`, and `/pricing`, `/`, `/billing?demo=growth` and
+  `/dashboard?demo=growth` all 200 with the new prices and the Growth plan present.

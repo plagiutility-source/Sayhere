@@ -56,7 +56,7 @@ export default function PricingPage() {
         </Section>
 
         <Section width="wide">
-          <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
             {planOrder.map((id) => {
               const plan = plans[id];
               const cta = ctaFor(plan);
