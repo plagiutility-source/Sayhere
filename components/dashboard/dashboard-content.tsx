@@ -22,6 +22,7 @@ import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
 import type { DemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
 import { AutoReplyCard } from "./auto-reply";
+import { DashboardCrmSection } from "./crm-cards";
 import { BarChart } from "./bar-chart";
 import { EmptyFeedback, ShareQrPlaceholder } from "./empty-state";
 import { FeedbackList, feedbackDisplayName } from "./feedback-list";
@@ -264,6 +265,9 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
 
       {/* Merge M9: table/room ordering, below the review content. */}
       <DashboardOrderingSection />
+
+      {/* CRM (salon/gym/retail/other on Starter+), below ordering. */}
+      <DashboardCrmSection planId={mock.plan.id} />
     </div>
   );
 }

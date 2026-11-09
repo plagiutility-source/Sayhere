@@ -40,7 +40,7 @@ body {
   }
 }
 
-/* Print: only the invoice paper (merged from the tables/rooms build). */
+/* Print: only the active invoice or patient report paper. */
 @media print {
   body {
     background: white;
@@ -51,11 +51,14 @@ body {
   }
 
   .invoice-print-area,
-  .invoice-print-area * {
+  .invoice-print-area *,
+  .report-print-area,
+  .report-print-area * {
     visibility: visible;
   }
 
-  .invoice-print-area {
+  .invoice-print-area,
+  .report-print-area {
     position: absolute;
     left: 0;
     top: 0;

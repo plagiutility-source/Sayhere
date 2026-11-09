@@ -32,6 +32,20 @@ export type PlanPageLimits = {
   ai_images: AiImageAllowance;
 };
 
+/**
+ * CRM limits for general-category businesses (salon, gym, retail, other).
+ * `null` on the plan means CRM is not included. Values mirror the plan table in
+ * CRM_FEATURE.md section 6.5 and the seed in schema.sql.
+ */
+export type CrmPlanLimits = {
+  contacts: number;
+  fields: number;
+  stages: number;
+  tags: number;
+  open_tasks: number;
+  import_rows: number;
+};
+
 export type Plan = {
   id: PlanId;
   /** Display label only; the schema stores just the plan key. */
@@ -42,6 +56,8 @@ export type Plan = {
   self_serve: boolean;
   google_auto_reply: boolean;
   page: PlanPageLimits;
+  /** `null` = the plan does not include the CRM (Free). */
+  crm: CrmPlanLimits | null;
 };
 
 export const plans: Record<PlanId, Plan> = {
@@ -58,6 +74,7 @@ export const plans: Record<PlanId, Plan> = {
       custom_links: null,
       ai_images: { limit: 3, period: "lifetime" },
     },
+    crm: null,
   },
   starter: {
     id: "starter",
@@ -71,6 +88,14 @@ export const plans: Record<PlanId, Plan> = {
       menu_items: 60,
       custom_links: null,
       ai_images: { limit: 15, period: "month" },
+    },
+    crm: {
+      contacts: 500,
+      fields: 8,
+      stages: 5,
+      tags: 5,
+      open_tasks: 200,
+      import_rows: 1_000,
     },
   },
   pro: {
@@ -86,6 +111,14 @@ export const plans: Record<PlanId, Plan> = {
       custom_links: null,
       ai_images: { limit: 40, period: "month" },
     },
+    crm: {
+      contacts: 2_000,
+      fields: 12,
+      stages: 6,
+      tags: 15,
+      open_tasks: 1_000,
+      import_rows: 5_000,
+    },
   },
   growth: {
     id: "growth",
@@ -100,6 +133,14 @@ export const plans: Record<PlanId, Plan> = {
       custom_links: null,
       ai_images: { limit: 60, period: "month" },
     },
+    crm: {
+      contacts: 10_000,
+      fields: 20,
+      stages: 8,
+      tags: 30,
+      open_tasks: 5_000,
+      import_rows: 10_000,
+    },
   },
   enterprise: {
     id: "enterprise",
@@ -113,6 +154,14 @@ export const plans: Record<PlanId, Plan> = {
       menu_items: null,
       custom_links: null,
       ai_images: { limit: 100, period: "month" },
+    },
+    crm: {
+      contacts: 100_000,
+      fields: 30,
+      stages: 8,
+      tags: 50,
+      open_tasks: 20_000,
+      import_rows: 10_000,
     },
   },
 };

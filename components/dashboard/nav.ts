@@ -1,9 +1,12 @@
 import type { ComponentType } from "react";
 import type { BusinessType } from "@/lib/brand/tokens";
 import { supportsTableOrdering } from "@/lib/category/ordering";
+import { supportsCrm } from "@/lib/crm/access";
+import type { PlanId } from "@/lib/mock/plans";
 import {
   AnalyticsIcon,
   BillingIcon,
+  CrmIcon,
   DashboardIcon,
   FeedbackIcon,
   LocationIcon,
@@ -24,7 +27,7 @@ export type DashboardNavItem = {
   href: string;
   icon: DashboardIconComponent;
   /** Optional gate; an item without one is always shown. */
-  requires?: (businessType: BusinessType) => boolean;
+  requires?: (businessType: BusinessType, planId: PlanId) => boolean;
   /** Optional label override per business type (hotel says "Rooms"). */
   labelByType?: Partial<Record<BusinessType, string>>;
 };
@@ -58,6 +61,12 @@ export const dashboardNav: readonly DashboardNavGroup[] = [
       },
       { label: "Customer page", href: "/customer-page", icon: PageIcon },
       { label: "Loyalty", href: "/loyalty", icon: LoyaltyIcon },
+      {
+        label: "CRM",
+        href: "/crm",
+        icon: CrmIcon,
+        requires: supportsCrm,
+      },
     ],
   },
   {

@@ -341,7 +341,7 @@ CREATE TABLE system_settings (
 INSERT INTO system_settings (id, key, value) VALUES (
   'setting_plans',
   'plans',
-  '{"free":{"price_inr_paise":0,"locations":1,"monthly_scans":10,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":10,"custom_links":null,"ai_images":{"limit":3,"period":"lifetime"}}},"starter":{"price_inr_paise":19900,"locations":1,"monthly_scans":1000,"self_serve":true,"google_auto_reply":false,"page":{"menu_items":60,"custom_links":null,"ai_images":{"limit":15,"period":"month"}}},"pro":{"price_inr_paise":29900,"locations":1,"monthly_scans":10000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":150,"custom_links":null,"ai_images":{"limit":40,"period":"month"}}},"growth":{"price_inr_paise":49900,"locations":1,"monthly_scans":25000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":200,"custom_links":null,"ai_images":{"limit":60,"period":"month"}}},"enterprise":{"price_inr_paise":null,"locations":null,"monthly_scans":null,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":null,"custom_links":null,"ai_images":{"limit":100,"period":"month"}}}}'
+  '{"free":{"price_inr_paise":0,"locations":1,"monthly_scans":10,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":10,"custom_links":null,"ai_images":{"limit":3,"period":"lifetime"}},"crm":null},"starter":{"price_inr_paise":19900,"locations":1,"monthly_scans":1000,"self_serve":true,"google_auto_reply":false,"page":{"menu_items":60,"custom_links":null,"ai_images":{"limit":15,"period":"month"}},"crm":{"contacts":500,"fields":8,"stages":5,"tags":5,"open_tasks":200,"import_rows":1000}},"pro":{"price_inr_paise":29900,"locations":1,"monthly_scans":10000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":150,"custom_links":null,"ai_images":{"limit":40,"period":"month"}},"crm":{"contacts":2000,"fields":12,"stages":6,"tags":15,"open_tasks":1000,"import_rows":5000}},"growth":{"price_inr_paise":49900,"locations":1,"monthly_scans":25000,"self_serve":true,"google_auto_reply":true,"page":{"menu_items":200,"custom_links":null,"ai_images":{"limit":60,"period":"month"}},"crm":{"contacts":10000,"fields":20,"stages":8,"tags":30,"open_tasks":5000,"import_rows":10000}},"enterprise":{"price_inr_paise":null,"locations":null,"monthly_scans":null,"self_serve":false,"google_auto_reply":true,"page":{"menu_items":null,"custom_links":null,"ai_images":{"limit":100,"period":"month"}},"crm":{"contacts":100000,"fields":30,"stages":8,"tags":50,"open_tasks":20000,"import_rows":10000}}}'
 );
 
 -- SEED: global AI dish photo switches (AI_MENU_PHOTOS.md section 5). Read on EVERY
@@ -730,3 +730,247 @@ CREATE TABLE rooms_page_configs (
 );
 
 CREATE INDEX idx_rooms_page_configs_business ON rooms_page_configs(business_id);
+
+-- ============================================================
+-- CRM (STAGE 2 PROPOSAL) — spec: CRM_FEATURE.md
+-- Owner-side contacts for salon, gym, retail and other (general-category)
+-- businesses. Not customer-facing. Every query MUST filter by business_id
+-- (see TENANT ISOLATION above). No marketing message is sent in v1, so
+-- consent is recorded, not acted on.
+-- Per-plan limits (contacts, fields, stages, tags, tasks, import rows) are in
+-- CRM_FEATURE.md section 6.5, mirrored in lib/mock/plans.ts and in the
+-- `plans` seed above. Hard caps: 100,000 contacts,
+-- 30 fields, 8 stages, 50 tags, 20,000 open tasks, 10,000 rows and 2 MB per
+-- import.
+-- ============================================================
+
+-- One validated JSON config per business: custom field definitions, pipeline
+-- stages, module switches and seller invoice details (`config.billing`). Max
+-- 100 KB, versioned. Stage ids are referenced by crm_contacts.stage_id but are
+-- NOT a foreign key (they live in this JSON and are validated on every write).
+-- invoice_seq is per business, monotonic, and never reused by a deleted bill.
+CREATE TABLE crm_configs (
+  business_id TEXT PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+  config TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  invoice_seq INTEGER NOT NULL DEFAULT 0 CHECK (invoice_seq >= 0),
+  report_seq INTEGER NOT NULL DEFAULT 0 CHECK (report_seq >= 0),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A person the owner knows. `custom_fields` is a JSON object keyed by the
+-- field `key` defined in crm_configs; values are validated against that
+-- config on every write. Soft delete (`deleted_at`) for 30 days, then purge.
+-- Email is unique per business when present; phone is not (families share it).
+CREATE TABLE crm_contacts (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                   -- 1..120
+  email TEXT,                           -- lower-cased, trimmed; null allowed
+  phone TEXT,                           -- 7..15 digits, optional leading +
+  company TEXT,                         -- 0..120
+  stage_id TEXT NOT NULL,               -- id from crm_configs.config.stages
+  custom_fields TEXT NOT NULL DEFAULT '{}',
+  consent_status TEXT NOT NULL DEFAULT 'unknown' CHECK (consent_status IN ('unknown', 'opted_in', 'opted_out')),
+  consent_source TEXT,                  -- manual, import, feedback, loyalty, order
+  consent_at TEXT,
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'import', 'feedback', 'loyalty', 'order')),
+  last_activity_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
+);
+
+CREATE UNIQUE INDEX idx_crm_contacts_email ON crm_contacts(business_id, lower(email))
+  WHERE email IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX idx_crm_contacts_stage ON crm_contacts(business_id, stage_id, updated_at);
+CREATE INDEX idx_crm_contacts_recent ON crm_contacts(business_id, updated_at DESC);
+CREATE INDEX idx_crm_contacts_phone ON crm_contacts(business_id, phone);
+
+-- The manual work/payment ledger. This is bookkeeping, not payment collection:
+-- no card, UPI or provider credentials are stored. Amounts are integer paise so
+-- money never passes through floating point. Balance and paid/part-paid/unpaid
+-- status are derived in the application; paid can never exceed billed.
+-- Photos are optional object-storage keys (never public URLs) and require the
+-- client's recorded consent. The Stage 1 mock stores compressed data URLs in
+-- browser storage; Stage 2 uploads to private R2 and stores only the key.
+CREATE TABLE crm_service_entries (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_id TEXT NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+  service TEXT NOT NULL,                -- 1..120
+  entry_date TEXT NOT NULL,             -- YYYY-MM-DD, business time zone
+  billed_paise INTEGER NOT NULL CHECK (billed_paise >= 0),
+  paid_paise INTEGER NOT NULL DEFAULT 0 CHECK (paid_paise >= 0),
+  payment_method TEXT NOT NULL DEFAULT 'other'
+    CHECK (payment_method IN ('cash', 'upi', 'card', 'bank', 'other')),
+  notes TEXT NOT NULL DEFAULT '',       -- 0..2000
+  before_photo_key TEXT,                -- private R2 key, null when absent
+  after_photo_key TEXT,                 -- private R2 key, null when absent
+  photo_consent INTEGER NOT NULL DEFAULT 0
+    CHECK (photo_consent IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT,
+  CHECK (paid_paise <= billed_paise),
+  CHECK (before_photo_key IS NULL AND after_photo_key IS NULL OR photo_consent = 1)
+);
+
+CREATE INDEX idx_crm_service_entries_contact
+  ON crm_service_entries(business_id, contact_id, entry_date DESC);
+CREATE INDEX idx_crm_service_entries_recent
+  ON crm_service_entries(business_id, entry_date DESC);
+
+-- A printable bill attached to one work record. The work record's billed_paise
+-- is the invoice total, so payments remain in crm_service_entries and there is
+-- no second payment ledger. invoice_seq on crm_configs produces the number.
+CREATE TABLE crm_invoices (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  service_entry_id TEXT NOT NULL UNIQUE
+    REFERENCES crm_service_entries(id) ON DELETE CASCADE,
+  number TEXT NOT NULL,                 -- e.g. INV-0001, unique per business
+  issue_date TEXT NOT NULL,             -- YYYY-MM-DD
+  due_date TEXT NOT NULL,               -- YYYY-MM-DD, >= issue_date
+  discount_paise INTEGER NOT NULL DEFAULT 0 CHECK (discount_paise >= 0),
+  tax_percent_bp INTEGER NOT NULL DEFAULT 0
+    CHECK (tax_percent_bp BETWEEN 0 AND 5000), -- 18% = 1800 basis points
+  notes TEXT NOT NULL DEFAULT '',       -- 0..2000
+  terms TEXT NOT NULL DEFAULT '',       -- 0..500
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK (due_date >= issue_date),
+  UNIQUE (business_id, number)
+);
+
+CREATE INDEX idx_crm_invoices_business
+  ON crm_invoices(business_id, issue_date DESC);
+CREATE INDEX idx_crm_invoices_due
+  ON crm_invoices(business_id, due_date);
+
+-- Ordered invoice lines. quantity_hundredths keeps fractional quantities exact
+-- (2.50 = 250); rate_paise is integer paise. The invoice total is derived from
+-- these lines, the discount and the tax, then cached as billed_paise on the
+-- work record so the ledger and the printed bill stay identical.
+CREATE TABLE crm_invoice_lines (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  invoice_id TEXT NOT NULL REFERENCES crm_invoices(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL CHECK (position BETWEEN 0 AND 7),
+  description TEXT NOT NULL,            -- 1..120
+  quantity_hundredths INTEGER NOT NULL
+    CHECK (quantity_hundredths > 0 AND quantity_hundredths <= 99900),
+  rate_paise INTEGER NOT NULL CHECK (rate_paise >= 0),
+  UNIQUE (invoice_id, position)
+);
+
+CREATE INDEX idx_crm_invoice_lines_invoice
+  ON crm_invoice_lines(business_id, invoice_id, position);
+
+-- Patient-facing clinical report / prescription attached one-to-one to a work
+-- record. The visit remains the source for date, service, amount and photos;
+-- this table only adds clinical content. `report_seq` on crm_configs produces
+-- the number. A report is shared only as a private self-contained file until a
+-- later authenticated patient portal is approved.
+CREATE TABLE crm_patient_reports (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  service_entry_id TEXT NOT NULL UNIQUE
+    REFERENCES crm_service_entries(id) ON DELETE CASCADE,
+  number TEXT NOT NULL,                 -- e.g. RPT-0001, unique per business
+  doctor_name TEXT NOT NULL,            -- 1..120
+  doctor_qualification TEXT NOT NULL DEFAULT '', -- 0..120
+  doctor_registration TEXT NOT NULL DEFAULT '',  -- 0..40
+  patient_age TEXT NOT NULL DEFAULT '', -- 0..20, kept as entered (e.g. "8 months")
+  patient_gender TEXT CHECK (
+    patient_gender IS NULL OR patient_gender IN ('female', 'male', 'nonbinary', 'prefer_not_to_say')
+  ),
+  chief_complaint TEXT NOT NULL DEFAULT '', -- 0..2000
+  diagnosis TEXT NOT NULL,              -- 1..2000
+  examination TEXT NOT NULL DEFAULT '', -- 0..2000
+  tests TEXT NOT NULL DEFAULT '',       -- 0..2000
+  treatment TEXT NOT NULL DEFAULT '',   -- 0..2000
+  advice TEXT NOT NULL DEFAULT '',      -- 0..2000
+  follow_up_date TEXT,                  -- YYYY-MM-DD, nullable
+  include_photos INTEGER NOT NULL DEFAULT 0
+    CHECK (include_photos IN (0, 1)),
+  share_consent INTEGER NOT NULL DEFAULT 0
+    CHECK (share_consent IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (business_id, number)
+);
+
+CREATE INDEX idx_crm_patient_reports_business
+  ON crm_patient_reports(business_id, updated_at DESC);
+CREATE INDEX idx_crm_patient_reports_contact
+  ON crm_patient_reports(business_id, service_entry_id);
+
+-- Ordered prescription rows. A report has at most 10; position is dense and
+-- starts at zero so the patient copy prints in the doctor's entered order.
+CREATE TABLE crm_report_medicines (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  report_id TEXT NOT NULL REFERENCES crm_patient_reports(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL CHECK (position BETWEEN 0 AND 9),
+  name TEXT NOT NULL,                   -- 1..120
+  dose TEXT NOT NULL DEFAULT '',        -- 0..80
+  frequency TEXT NOT NULL DEFAULT '',   -- 0..80
+  duration TEXT NOT NULL DEFAULT '',    -- 0..80
+  instructions TEXT NOT NULL DEFAULT '',-- 0..240
+  UNIQUE (report_id, position)
+);
+
+CREATE INDEX idx_crm_report_medicines_report
+  ON crm_report_medicines(business_id, report_id, position);
+
+-- Append-only timeline. Notes/calls/visits are never edited; `deleted_at` is a
+-- soft hide for the owner and remains in the audit trail.
+CREATE TABLE crm_activities (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_id TEXT NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('note', 'call', 'email', 'visit', 'system')),
+  body TEXT NOT NULL,                   -- 1..2000 characters
+  created_by TEXT,                      -- owner user id; 'system' for automatic entries
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
+);
+
+CREATE INDEX idx_crm_activities_contact ON crm_activities(business_id, contact_id, created_at DESC);
+
+-- Follow-ups, not bookings. `due_on` is a date (YYYY-MM-DD) in the business
+-- time zone; overdue is derived, never stored as a status.
+CREATE TABLE crm_tasks (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_id TEXT NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,                  -- 1..120
+  due_on TEXT,                          -- nullable
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+  completed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_crm_tasks_open ON crm_tasks(business_id, status, due_on);
+
+CREATE TABLE crm_tags (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                   -- 1..24
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (business_id, name COLLATE NOCASE)
+);
+
+-- Many-to-many tag links. business_id is duplicated on purpose so every query
+-- can filter by tenant without joining crm_contacts first.
+CREATE TABLE crm_contact_tags (
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_id TEXT NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+  tag_id TEXT NOT NULL REFERENCES crm_tags(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (contact_id, tag_id)
+);
+
+CREATE INDEX idx_crm_contact_tags_tag ON crm_contact_tags(business_id, tag_id);

@@ -1,6 +1,6 @@
 # Build Progress Tracker
 
-Last updated: 2026-11-06
+Last updated: 2026-11-07
 Build environment: Freebuff (DeepSeek V4.1 Flash). Sessions: owner 48h, admin 24h + 30 min idle.
 
 ## Rules for the AI coding agent
@@ -1890,3 +1890,105 @@ the merge.
   figures are display-only approximations at the same ~₹50/$ ratio (international billing is
   deferred). Verified: `tsc`, `npm run build`, and `/pricing`, `/`, `/billing?demo=growth` and
   `/dashboard?demo=growth` all 200 with the new prices and the Growth plan present.
+
+- 2026-11-06 — CRM spec for salon/gym/retail/other (spec only, no UI, route, store or API): approved
+  scope is general-category businesses first, Starter and above, contacts + owner-defined fields +
+  pipeline + notes/follow-up tasks + CSV, with appointment booking left out of scope. Added
+  `CRM_FEATURE.md` (presets, validation, limits, consent/retention, acceptance tests, build phases),
+  PRD 5.9 plus pricing/out-of-scope notes, business-rules 15, security 4F and the proposed `crm_*`
+  tables in `schema.sql` (six tables: configs, contacts, activities, tasks, tags, contact-tags);
+  README links the spec. Verified: `schema.sql` executes in Python sqlite3 (38 tables, 6 CRM), the
+  section cross-references resolve, and `tsc` stays clean (documentation/schema only).
+
+- 2026-11-06 — CRM Phase 1 mock UI for salon/gym/retail/other on Starter+ (approved spec): built the
+  fail-closed access gate, business-type presets and plan limits, the localStorage store and rules
+  engine, `/crm` contacts + pipeline + filters, contact detail with notes/tasks/stage moves and soft
+  delete, `/crm/settings` for fields/stages/modules, CSV import/export, the Contacts nav item, and
+  dashboard/analytics CRM cards. Free and café/restaurant/hotel stay hidden and 404 on the route.
+  Fixed two bugs found in verification: the salon profile was seeding the "Other" preset because the
+  store seeded before the business profile hydrated (the CRM hook now waits for the real type), and
+  exported phones beginning `+` became `91…` on re-import because the spreadsheet guard's `'` prefix
+  was kept (normalizePhone now strips it). Verified: `npm run typecheck`, `npm run crm-check` (83
+  checks), `npm run build`, and `schema.sql` in Python sqlite3; browser add contact, note, task, stage
+  move, settings field save, Starter stage cap, CSV export, Free/café 404 with nav hidden, and the
+  dashboard cards. CSV import UI was not click-driven; its parser/importer is covered by the 83
+  checks. All CRM work is uncommitted. Next: Stage 2 only after approval.
+
+- 2026-11-06 — CRM Phase 1 refined after owner design feedback: `/crm` is now a Salesforce/Zoho-style
+  workspace with Contacts, Pipeline and Work & payments views, a commercial summary strip, a dense
+  desktop table and mobile record cards. `/crm/[id]` now has a record header, lifetime billed /
+  collected / outstanding / last-work highlights and Overview, Work & payments, Activity and Tasks
+  tabs. Added structured service records (what was done, date, total cost, amount paid, payment
+  method, notes), paid/part-paid/unpaid status, add/edit/delete, seed records and rollups. The proposed
+  schema now has `crm_service_entries` (39 tables, 7 CRM). Verified: `npm run typecheck`,
+  `npm run crm-check` (107 checks), `npm run build`, schema executed in Python sqlite3, seeded salon
+  workspace, contact record, and adding/editing a work-payment record in the browser. All changes
+  remain uncommitted; no backend or migration. Next: Stage 2 only after approval.
+
+- 2026-11-06 — CRM column customization now lives where the owner works. The Contacts table has a
+  compact Add column button that opens a validated builder for column name, type, choices, required
+  and Show in table, with a live column preview and the plan-limit count. New columns appear in the
+  table immediately and automatically flow through the contact form, detail record, search, mobile
+  cards and CSV import/export; duplicate labels, immutable keys and plan limits stay enforced by the
+  shared rules. Settings remains the full editor for rename, visibility and archive. Docs updated in
+  README.md and CRM_FEATURE.md. Verified: `npm run typecheck`, `npm run crm-check` (113 checks),
+  `npm run build`, and a browser run adding a “Membership expiry” date column at 7 of 8 Starter
+  columns with the header rendered. All changes remain uncommitted; no backend or migration.
+
+- 2026-11-07 — CRM visit photos, invoices and invoice settings (Phase 1 mock): added optional
+  before/after visit photos with browser compression (900 px max edge, 12 MB source, WebP/JPEG),
+  strict raster-only validation and required client consent; a Photos tab, thumbnails on work rows
+  and a private side-by-side viewer. Added printable invoices/bills attached one-to-one to work
+  records: up to 8 lines, discount, tax, issue/due dates, notes/terms, paid amount and method,
+  automatic numbers (`INV-0001`), derived Paid/Part paid/Unpaid status, an Invoices view with
+  search/overdue state, edit and print/save-PDF, plus seller invoice details in CRM settings. The
+  invoice total is the work record's billed total, so there is no second payment ledger; invoiced
+  totals are locked in the visit editor. Added billing normalisation for old saved configs,
+  proposed `crm_invoices`/`crm_invoice_lines` tables, photo keys/consent, `invoice_seq`, docs and
+  checks. Verified: `npm run typecheck`, `npm run crm-check` (145 checks), `npm run build`,
+  `schema.sql` executes in Python sqlite3, and a browser pass creating a ₹3,894 invoice (discount
+  ₹200, 18% tax, ₹1,500 paid), saving before/after photos with consent, opening the Photos viewer,
+  saving seller invoice details and seeing them on the bill. The browser print dialog itself was
+  not automated. All CRM work remains uncommitted; no backend or migration.
+
+- 2026-11-07 — Public CRM demo preview: added `/crm/demo`, a first-visit bootstrap that seeds
+  Glow Studio (salon, Other business category) and redirects to `/crm?demo=growth`, so a clean
+  browser no longer hits the CRM access 404. Moved Next.js to 16.4.5 because the supported
+  OpenNext/Sites adapter rejects the unsupported 15.x line, added `open-next.config.ts` using the
+  Sites R2/DO cache bindings, and ignored the generated OpenNext wrapper in `tsc`. Deployed the
+  preview at https://site-7873c4be16954fe48b81b90a633515d8.freebuff.page and verified from cleared
+  storage that `/crm/demo` redirects to the Growth CRM with 4 clients, 5 work records and 0 invoices.
+  Verified `npm run typecheck`, `npm run crm-check` (145 checks), `npm run build`, a local Wrangler
+  build with all Sites bindings, public HTTP 200 for `/`, `/crm` and `/crm/demo`, and the browser
+  console (only a missing `/favicon.ico` request). Follow-up: the redirected
+  `/crm?demo=growth` URL now seeds the demo itself when no CRM profile exists, so copying the
+  address-bar URL or opening it in a fresh browser no longer shows the CRM 404. Redeployed the
+  preview under request `preview-20261107-crm-selfseed` and verified with cleared localStorage that
+  both `/crm?demo=growth` and `/crm/demo` load the Growth CRM (4 clients, 5 work records, 0
+  invoices) with no console errors. All changes remain uncommitted.
+
+- 2026-11-07 — CRM patient reports & prescriptions (Phase 1 mock): added one patient report per work
+  record with doctor/practitioner details, patient age/gender, complaint, diagnosis, examination,
+  tests, treatment, up to 10 medicine rows, advice, follow-up date, photo inclusion and share
+  consent. Added automatic `RPT-0001` numbers, sanitized storage/migration, a Reports tab and visit
+  actions, an editor and a patient-facing printable copy with embedded consented photos. The patient
+  copy can be printed/saved as PDF or shared as a self-contained private HTML file through Web Share
+  with a download fallback; nothing is uploaded to a public page. The report reuses the visit's
+  service, date, photos and payment data, so no second ledger exists. Updated the seed with one
+  realistic sample report, proposed `crm_patient_reports`/`crm_report_medicines` tables plus
+  `report_seq`, and updated CRM_FEATURE.md and README. Verified: `npm run typecheck`, `npm run
+  crm-check` (177 checks), `npm run build`, `schema.sql` in Python sqlite3 (43 tables, 11 CRM), and
+  a browser pass on the rebuilt production preview creating RPT-0002 on a visit and opening its
+  patient copy. The native share sheet and print dialog were not automated. All CRM work remains
+  uncommitted; no backend or migration.
+
+- 2026-11-07 — CRM report/provider settings and one-click generation: moved provider name,
+  qualification, registration, signature, approval wording and all report terminology out of the
+  per-report form and into Settings → Report & provider details. Added editable report title,
+  recipient/provider labels, plan heading and footer; defaults are business-neutral so salons, gyms,
+  trainers and other businesses can use their own language without a doctor or degree. Generate
+  report now creates the private report directly from the visit service and saved settings, then
+  opens the copy; the editor remains for assessment, plan, photos and consent. Existing reports keep
+  their provider snapshot, old local configs receive sanitized defaults, and generated drafts are
+  clearly labelled until an assessment is added. Verified: npm run typecheck, npm run crm-check
+  (189 checks) and npm run build. All CRM work remains uncommitted; no backend or migration.

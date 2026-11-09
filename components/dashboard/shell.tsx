@@ -28,6 +28,7 @@ import { LiveTopbarActions } from "@/components/rooms/owner/LiveTopbar";
 import type { BusinessType } from "@/lib/brand/tokens";
 import { supportsTableOrdering } from "@/lib/category/ordering";
 import { getDashboardMock } from "@/lib/mock/dashboard";
+import type { PlanId } from "@/lib/mock/plans";
 import { displayableLogo } from "@/lib/mock/store";
 import { resolveDemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
@@ -59,9 +60,11 @@ function isActivePath(pathname: string, href: string): boolean {
 function NavList({
   onNavigate,
   businessType,
+  mockPlanId,
 }: {
   onNavigate?: () => void;
   businessType: BusinessType;
+  mockPlanId: PlanId;
 }) {
   const pathname = usePathname();
   return (
@@ -73,7 +76,10 @@ function NavList({
           </p>
           <ul className="mt-1 flex flex-col gap-1">
             {group.items
-              .filter((item) => !item.requires || item.requires(businessType))
+              .filter(
+                (item) =>
+                  !item.requires || item.requires(businessType, mockPlanId),
+              )
               .map((item) => {
               const active = isActivePath(pathname, item.href);
               const label = item.labelByType?.[businessType] ?? item.label;
@@ -131,9 +137,11 @@ function UpgradeCard() {
 function SidebarChrome({
   onNavigate,
   businessType,
+  mockPlanId,
 }: {
   onNavigate?: () => void;
   businessType: BusinessType;
+  mockPlanId: PlanId;
 }) {
   return (
     <>
@@ -152,7 +160,11 @@ function SidebarChrome({
           </span>
         </span>
       </Link>
-      <NavList onNavigate={onNavigate} businessType={businessType} />
+      <NavList
+        onNavigate={onNavigate}
+        businessType={businessType}
+        mockPlanId={mockPlanId}
+      />
       <div className="mt-auto">
         <UpgradeCard />
       </div>
@@ -233,7 +245,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop sidebar: full at xl (>=1280px), icon rail at lg (1024–1279px). */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-4 bg-brand-blue p-2 lg:flex xl:w-60 xl:p-3 print:hidden">
-        <SidebarChrome businessType={business.business_type} />
+        <SidebarChrome
+          businessType={business.business_type}
+          mockPlanId={mock.plan.id}
+        />
       </aside>
 
       {/* Off-canvas drawer for <1024px. */}
@@ -264,6 +279,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <SidebarChrome
               onNavigate={() => setDrawerOpen(false)}
               businessType={business.business_type}
+              mockPlanId={mock.plan.id}
             />
           </div>
         </div>

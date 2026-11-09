@@ -487,6 +487,69 @@ orders and join requests. The same untrusted-content rules as 4C apply, plus the
 
 ---
 
+## 4F. CRM (owner-side contact data)
+
+The CRM (PRD.md 5.9, CRM_FEATURE.md) stores personal data about people who are not necessarily
+customers: names, emails, phones, notes and consent. The table/room rules do not apply; these do.
+
+- **Authorization and tenancy.** Every CRM route and query requires the authenticated owner. Resolve
+  `business_id` from the session, never from the URL, body or query. Every contact, activity, task,
+  tag and config row is tenant-scoped; a contact id from another business returns 404 with no detail.
+  Staff access does not exist in v1; do not add a client-supplied role.
+- **Plan and category gate.** The server decides access from the business type and the plan setting
+  (`salon`, `gym`, `retail`, `other`; Starter and above). The UI gate is cosmetic. A direct request for
+  a non-eligible business is a 404, not a 403 that confirms the feature.
+- **PII minimisation.** Store only what the owner enters: name, email, phone, company, custom fields,
+  consent and notes. No passwords, card data, UPI credentials, IDs or provider tokens. Do not log PII,
+  put it in URLs, analytics events, error messages or emails. No marketing message is sent in v1.
+- **Consent and retention.** `consent_status` is `unknown`/`opted_in`/`opted_out` with source and
+  timestamp. An opted-out contact must never be messaged by a later campaign feature. Soft-deleted
+  contacts and their activities/tasks are purged after 30 days; CRM data after a downgrade to Free is
+  read-only for `RETENTION_DAYS_AFTER_CANCEL` (default 90) days and then purged. Exports and deletes
+  are audit-logged.
+- **Input and output.** Name 120, email 254, phone 20 (7–15 digits), company 120, short custom field
+  200, long text 2000, activity 2000, task title 120, tag 24, stage name 32, field label 40, options
+  20 × 40, config 100 KB, CSV 2 MB and the plan's row cap. Reject unknown field keys, invalid option
+  values, duplicate keys and stage names, and any config above the plan limits. React escaping is the
+  only renderer; `dangerouslySetInnerHTML`/`innerHTML` are forbidden in CRM code. Every cell is plain
+  text.
+- **CSV safety.** Import treats every cell as text: never evaluate formulas, HTML or links. Export
+  quotes every value, prefixes cells starting with `=`, `+`, `-` or `@` with `'`, sets
+  `Content-Type: text/csv; charset=utf-8` and `Cache-Control: no-store`, uses a fixed filename, and is
+  audit-logged. The uploaded file is parsed in memory and never stored. Reject XLSX, PDF and images.
+- **Config integrity.** The config is one server-validated JSON row per business, versioned, with
+  unknown keys rejected. Field keys and types are immutable once used; removing a field archives it and
+  keeps values. Removing a stage requires an atomic move of its contacts. The client never supplies
+  `business_id`, counts, limits or consent timestamps.
+- **Duplicates and enumeration.** Duplicate-email checks are scoped to the session's business and
+  return the same friendly message; there is no cross-tenant lookup and no endpoint that confirms
+  whether an email exists in another business.
+- **Local state (Stage 1 mock).** `syehere.mock.crm.v1` is the only storage key; parse it in try/catch
+  and treat malformed JSON as absent. It is disposable demo data, never the source of truth.
+- **Stage 2 tables.** `crm_configs`, `crm_contacts`, `crm_activities`, `crm_tasks`, `crm_tags` and
+  `crm_contact_tags`, all tenant-scoped by `business_id`. Use one data-access module so a missing
+  tenant filter is caught in review.
+
+**Acceptance tests**
+- A café, restaurant, hotel, Free-plan business or unknown type gets 404 on every `/crm` route and no
+  CRM navigation.
+- A contact id from business B returns 404 for business A, for read, edit, delete, task and export.
+- A 31st custom field, a 9th stage, a 51st tag or a contact above the plan limit is refused server-side
+  with the plan message, even if the request is hand-edited.
+- A config with an unknown key, duplicate stage id, missing won/lost stage or over-limit field count is
+  rejected and the previous config stays active.
+- A contact name or note containing `<script>alert(1)</script>` renders as text in the list, detail,
+  CSV and dashboard.
+- Exporting `=cmd|' /C calc'!A0` writes `'=cmd|' /C calc'!A0` and no formula is evaluated on import.
+- Importing 3 valid, 1 duplicate and 2 invalid rows adds 3 and reports the rest with row numbers; an
+  existing contact is never overwritten.
+- A soft-deleted contact disappears immediately and is purged with its notes and tasks after 30 days.
+- After a downgrade to Free, CRM is read-only, export still works for the retention window, and the
+  purge removes only that business's CRM rows.
+- Every CRM query filters by the session's `business_id` (tenant-isolation test extended to CRM).
+
+---
+
 ## 5. Security Headers, CORS, Errors, Secrets
 
 - **Headers on every response** (configure in `next.config.js` `headers()`):

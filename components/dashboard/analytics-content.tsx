@@ -21,6 +21,7 @@ import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
 import type { DemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
 import { BarChart } from "./bar-chart";
+import { AnalyticsCrmSection } from "./crm-cards";
 import { ShareQrPlaceholder } from "./empty-state";
 import { Gauge } from "./gauge";
 import { AnalyticsOrderingSection } from "./ordering-cards";
@@ -194,6 +195,9 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
 
       {/* Merge M9: table/room ordering analytics, below the review content. */}
       <AnalyticsOrderingSection />
+
+      {/* CRM analytics (salon/gym/retail/other on Starter+). */}
+      <AnalyticsCrmSection planId={mock.plan.id} />
     </div>
   );
 }

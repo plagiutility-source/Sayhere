@@ -524,3 +524,58 @@ Spec: PRD.md section 5.8. Code: `lib/rooms/rules.ts` (the ONE place these rules 
     schema.sql "TABLE & ROOM QR ORDERING (STAGE 2)"; security rules: security-and-reliability.md section 4E.
 
 ---
+
+## 15. CRM (salon, gym, retail and other)
+
+Spec: PRD.md section 5.9 and CRM_FEATURE.md. Code: `lib/crm/rules.ts` (the ONE place
+these rules live), `lib/crm/access.ts` (the gate) and `lib/crm/config.ts` (presets, limits,
+validation). Approved 2026-11-06. Phase 1 mock UI is built; server-side enforcement is still Stage 2/3,
+so this section remains binding for both.
+
+1. **Eligibility is fail-closed.** CRM exists only when the business type is `salon`, `gym`, `retail` or
+   `other` AND the plan is `starter`, `pro`, `growth` or `enterprise`. Café, restaurant and hotel get no CRM
+   nav item or page in v1. An unknown, missing or wrongly-cased type is no access. The locked category
+   (section 13) is never changed.
+2. **Plans.** Free has no CRM. Starter, Pro, Growth and Enterprise get it with the limits in
+   CRM_FEATURE.md section 6.5. A downgrade to Free makes CRM read-only for
+   `RETENTION_DAYS_AFTER_CANCEL` (default 90) days, then deletes the contacts, activities, tasks and tags.
+   The owner can export during that window. Nothing is deleted on downgrade itself.
+3. **Contacts.** A contact needs a name (1–120) and at least one of email (254, valid) or phone
+   (7–15 digits, optional leading `+`). Email is lower-cased and unique among live contacts in one
+   business; phone is not unique. `company` is optional (120). Source is `manual`, `import`,
+   `feedback`, `loyalty` or `order`. Deleting a contact is a soft delete, hidden immediately and purged
+   after 30 days with its activities and tasks.
+4. **Custom fields.** The owner starts from the preset for their business type and may add, rename,
+   reorder or archive fields. `key` matches `^[a-z][a-z0-9_]{1,29}$`, is unique and immutable; `label`
+   is 1–40. Types: text (200), long_text (2000), number, date, select, multi_select, checkbox. A
+   select/multi_select has 1–20 options of 1–40 characters. The type is immutable once the field has a
+   value. Archiving keeps values and hides the field from forms, filters and exports. Limits and hard
+   caps: CRM_FEATURE.md section 6.5 (max 30 fields).
+5. **Stages.** 2–8, unique names (1–32), ordered, exactly one `won` and one `lost`, at least one
+   `open`. Stage ids are stable and never reused. Deleting a stage requires a destination for every
+   contact and cannot remove the last open stage; the move and delete are one transaction. Turning the
+   pipeline module off hides stages and keeps `stage_id`.
+6. **Notes and tasks.** Activities are append-only (note, call, email, visit, system), body 1–2000.
+   Tasks have a title (1–120), optional due date, and `open`/`done`; overdue is derived in the business
+   time zone, never stored. Open-task counts follow CRM_FEATURE.md section 6.5. No appointment or
+   booking calendar is part of v1 (PRD.md section 11).
+7. **Tags.** Name 1–24, unique per business (case-insensitive), up to the plan's tag count, at most 10
+   per contact. Unknown tags in an import are created only while under the limit; the rest are reported.
+8. **Import/export.** CSV only, UTF-8, max 2 MB and the plan's row cap. `name` is required; unknown stage
+   names, invalid rows and duplicate emails are reported per row and skipped; v1 never updates an
+   existing contact. Export includes active fields plus consent, is quoted, prefixes formula-leading
+   cells with `'` and is audit-logged.
+9. **Consent.** `consent_status` is `unknown` (default), `opted_in` or `opted_out`, with source and
+   timestamp. V1 sends no marketing messages; consent is recorded so no later campaign can message an
+   opted-out contact.
+10. **Config is server-validated.** One config per business, versioned, max 100 KB, unknown keys and
+    duplicate keys/stage ids rejected. The client never sets a count, limit, `business_id` or consent.
+    Saving config never deletes contact data; removing a field archives it.
+11. **Privacy and audit.** PII is visible only to the authenticated owner of that business, never
+    logged, never in URLs or analytics events. Contact delete, config changes, imports and exports are
+    written to `audit_logs`. Data-subject export/delete use the same paths.
+12. **Stage 2 is not built.** Server-side CRUD, tenant checks, CSV processing, soft-delete purge and
+    analytics remain Stage 2/3. Proposed tables: schema.sql "CRM (STAGE 2 PROPOSAL)"; security rules:
+    security-and-reliability.md section 4F.
+
+---

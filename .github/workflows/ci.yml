@@ -31,3 +31,5 @@ jobs:
         run: npm run build
       - name: Rooms rules check
         run: npm run rooms-check
+      - name: CRM rules check
+        run: npm run crm-check

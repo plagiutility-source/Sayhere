@@ -21,7 +21,8 @@ npm run dev
 ```
 
 Open <http://localhost:3000>. The dashboard is at `/dashboard`; the sidebar links to Feedback,
-Analytics, Locations, the customer page, Loyalty, Billing and Settings.
+Analytics, Locations, the customer page, Loyalty, Contacts (salon/gym/retail/other on Starter+),
+Billing and Settings.
 
 Production build:
 
@@ -48,8 +49,10 @@ dashboard URL:
 | `cancel-pending` / `cancel-finalized` / `past-due` | Billing lifecycle states |
 | `page_custom_hidden` / `auto-reply-*` | Admin-hide and auto-reply request states |
 
-Loyalty and AI-photo credits have their own `syehere.mock.*` keys. To reset, clear site data for
-`localhost:3000` (or just that key) and reload.
+Loyalty, AI-photo credits and the CRM (contacts, work/payment records, visit photos, invoices and
+patient reports) each have their own `syehere.mock.*` keys. The CRM only mounts
+for salon, gym, retail and other businesses on Starter or above; set a matching business profile to
+see it. To reset, clear site data for `localhost:3000` (or just that key) and reload.
 
 The menu PDF import is a labelled demo: it validates the PDF and runs the real review,
 limit, photo-reservation and save flow, but returns a sample menu instead of calling AI.
@@ -59,6 +62,9 @@ No PDF or customer data leaves the browser.
 
 - `/customer-page` — public-page editor, including menu PDF import and AI photo mock
 - `/loyalty` — stamp card, rewards, staff and members
+- `/crm` — contacts with add-your-own columns, pipeline, work/payment ledger, printable invoices and reports/plans, notes and follow-up tasks (salon/gym/retail/other, Starter+)
+- `/crm/[id]` — one client with commercial highlights, work/payment history, before/after photos, invoices, reports/plans, notes, tasks and stage changes
+- `/crm/settings` — owner-defined fields, stages, modules, invoice details and business-neutral report/provider wording
 - `/billing` — Syehere subscription (mock checkout and cancellation)
 - `/r/[slug]` — public review/customer page (try `/r/cafe01`)
 - `/dashboard`, `/feedback`, `/analytics`, `/locations`, `/settings`
@@ -71,6 +77,7 @@ npm run build
 npx tsx scripts/menu-import-check.ts
 npx tsx scripts/category-check.ts   # text match, proofs and the category lock
 npx tsx scripts/loyalty-rules-check.ts
+npm run crm-check                    # CRM access, limits, columns, work/payments, photos/consent, invoices, reports, stages, tasks, CSV
 ```
 
 The scripts print `N passed` / `N checks passed` and exit non-zero on failure.
@@ -86,6 +93,7 @@ have the SQLite CLI installed, you can check that it still parses with
 - [security-and-reliability.md](security-and-reliability.md) — security, uploads, retention
 - [customer-page-ui-spec.md](customer-page-ui-spec.md) — editor and public-page wireframes
 - [AI_MENU_PHOTOS.md](AI_MENU_PHOTOS.md) — AI photo costs, batch import and launch gates
+- [CRM_FEATURE.md](CRM_FEATURE.md) — CRM spec and Phase 1 mock UI, including the work/payment ledger, visit photos, invoices and patient reports (no backend yet)
 - [PROGRESS.md](PROGRESS.md) — build tracker and session log
 - [env.example.txt](env.example.txt) — variables needed only for later stages
 
