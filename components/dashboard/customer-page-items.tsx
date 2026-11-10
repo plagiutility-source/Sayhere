@@ -272,6 +272,7 @@ export function ButtonsSection({
   menuItemLimit,
   aiAllowance,
   planName,
+  loyaltyIncluded,
   loyaltyOn,
   onToggleLoyalty,
   highlight,
@@ -285,6 +286,8 @@ export function ButtonsSection({
   /** Plan AI dish photo allowance; from lib/mock/plans.ts. */
   aiAllowance: AiImageAllowance;
   planName: string;
+  /** The plan includes loyalty (Pro+); Starter hides the row entirely. */
+  loyaltyIncluded: boolean;
   loyaltyOn: boolean;
   onToggleLoyalty: (next: boolean) => void;
   highlight: string | null;
@@ -311,7 +314,9 @@ export function ButtonsSection({
   return (
     <>
       <ul className="mt-3 flex flex-col gap-3">
-        <LoyaltyRow on={loyaltyOn} onToggle={onToggleLoyalty} />
+        {loyaltyIncluded ? (
+          <LoyaltyRow on={loyaltyOn} onToggle={onToggleLoyalty} />
+        ) : null}
 
         <MenuRow
           businessType={businessType}

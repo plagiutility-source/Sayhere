@@ -21,8 +21,8 @@ npm run dev
 ```
 
 Open <http://localhost:3000>. The dashboard is at `/dashboard`; the sidebar links to Feedback,
-Analytics, Locations, the customer page, Loyalty, Contacts (salon/gym/retail/other on Starter+),
-Billing and Settings.
+Analytics, Locations, the customer page, Loyalty (Pro+), Contacts (salon/gym/retail/other on Pro+),
+Billing and Settings. Starter is the review product only — no loyalty, ordering, CRM or auto-reply.
 
 Production build:
 
@@ -51,7 +51,7 @@ dashboard URL:
 
 Loyalty, AI-photo credits and the CRM (contacts, work/payment records, visit photos, invoices and
 patient reports) each have their own `syehere.mock.*` keys. The CRM only mounts
-for salon, gym, retail and other businesses on Starter or above; set a matching business profile to
+for salon, gym, retail and other businesses on Pro or above; set a matching business profile to
 see it. To reset, clear site data for `localhost:3000` (or just that key) and reload.
 
 The menu PDF import is a labelled demo: it validates the PDF and runs the real review,
@@ -62,7 +62,7 @@ No PDF or customer data leaves the browser.
 
 - `/customer-page` — public-page editor, including menu PDF import and AI photo mock
 - `/loyalty` — stamp card, rewards, staff and members
-- `/crm` — contacts with add-your-own columns, pipeline, work/payment ledger, printable invoices and reports/plans, notes and follow-up tasks (salon/gym/retail/other, Starter+)
+- `/crm` — contacts with add-your-own columns, pipeline, work/payment ledger, printable invoices and reports/plans, notes and follow-up tasks (salon/gym/retail/other, Pro+)
 - `/crm/[id]` — one client with commercial highlights, work/payment history, before/after photos, invoices, reports/plans, notes, tasks and stage changes
 - `/crm/settings` — owner-defined fields, stages, modules, invoice details and business-neutral report/provider wording
 - `/billing` — Syehere subscription (mock checkout and cancellation)

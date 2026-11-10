@@ -14,6 +14,15 @@ import {
 } from "@/lib/mock/plans";
 import { site } from "@/lib/mock/site";
 
+/** One summary line for the category features on the home pricing cards. */
+function categoryFeaturesLabel(plan: Plan): string {
+  if (!plan.loyalty && !plan.table_ordering && !plan.crm) return "None";
+  if (plan.crm && plan.table_ordering) {
+    return plan.google_auto_reply ? "All features" : "Loyalty + ordering or CRM";
+  }
+  return "Loyalty + ordering";
+}
+
 const navLinks = [
   { label: "How it works", href: "#how-it-works" },
   { label: "Pricing", href: "#pricing" },
@@ -54,7 +63,7 @@ const features = [
   },
   {
     title: "Google review auto-reply",
-    body: "New reviews get a reply drafted and posted for you, 24 to 48 hours after they arrive. Available on every plan except Starter.",
+    body: "New reviews get a reply drafted and posted for you, 24 to 48 hours after they arrive. Included on Free, Growth and Enterprise.",
   },
   {
     title: "Your own customer page",
@@ -200,7 +209,7 @@ export default function HomePage() {
         <Section
           id="pricing"
           title="Simple pricing"
-          subtitle="Every plan includes the review funnel, the customer page and the dashboard. Google review auto-reply is on every plan except Starter."
+          subtitle="Every plan includes the review funnel, the customer page and the dashboard. Loyalty, ordering, CRM and Google auto-reply are included by plan."
         >
           <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
             {planOrder.map((id) => {
@@ -223,6 +232,10 @@ export default function HomePage() {
                     <div className="flex justify-between gap-md">
                       <dt className="text-ink-muted">Monthly scans</dt>
                       <dd>{limitLabel(plan.monthly_scans)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-md">
+                      <dt className="text-ink-muted">Loyalty &amp; category features</dt>
+                      <dd className="text-right">{categoryFeaturesLabel(plan)}</dd>
                     </div>
                     <div className="flex justify-between gap-md">
                       <dt className="text-ink-muted">Google auto-reply</dt>

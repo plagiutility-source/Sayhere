@@ -2,18 +2,20 @@
 
 /**
  * CRM cards on the dashboard and analytics pages. Rendered only for the four
- * general-category types on Starter+, so café/restaurant/hotel pages keep their
+ * general-category types on Pro+, so café/restaurant/hotel pages keep their
  * existing content unchanged. Numbers come from the same mock CRM store as
  * `/crm`; plan gating is shared with the nav and routes.
  */
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { Card } from "@/components/card";
 import type { CrmBusinessType } from "@/lib/crm/access";
 import { supportsCrm, supportsCrmType } from "@/lib/crm/access";
 import { defaultCrmConfig } from "@/lib/crm/config";
 import { crmStats } from "@/lib/crm/rules";
+import { withDemo } from "@/lib/mock/demo";
 import type { PlanId } from "@/lib/mock/plans";
 import { useCrm } from "@/lib/use-crm";
 import { useBusiness } from "@/lib/use-business";
@@ -42,6 +44,7 @@ function CrmSectionBody({
   variant: "dashboard" | "analytics";
 }) {
   const fallback = useMemo(() => defaultCrmConfig(type), [type]);
+  const demo = useSearchParams().get("demo");
   const { state } = useCrm(fallback);
 
   if (!state) return <CrmLoadingSection />;
@@ -69,7 +72,7 @@ function CrmSectionBody({
           </p>
         </div>
         <Link
-          href="/crm"
+          href={withDemo("/crm", demo)}
           className="text-[12px] font-medium text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
         >
           Open contacts

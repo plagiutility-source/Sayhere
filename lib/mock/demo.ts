@@ -50,6 +50,18 @@ export const demoScenarios = [
 
 export type DemoScenario = (typeof demoScenarios)[number];
 
+/**
+ * Keep the dev-only demo scenario when moving between dashboard screens, so
+ * clicking Billing/CRM/Orders from `?demo=pro` does not fall back to `normal`.
+ */
+export function withDemo(
+  href: string,
+  demo: string | null | undefined,
+): string {
+  if (!demo) return href;
+  return `${href}${href.includes("?") ? "&" : "?"}demo=${encodeURIComponent(demo)}`;
+}
+
 /** Normalise an unknown `?demo=` value to a known scenario (default `normal`). */
 export function resolveDemoScenario(
   value: string | string[] | undefined | null,

@@ -109,26 +109,31 @@ The review block always stays first.
 
 ## 4. Pricing (max 5 features shown per plan; free tier = all features, tightly limited usage)
 
-| Plan | Price | Locations | Monthly Scans | Google review auto-reply |
-|---|---|---|---|---|
-| Free | $0 / ₹0 | 1 | 10 | Yes |
-| Starter | $3.99 / ₹199 | 1 | 1,000 | **No** |
-| Pro | $5.99 / ₹299 | 1 | 10,000 | Yes |
-| Growth | $9.99 / ₹499 | 1 | 25,000 | Yes |
-| Enterprise | Custom | Unlimited | Unlimited | Yes |
+| Plan | Price | Locations | Monthly Scans | Loyalty | Table/room ordering | CRM | Google review auto-reply |
+|---|---|---|---|---|---|---|---|
+| Free | $0 / ₹0 | 1 | 10 | Yes | Yes | No | Yes |
+| Starter | $3.99 / ₹199 | 1 | 1,000 | **No** | **No** | **No** | **No** |
+| Pro | $5.99 / ₹299 | 1 | 10,000 | Yes | Café/restaurant/hotel | Salon/gym/retail/other | **No** |
+| Growth | $9.99 / ₹499 | 1 | 25,000 | Yes | Café/restaurant/hotel | Salon/gym/retail/other | Yes |
+| Enterprise | Custom | Unlimited | Unlimited | Yes | Yes | Yes | Yes |
 
 **When a business uses all its monthly scans, everything pauses: its QR code, NFC tag and review page (customers see a
 neutral "temporarily unavailable" page), Google auto-reply and the weekly report, until the count resets on the billing
 date or the owner upgrades.** Only the owner's dashboard and billing stay open. See business-rules.md section 1.
 
-Only Enterprise has more than 1 location. **Google review auto-reply is available only on Free, Pro,
-Growth and Enterprise; Starter does not include it** (rules: business-rules.md section 6).
+Only Enterprise has more than 1 location. **Google review auto-reply is available only on Free, Growth
+and Enterprise; Starter and Pro do not include it** (rules: business-rules.md section 6).
+
+**Loyalty and category features (2026-11-09):** Starter is the review product only. Pro adds loyalty plus the one
+category feature that fits the locked business category — table/room ordering for café, restaurant and hotel, or the
+CRM for salon, gym, retail and other. Growth includes both category features and Google review auto-reply. Free's
+feature flags stay as they are until the Free plan is decided separately.
 
 All plans include: AI review generation, weekly email reports, and a customizable customer page
 (menu/price list, links, contact and hours; quantity limits per plan, see business-rules.md
-section 1). Google auto-reply is included on every plan except Starter.
+section 1). Google auto-reply is included on Free, Growth and Enterprise.
 
-**CRM** is included on Starter, Pro, Growth and Enterprise (not Free) for salon, gym, retail and
+**CRM** is included on Pro, Growth and Enterprise (not Free or Starter) for salon, gym, retail and
 other businesses; cafés, restaurants and hotels keep table/room ordering and can opt in later.
 The owner-configurable fields, stages and limits are in CRM_FEATURE.md section 6.
 Free tier exists purely so a prospective customer can see the whole system work,
@@ -291,7 +296,7 @@ with unsaved edits. Each tab has skeleton loading and an inline retry on load fa
 |---|---|
 | 1. Business profile | Name, type, tagline, time zone, logo |
 | 2. Appearance | Colors (section 8.1, unchanged) |
-| 3. Auto-reply | v1: Contact support and request form, or "Please upgrade your plan" on Starter (5.4.3). Later: on/off + reply templates (5.4.3A) |
+| 3. Auto-reply | v1: Contact support and request form, or "Please upgrade your plan" on Starter and Pro (5.4.3). Later: on/off + reply templates (5.4.3A) |
 | 4. Google connection | **Tab is later, hidden in v1.** In v1 the same connect flow (5.4.4) is started from the Connect Google button on the Auto-reply status card once support has marked the request Contacted |
 | 5. Account & security | Email, password, delete account (5.4.5) |
 
@@ -322,8 +327,8 @@ In v1 the owner does not switch auto-reply on themselves. They ask our support t
 *By plan:*
 | Plan | What the owner sees after clicking |
 |---|---|
-| Starter | "Google review auto-reply is available on the Pro plan. Please upgrade your plan." with an **Upgrade plan** button (goes to Billing). No Contact support button and no form. |
-| Free, Pro, Enterprise | A short explanation ("We set up Google review auto-reply with you. Contact support and our team will get it running.") and a **Contact support** button that opens the request form page. |
+| Starter, Pro | "Google review auto-reply is available on the Growth plan. Please upgrade your plan." with an **Upgrade plan** button (goes to Billing). No Contact support button and no form. |
+| Free, Growth, Enterprise | A short explanation ("We set up Google review auto-reply with you. Contact support and our team will get it running.") and a **Contact support** button that opens the request form page. |
 
 *Request form page* (`/settings/auto-reply/request`, owner login required). Every field is required:
 | Field | Rules |
@@ -351,14 +356,14 @@ Once the connection shows Connected, the admin marks the request **Active**. Onl
 Until then the auto-reply job skips the business. The owner gets two emails: "Auto-reply request received" and "Auto-reply is on"
 (email-templates.md 13 and 14).
 
-*Rules:* the plan gate is enforced on the server (Starter gets 403 on the form page and on submit). The auto-reply job still skips a
+*Rules:* the plan gate is enforced on the server (Starter and Pro get 403 on the form page and on submit). The auto-reply job still skips a
 business that has hit its scan limit, or whose plan no longer includes auto-reply (business-rules.md sections 1 and 6).
 
 **5.4.3A Self-serve auto-reply settings (later, NOT built in v1)**
 Kept for when Google approval is done and support no longer has to set each business up (google-approval.md). Do not build in v1.
 0. **Pauses at the scan limit.** While the business has used all its scans, auto-reply is paused (business-rules.md section 1).
-   Plan gate: available on Free, Pro, Growth and Enterprise only (`plans.<plan>.google_auto_reply`). On Starter the whole
-   Auto-reply screen is read-only with a "Google auto-reply is available on the Pro plan" message and an Upgrade button;
+   Plan gate: available on Free, Growth and Enterprise only (`plans.<plan>.google_auto_reply`). On Starter and Pro the
+   whole Auto-reply screen is read-only with a "Google auto-reply is available on the Growth plan" message and an Upgrade button;
    the master switch and templates cannot be changed. Enforced on the server too (business-rules.md section 6).
 1. **Master switch** (`businesses.auto_reply_enabled`). Disabled with "Connect Google first" if Google is not connected.
 2. Info line: "Replies are posted 24 to 48 hours after a review, never instantly."
@@ -730,8 +735,8 @@ Stage 2 tables and hardening are in `schema.sql` and security-and-reliability.md
 Owner-approved 2026-11-06. Detailed spec: CRM_FEATURE.md. Rules: business-rules.md section 15.
 Security: security-and-reliability.md section 4F. Tables: `schema.sql` "CRM (STAGE 2 PROPOSAL)".
 
-- **Access is fail-closed.** Only `salon`, `gym`, `retail` and `other` businesses on Starter or above
-  get the CRM nav item and pages; Free and the ordering types get the branded 404. Café, restaurant
+- **Access is fail-closed.** Only `salon`, `gym`, `retail` and `other` businesses on Pro or above
+  get the CRM nav item and pages; Free, Starter and the ordering types get the branded 404. Café, restaurant
   and hotel can opt in later without changing the locked category.
 - **Contacts.** Name required, email or phone required, optional company, consent status and source,
   tags and a soft delete with a 30-day purge. Email is unique per business.

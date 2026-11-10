@@ -194,7 +194,7 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
       )}
 
       {/* Merge M9: table/room ordering analytics, below the review content. */}
-      <AnalyticsOrderingSection />
+      <AnalyticsOrderingSection planId={mock.plan.id} />
 
       {/* CRM analytics (salon/gym/retail/other on Starter+). */}
       <AnalyticsCrmSection planId={mock.plan.id} />

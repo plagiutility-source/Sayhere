@@ -37,6 +37,8 @@ import {
 import { getDashboardMock } from "@/lib/mock/dashboard";
 import { getMockReviewPage } from "@/lib/mock/customer-page";
 import { reviewUrlFor } from "@/lib/mock/locations";
+import type { PlanId } from "@/lib/mock/plans";
+import { supportsLoyalty } from "@/lib/plan-features";
 import type {
   MenuItem,
   MockReviewPage,
@@ -94,6 +96,8 @@ export type RoomsPublicData = {
   /** True when the table menu is on and has at least one named item. */
   ordering: boolean;
   planMenuLimit: number | null;
+  /** The business plan, so the customer-side feature gates match the dashboard. */
+  plan: PlanId;
   /** The Tables/Rooms page loyalty switch; the program state is added client-side. */
   loyaltyOn: boolean;
   /** The reception page's home props, so both QR pages render the same page. */
@@ -133,6 +137,8 @@ export function publicRoomsData(input: {
   page: RoomsPageSource;
   slug: string;
   menuItemLimit: number | null;
+  /** The demo business's plan; feature gates read it exactly like the owner UI. */
+  plan: PlanId;
   now?: Date;
 }): RoomsPublicData | null {
   /*
@@ -222,8 +228,10 @@ export function publicRoomsData(input: {
     hours,
     openNow,
     ordering: page.menu.on,
+    plan: input.plan,
     planMenuLimit: input.menuItemLimit,
-    loyaltyOn: tableConfig?.loyalty?.on ?? true,
+    loyaltyOn:
+      supportsLoyalty(input.plan) && (tableConfig?.loyalty?.on ?? true),
     announcementText: home.announcementText,
     buttons: home.buttons,
     socials: home.socials,
@@ -240,7 +248,8 @@ export function useRoomsPublicData(slug: string): RoomsPublicData | null {
   const scenario: DemoScenario = "normal";
   const locations = useMockLocations(scenario);
   const page = useRoomsPage(slug, scenario);
-  const limit = getDashboardMock(scenario).plan.page.menu_items;
+  const plan = getDashboardMock(scenario).plan;
+  const limit = plan.page.menu_items;
   return useMemo(
     () =>
       publicRoomsData({
@@ -249,8 +258,9 @@ export function useRoomsPublicData(slug: string): RoomsPublicData | null {
         page,
         slug,
         menuItemLimit: limit,
+        plan: plan.id,
       }),
-    [business, locations, page, slug, limit],
+    [business, locations, page, slug, limit, plan.id],
   );
 }
 

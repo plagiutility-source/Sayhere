@@ -13,8 +13,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getDashboardMock } from "@/lib/mock/dashboard";
 import type { DemoScenario } from "@/lib/mock/demo";
+import { supportsLoyalty } from "@/lib/plan-features";
 import { useLoyaltyState } from "@/lib/use-loyalty";
+import { PlanFeatureGate } from "../plan-feature-gate";
 import { ActivityTab } from "./activity-tab";
 import { MembersTab } from "./members-tab";
 import { OverviewTab } from "./overview-tab";
@@ -43,6 +46,17 @@ export function LoyaltyContent({ demo }: { demo: DemoScenario }) {
   const searchParams = useSearchParams();
   const active = resolveTab(searchParams.get("tab"));
   const state = useLoyaltyState({ seedDemoStaff: true });
+  const plan = getDashboardMock(demo).plan;
+
+  if (!supportsLoyalty(plan.id)) {
+    return (
+      <PlanFeatureGate
+        title="Loyalty is not included on your plan"
+        message={`Loyalty is included on Pro, Growth and Enterprise. You are on ${plan.name}. Upgrade to start a stamp card and reward regulars.`}
+        demo={demo}
+      />
+    );
+  }
 
   return (
     <div>

@@ -55,6 +55,17 @@ export type Plan = {
   monthly_scans: number | null;
   self_serve: boolean;
   google_auto_reply: boolean;
+  /**
+   * Loyalty card and rewards (2026-11-09 pricing restructure): Pro, Growth and
+   * Enterprise only. Free keeps today's behaviour until its features are
+   * decided separately.
+   */
+  loyalty: boolean;
+  /**
+   * Table/room QR ordering, for café, restaurant and hotel only: Pro, Growth
+   * and Enterprise. Starter has the review product without ordering.
+   */
+  table_ordering: boolean;
   page: PlanPageLimits;
   /** `null` = the plan does not include the CRM (Free). */
   crm: CrmPlanLimits | null;
@@ -69,6 +80,8 @@ export const plans: Record<PlanId, Plan> = {
     monthly_scans: 10,
     self_serve: false,
     google_auto_reply: true,
+    loyalty: true,
+    table_ordering: true,
     page: {
       menu_items: 10,
       custom_links: null,
@@ -84,19 +97,14 @@ export const plans: Record<PlanId, Plan> = {
     monthly_scans: 1000,
     self_serve: true,
     google_auto_reply: false,
+    loyalty: false,
+    table_ordering: false,
     page: {
       menu_items: 60,
       custom_links: null,
       ai_images: { limit: 15, period: "month" },
     },
-    crm: {
-      contacts: 500,
-      fields: 8,
-      stages: 5,
-      tags: 5,
-      open_tasks: 200,
-      import_rows: 1_000,
-    },
+    crm: null,
   },
   pro: {
     id: "pro",
@@ -105,7 +113,9 @@ export const plans: Record<PlanId, Plan> = {
     locations: 1,
     monthly_scans: 10000,
     self_serve: true,
-    google_auto_reply: true,
+    google_auto_reply: false,
+    loyalty: true,
+    table_ordering: true,
     page: {
       menu_items: 150,
       custom_links: null,
@@ -128,6 +138,8 @@ export const plans: Record<PlanId, Plan> = {
     monthly_scans: 25000,
     self_serve: true,
     google_auto_reply: true,
+    loyalty: true,
+    table_ordering: true,
     page: {
       menu_items: 200,
       custom_links: null,
@@ -150,6 +162,8 @@ export const plans: Record<PlanId, Plan> = {
     monthly_scans: null,
     self_serve: false,
     google_auto_reply: true,
+    loyalty: true,
+    table_ordering: true,
     page: {
       menu_items: null,
       custom_links: null,
@@ -166,7 +180,7 @@ export const plans: Record<PlanId, Plan> = {
   },
 };
 
-/** Plan display order (Free, Starter, Pro, Enterprise). */
+/** Plan display order (Free, Starter, Pro, Growth, Enterprise). */
 export const planOrder: PlanId[] = ["free", "starter", "pro", "growth", "enterprise"];
 
 /** Deterministic Indian digit grouping (no Intl, so SSR and client match). */

@@ -1992,3 +1992,20 @@ the merge.
   their provider snapshot, old local configs receive sanitized defaults, and generated drafts are
   clearly labelled until an assessment is added. Verified: npm run typecheck, npm run crm-check
   (189 checks) and npm run build. All CRM work remains uncommitted; no backend or migration.
+
+- 2026-11-09 — Plan features restructured by price and category (owner request): Starter ₹199 is the
+  review product only (no loyalty, table/room ordering, CRM or Google auto-reply). Pro ₹299 adds
+  loyalty plus ONE category feature: ordering for café/restaurant/hotel, or the CRM for
+  salon/gym/retail/other. Growth ₹499 includes both category features and auto-reply. Free is
+  unchanged until its feature set is decided separately. Added `loyalty`/`table_ordering` to the plan
+  seed, set Starter's `crm` to null, and added `lib/plan-features.ts` as the single access helper
+  (plan flag + the existing category gates). Gated the sidebar, `/loyalty`, `/orders`, `/rooms`, the
+  dashboard/analytics ordering and CRM cards, the customer-page editor, the locations QR panel, the
+  reception and table loyalty tiles, and the live ordering layer; added plan-feature panels for the
+  ordering and loyalty routes (category refusals stay 404). Pricing, home and billing cards show the
+  new feature rows; auto-reply demos now run on Growth. Updated PRD 4/5.4.3/5.9, business-rules 1/6/12,
+  README and `schema.sql`. Verified: `npm run typecheck`, `npm run build`, `npm run crm-check` (190
+  checks), `npm run rooms-check` (162 checks), and `schema.sql` executed in Python sqlite3 with the new
+  plan JSON (5 plan keys, Starter crm null, Pro auto-reply false). Browser pass: pricing, Starter
+  loyalty/ordering gates and nav; the cloud preview did not hydrate client JS (Next blocks
+  cross-origin dev HMR), so the Pro CRM demo could not be browser-verified.

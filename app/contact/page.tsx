@@ -34,7 +34,7 @@ export default function ContactPage() {
       <Navbar
         productName={site.productName}
         links={publicNavLinks}
-        cta={{ label: "Start free", href: "/sign-up" }}
+        cta={{ label: "Start free", href: "/signup" }}
       />
 
       <main>

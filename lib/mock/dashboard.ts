@@ -285,7 +285,8 @@ function scansInLastDays(days: number): number {
  * Plan per scenario: the plan scenarios pick their own plan; every other
  * scenario keeps the mock café on Starter. `over-limit` is Starter *after a
  * downgrade* — a page with more menu items than the Starter limit (T4). The
- * `auto-reply-*` scenarios run on Pro so the plan includes auto-reply (T7).
+ * `auto-reply-*` scenarios run on Growth so the plan includes auto-reply (T7);
+ * Pro deliberately does not (2026-11-09 pricing restructure).
  */
 export function planForScenario(scenario: DemoScenario): PlanId {
   // A mock upgrade on /billing (lib/mock/billing.ts) wins over the scenario's
@@ -306,7 +307,7 @@ export function planForScenario(scenario: DemoScenario): PlanId {
     case "auto-reply-on":
     case "auto-reply-paused":
     case "auto-reply-closed":
-      return "pro";
+      return "growth";
     default:
       return "starter";
   }

@@ -5,8 +5,9 @@
  * storage, so the real check has to run after mount. Before mount we show the
  * page skeleton, so the static café profile never flashes a 404.
  *
- * Access is exactly `supportsCrm`: salon, gym, retail and other on Starter or
- * above. Free, café, restaurant, hotel and unknown types get the branded 404.
+ * Access is exactly `supportsCrm`: salon, gym, retail and other on Pro or
+ * above. Free, Starter, café, restaurant, hotel and unknown types get the
+ * branded 404.
  */
 
 import { useSearchParams } from "next/navigation";
@@ -48,8 +49,8 @@ export function CrmNotFound() {
         We couldn&apos;t find that page.
       </h1>
       <p className="mt-lg text-[15px] leading-relaxed text-ink-muted">
-        Contacts are available on Starter and above for salons, gyms, retail and
-        other businesses. The link may also be out of date.
+        Contacts are available on Pro, Growth and Enterprise for salons, gyms,
+        retail and other businesses. The link may also be out of date.
       </p>
       <div className="mt-2xl flex flex-wrap justify-center gap-md">
         <ButtonLink href="/dashboard" size="lg">

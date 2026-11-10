@@ -17,15 +17,37 @@ import { publicNavLinks, site } from "@/lib/mock/site";
 export const metadata: Metadata = {
   title: "Pricing — Syehere",
   description:
-    "Syehere plan prices in INR: Free, Starter and Pro, with locations, monthly scans and auto-reply availability. Enterprise is arranged with our team.",
+    "Syehere plan prices in INR: Free, Starter, Pro, Growth and Enterprise, with locations, monthly scans, loyalty, table and room ordering, CRM and Google auto-reply availability.",
 };
 
 /** Only self-serve plans go through checkout; the rest use contact wording. */
 function ctaFor(plan: Plan): { label: string; href: string } {
   if (plan.self_serve) {
-    return { label: "Get started", href: "/sign-up" };
+    return { label: "Get started", href: "/signup" };
   }
   return { label: "Contact us", href: "/contact" };
+}
+
+/** Category feature wording: the category itself decides who gets it. */
+const ORDERING_FEATURES = "Café, restaurant & hotel";
+const CRM_FEATURES = "Salon, gym, retail & other";
+
+/** One line that says what the paid tier adds, beyond the review product. */
+function planSummary(plan: Plan): string | null {
+  switch (plan.id) {
+    case "starter":
+      return "The review product only: review funnel, customer page, feedback and analytics.";
+    case "pro":
+      return "Adds loyalty, plus table/room ordering for cafés and hotels, or the CRM for other businesses.";
+    case "growth":
+      return "Everything: loyalty, ordering, CRM and Google review auto-reply.";
+    default:
+      return null;
+  }
+}
+
+function included(value: boolean): string {
+  return value ? "Yes" : "No";
 }
 
 export default function PricingPage() {
@@ -34,7 +56,7 @@ export default function PricingPage() {
       <Navbar
         productName={site.productName}
         links={publicNavLinks}
-        cta={{ label: "Start free", href: "/sign-up" }}
+        cta={{ label: "Start free", href: "/signup" }}
       />
 
       <main>
@@ -49,8 +71,8 @@ export default function PricingPage() {
             <p className="mt-lg text-[16px] leading-relaxed text-ink-muted">
               Prices are in INR and match what our payment provider charges.
               Every plan includes the review funnel, the customer page and the
-              dashboard. Google review auto-reply is on every plan except
-              Starter.
+              dashboard. Loyalty, ordering, CRM and Google review auto-reply are
+              included by plan.
             </p>
           </div>
         </Section>
@@ -60,6 +82,7 @@ export default function PricingPage() {
             {planOrder.map((id) => {
               const plan = plans[id];
               const cta = ctaFor(plan);
+              const summary = planSummary(plan);
               return (
                 <div
                   key={id}
@@ -69,6 +92,11 @@ export default function PricingPage() {
                   <p className="mt-md text-[24px] font-medium">
                     {planPriceLabel(plan)}
                   </p>
+                  {summary ? (
+                    <p className="mt-sm text-[12px] leading-relaxed text-ink-muted">
+                      {summary}
+                    </p>
+                  ) : null}
 
                   <dl className="mt-lg grid flex-1 gap-sm text-[13px]">
                     <div className="flex justify-between gap-md">
@@ -78,6 +106,22 @@ export default function PricingPage() {
                     <div className="flex justify-between gap-md">
                       <dt className="text-ink-muted">Monthly scans</dt>
                       <dd>{limitLabel(plan.monthly_scans)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-md">
+                      <dt className="text-ink-muted">Loyalty</dt>
+                      <dd>{included(plan.loyalty)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-md">
+                      <dt className="text-ink-muted">Table &amp; room ordering</dt>
+                      <dd className="text-right">
+                        {plan.table_ordering ? ORDERING_FEATURES : "No"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-md">
+                      <dt className="text-ink-muted">CRM</dt>
+                      <dd className="text-right">
+                        {plan.crm ? CRM_FEATURES : "No"}
+                      </dd>
                     </div>
                     <div className="flex justify-between gap-md">
                       <dt className="text-ink-muted">Google auto-reply</dt>
@@ -95,7 +139,8 @@ export default function PricingPage() {
 
                   {plan.id === "starter" ? (
                     <p className="mt-md text-[12px] leading-relaxed text-ink-muted">
-                      Google review auto-reply is not included on Starter.
+                      Starter is the review product only. Loyalty, ordering, CRM
+                      and auto-reply are not included.
                     </p>
                   ) : null}
 
@@ -133,6 +178,18 @@ export default function PricingPage() {
               );
             })}
           </div>
+
+          <p className="mt-lg text-[13px] leading-relaxed text-ink-muted">
+            <strong className="text-ink">Category features:</strong> table and
+            room ordering is for cafés, restaurants and hotels; the CRM is for
+            salons, gyms, retail and other businesses. Pro includes loyalty plus
+            the one that fits your category; Growth and Enterprise include both,
+            plus Google review auto-reply.
+          </p>
+          <p className="mt-sm text-[12px] leading-relaxed text-ink-muted">
+            Free keeps its current feature set until its pricing is confirmed
+            separately.
+          </p>
 
           <div className="mt-2xl grid gap-lg text-[13px] leading-relaxed text-ink-muted">
             <p>

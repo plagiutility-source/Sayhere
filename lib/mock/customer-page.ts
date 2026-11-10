@@ -121,7 +121,7 @@ export type MockBusiness = {
   color_source: ColorSource;
   google_review_url: string;
   social_links: SocialLinks;
-  /** `businesses.plan` (schema.sql): free, starter, pro, enterprise. */
+  /** `businesses.plan` (schema.sql): free, starter, pro, growth, enterprise. */
   plan: PlanId;
   /** MOCK ONLY — see the file header. */
   time_zone: string;

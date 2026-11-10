@@ -80,8 +80,8 @@ function eq<T>(name: string, actual: T, expected: T): void {
 }
 
 const NOW = new Date("2026-10-30T12:00:00");
-const limits = plans.starter.crm;
-if (!limits) throw new Error("Starter must include CRM limits");
+const limits = plans.pro.crm;
+if (!limits) throw new Error("Pro must include CRM limits");
 const config = defaultCrmConfig("salon");
 const base = seedCrmState(config, NOW);
 
@@ -109,7 +109,8 @@ function cloneConfig(change: (current: CrmConfig) => CrmConfig): CrmConfig {
 }
 
 /* Access ------------------------------------------------------------ */
-check("access salon on starter", supportsCrm("salon", "starter"));
+check("no access salon on starter", !supportsCrm("salon", "starter"));
+check("access salon on pro", supportsCrm("salon", "pro"));
 check("access gym on pro", supportsCrm("gym", "pro"));
 check("access retail on growth", supportsCrm("retail", "growth"));
 check("access other on enterprise", supportsCrm("other", "enterprise"));
@@ -120,7 +121,7 @@ check("free plan is out of scope", !supportsCrm("salon", "free"));
 check("unknown type fails closed", !supportsCrm("spa", "pro"));
 check("mixed-case type fails closed", !supportsCrmType("Salon"));
 check("free has no crm limits", crmLimitsFor("free") === null);
-eq("starter contact limit", crmLimitsFor("starter")?.contacts, 500);
+eq("starter has no CRM limits", crmLimitsFor("starter"), null);
 eq("pro field limit", crmLimitsFor("pro")?.fields, 12);
 eq("growth stage limit", crmLimitsFor("growth")?.stages, 8);
 eq("enterprise task limit", crmLimitsFor("enterprise")?.open_tasks, 20000);

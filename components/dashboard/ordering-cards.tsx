@@ -6,9 +6,9 @@
  *
  * Every number comes from the rooms store's real orders for the business's
  * first real location; nothing here reads the standalone demo fixtures. The
- * section only mounts for cafe/restaurant/hotel (`supportsTableOrdering`, the
- * same gate as the sidebar and the live layer), so salon/gym/retail pages
- * render exactly as before.
+ * section only mounts for cafe/restaurant/hotel on a plan with ordering
+ * (`supportsOrdering`, the same gate as the sidebar and the live layer), so
+ * salon/gym/retail pages and Starter businesses render exactly as before.
  *
  * Styling reuses the app's own card, stat-card and bar-chart components; the
  * only injected colour is the business theme's primary, as on the existing
@@ -16,6 +16,7 @@
  */
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/card";
 import { useOwner, useOwnerOptional } from "@/components/rooms/owner/OwnerProvider";
@@ -23,6 +24,7 @@ import { PeriodBar } from "@/components/rooms/owner/PeriodBar";
 import { LocalTime } from "@/components/rooms/shared/LocalTime";
 import { getBrandTheme } from "@/lib/brand/theme";
 import type { ScanDayBucket } from "@/lib/dashboard/metrics";
+import { supportsOrdering } from "@/lib/plan-features";
 import { useRoomsBusiness } from "@/lib/rooms/adapter";
 import { PERIODS, type PeriodKey } from "@/lib/rooms/constants";
 import {
@@ -43,6 +45,8 @@ import {
 } from "@/lib/rooms/rules";
 import type { DailyPoint, RangeStats } from "@/lib/rooms/rules";
 import type { Order, RoomsState, SpotLocation } from "@/lib/rooms/types";
+import { withDemo } from "@/lib/mock/demo";
+import type { PlanId } from "@/lib/mock/plans";
 import { useBusiness } from "@/lib/use-business";
 import { BarChart } from "./bar-chart";
 import { CardSkeleton, StatCardSkeleton } from "./skeletons";
@@ -181,6 +185,7 @@ function SectionHeader({
   spots: string;
   period: PeriodKey;
 }) {
+  const demo = useSearchParams().get("demo");
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
@@ -191,10 +196,16 @@ function SectionHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={`/rooms?loc=${location.id}`} className={OUTLINE_BUTTON}>
+        <Link
+          href={withDemo(`/rooms?loc=${location.id}`, demo)}
+          className={OUTLINE_BUTTON}
+        >
           Manage {spots.toLowerCase()}
         </Link>
-        <Link href={`/orders?loc=${location.id}`} className={PRIMARY_BUTTON}>
+        <Link
+          href={withDemo(`/orders?loc=${location.id}`, demo)}
+          className={PRIMARY_BUTTON}
+        >
           Open orders
         </Link>
       </div>
@@ -284,6 +295,7 @@ function BillList({
   orders: Order[];
   state: RoomsState;
 }) {
+  const demo = useSearchParams().get("demo");
   if (!orders.length) {
     return (
       <p className="text-[13px] text-ink-muted">
@@ -297,7 +309,7 @@ function BillList({
       {orders.map((order) => (
         <Link
           key={order.id}
-          href={`/orders?loc=${order.locId}`}
+          href={withDemo(`/orders?loc=${order.locId}`, demo)}
           className="flex flex-wrap items-center gap-2 border-b border-black/5 py-2.5 text-[12px] last:border-b-0 hover:bg-surface-muted/60"
         >
           <span className="min-w-0 flex-1">
@@ -425,9 +437,9 @@ function DashboardOrderingContent() {
   );
 }
 
-export function DashboardOrderingSection() {
+export function DashboardOrderingSection({ planId }: { planId: PlanId }) {
   const business = useRoomsBusiness();
-  if (!business) return null;
+  if (!business || !supportsOrdering(business.type, planId)) return null;
   return <DashboardOrderingBody />;
 }
 
@@ -640,8 +652,8 @@ function AnalyticsOrderingContent() {
   );
 }
 
-export function AnalyticsOrderingSection() {
+export function AnalyticsOrderingSection({ planId }: { planId: PlanId }) {
   const business = useRoomsBusiness();
-  if (!business) return null;
+  if (!business || !supportsOrdering(business.type, planId)) return null;
   return <AnalyticsOrderingBody />;
 }

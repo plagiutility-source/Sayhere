@@ -29,7 +29,7 @@ import { useMockBusiness, useMockLocations } from "@/lib/use-business";
 import { CategoryLockBadge } from "@/components/category/category-lock-badge";
 import { RoomsQrSection } from "@/components/rooms/owner/RoomsQrSection";
 import { normalizeCategory } from "@/lib/category/features";
-import { supportsTableOrdering } from "@/lib/category/ordering";
+import { supportsOrdering } from "@/lib/plan-features";
 import { validateGoogleReviewUrl } from "@/lib/validation";
 import { CopyButton } from "./copy-button";
 import { DownloadIcon, PlusIcon } from "./icons";
@@ -221,7 +221,7 @@ export function LocationsContent() {
       {/* Table/room ordering types only: QR panel for the selected location.
           The locations list, addition, editing and plan limits above are
           untouched. */}
-      {selected && supportsTableOrdering(business.business_type) ? (
+      {selected && supportsOrdering(business.business_type, plan.id) ? (
         <RoomsQrSection location={selected} />
       ) : null}
 

@@ -5,16 +5,25 @@ to this spec — do not infer different behavior.
 
 ## 1. Plan Limits
 
-| Plan | Price (INR) | Locations | Monthly Scans | Google review auto-reply |
-|---|---|---|---|---|
-| Free | ₹0 | 1 | 10 | Yes |
-| Starter | ₹199 | 1 | 1,000 | No |
-| Pro | ₹299 | 1 | 10,000 | Yes |
-| Growth | ₹499 | 1 | 25,000 | Yes |
-| Enterprise | Custom | Unlimited | Unlimited | Yes |
+| Plan | Price (INR) | Locations | Monthly Scans | Loyalty | Table/room ordering | CRM | Google review auto-reply |
+|---|---|---|---|---|---|---|---|
+| Free | ₹0 | 1 | 10 | Yes | Yes | No | Yes |
+| Starter | ₹199 | 1 | 1,000 | No | No | No | No |
+| Pro | ₹299 | 1 | 10,000 | Yes | Café, restaurant, hotel | Salon, gym, retail, other | No |
+| Growth | ₹499 | 1 | 25,000 | Yes | Café, restaurant, hotel | Salon, gym, retail, other | Yes |
+| Enterprise | Custom | Unlimited | Unlimited | Yes | Yes | Yes | Yes |
 
 - Only Enterprise can have more than 1 location. Free, Starter, Pro and Growth are all 1 location.
 - The auto-reply column is the plan's `google_auto_reply` flag in the `plans` setting (true/false).
+- The **loyalty** column is `plans.<plan>.loyalty`. The **ordering** column is `plans.<plan>.table_ordering` plus the
+  category gate in `lib/category/ordering.ts` (café, restaurant and hotel only). The **CRM** column is the plan's `crm`
+  limits plus the type gate in `lib/crm/access.ts` (salon, gym, retail and other only). Unknown or missing values fail
+  closed, and `lib/plan-features.ts` is the one helper every surface uses.
+- **Starter (₹199) is the review product only:** review funnel, customer page, feedback, analytics and locations, with
+  no loyalty, ordering, CRM or Google auto-reply. **Pro (₹299)** adds loyalty plus the one category feature that fits the
+  locked business category (ordering for café/restaurant/hotel, CRM for the other types). **Growth (₹499)** includes both
+  category features and auto-reply. **Enterprise** includes everything.
+- Free's feature flags stay as they are until the Free plan is decided separately (owner follow-up).
 - **Adding a location:** the "Add location" route checks `locations_used < plans.<plan>.locations` on the server, using the
   plan from the session and `getPlans()` (never from the request). Over the limit returns 403 with "Extra locations are
   available on the Enterprise plan". The UI button is disabled for the same case (PRD.md section 5).
@@ -223,23 +232,23 @@ Because a finalized cancellation moves the owner to Free (5.4), most data simply
   them, completes the Google link and marks the request Active. `businesses.auto_reply_enabled` defaults to 0 and is set to 1
   ONLY by that admin action (audit-logged). The cron processes a business only when ALL are true: plan flag
   `google_auto_reply = true`, `auto_reply_enabled = 1`, Google connection healthy, location mapped, scan limit not reached.
-- **Request rules:** only plans with `google_auto_reply = true` can send a request (Starter gets 403 and sees "Please upgrade
-  your plan"). One open request (`pending` or `contacted`) per business; a second submit returns a friendly "You already have a
+- **Request rules:** only plans with `google_auto_reply = true` can send a request (Starter and Pro get 403 and see "Please
+  upgrade your plan"). One open request (`pending` or `contacted`) per business; a second submit returns a friendly "You already have a
   request in progress". Max 3 submits per hour per business. Statuses: `pending`, `contacted`, `active`, `closed`.
   Admin marking `active` for a business whose plan has no auto-reply is refused.
 - **Contact and connect (decided):** our team contacts the owner by email or phone call within 48 hours of the request
   (`contact_method` = `email` or `phone` is recorded). The owner signs in to Google themselves during that contact. The
   **Connect Google** button is shown only while the request is `contacted` and the plan still includes auto-reply.
-- **Plan gate:** auto-reply runs only for plans with `google_auto_reply = true` (Free, Pro, Growth, Enterprise).
-  Starter does not get it.
+- **Plan gate:** auto-reply runs only for plans with `google_auto_reply = true` (Free, Growth, Enterprise).
+  Starter and Pro do not get it.
   - The daily cron skips any business whose current plan has the flag off, even if `auto_reply_enabled = 1`.
   - Any route that turns auto-reply on or saves templates returns 403 for a plan without the flag.
     The check reads the plan from the server (session + `getPlans()`), never from the request.
-  - Upgrading from Starter to Pro unlocks it instantly (section 2). The owner then connects Google
-    and turns the switch on; it is not auto-enabled.
-  - Moving to Starter (downgrade at cycle end, section 3) pauses auto-reply. Stored templates and the Google
-    connection are kept, so it resumes if the owner upgrades again. Send one email when it is paused.
-  - Free and Pro keep it, so a Pro to Free move changes nothing here.
+  - Upgrading to Growth unlocks it instantly (section 2). The owner then connects Google and turns the
+    switch on; it is not auto-enabled.
+  - Moving to Starter or Pro (downgrade at cycle end, section 3) pauses auto-reply. Stored templates and the
+    Google connection are kept, so it resumes if the owner upgrades again. Send one email when it is paused.
+  - Free keeps it, so a Growth to Free move changes nothing here.
 - **Scan-limit pause:** the cron also skips any business that has reached its scan limit (section 1), even on a plan
   that includes auto-reply. It resumes after the reset or an upgrade.
 - Replies are NOT posted immediately when a new Google review is detected.
@@ -411,8 +420,8 @@ Spec: PRD.md section 5.7. Code: `lib/loyalty/rules.ts` (the ONE place these rule
 
 1. **Optional, per business.** A business has at most one program (`loyalty_programs`). The customer page shows the
    **Loyalty card** button first in the grid only while the program is on. It is not a `page_config` button. Loyalty is
-   available on every plan, and loyalty actions do NOT count toward `scans_used` (owner decision pending, see PROGRESS.md
-   open decisions). If the business is suspended or at its scan limit the whole customer page is already unavailable.
+   included on Pro, Growth and Enterprise (not Starter; Free keeps it for now), and loyalty actions do NOT count toward
+   `scans_used` (owner decision pending, see PROGRESS.md open decisions). If the business is suspended or at its scan limit the whole customer page is already unavailable.
 2. **Identity = confirmed email.** A card exists only after the customer confirms an emailed 6 digit code (10 minutes,
    5 tries). Sending the code needs a Turnstile token, a rate limit per IP and per email, and one email per 60 seconds.
    The email is used only for this card (privacy-policy.md). Members can be deleted by the owner; the email is removed and

@@ -46,7 +46,7 @@ import {
   namedMenuItemCount,
   pageConfigIssues,
 } from "@/lib/validation/page-config";
-import { supportsTableOrdering } from "@/lib/category/ordering";
+import { supportsLoyalty, supportsOrdering } from "@/lib/plan-features";
 import {
   ButtonsSection,
   PageContentSection,
@@ -122,9 +122,10 @@ function EditorForLocation({
   const business = useMockBusiness(mockReviewPages.cafe01.business);
   const plan = mock.plan;
 
-  // Merge M7: the second tab exists only for table/room ordering types. The
-  // Reception tab below is the existing editor, unchanged.
-  const supportsOrdering = supportsTableOrdering(business.business_type);
+  // Merge M7: the second tab exists only for table/room ordering types on a
+  // plan that includes ordering. The Reception tab below is the existing
+  // editor, unchanged.
+  const orderingIncluded = supportsOrdering(business.business_type, plan.id);
   const [tab, setTab] = useState<"reception" | "rooms">("reception");
   // The first real table code for this location, so "View live page" opens the
   // same kind of page the active tab is editing. Falls back to qr1 for a
@@ -638,7 +639,7 @@ function EditorForLocation({
         </div>
       </header>
 
-      {supportsOrdering ? (
+      {orderingIncluded ? (
         <div
           className="mt-6 flex w-full max-w-[380px] gap-0.5 rounded-control bg-surface-muted p-[3px]"
           role="tablist"
@@ -680,7 +681,7 @@ function EditorForLocation({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_375px]">
         <div>
-          {supportsOrdering && tab === "rooms" ? (
+          {orderingIncluded && tab === "rooms" ? (
             <div className="mb-6 rounded-card border border-brand-blue/20 bg-brand-blue/[0.04] p-4 text-[12px] leading-[1.6] text-ink">
               <p className="font-medium">A separate page for tables and rooms.</p>
               <p className="mt-1 text-ink-muted">
@@ -721,6 +722,7 @@ function EditorForLocation({
               menuItemLimit={plan.page.menu_items}
               aiAllowance={plan.page.ai_images}
               planName={plan.name}
+              loyaltyIncluded={supportsLoyalty(plan.id)}
               loyaltyOn={draftConfig.loyalty?.on ?? true}
               onToggleLoyalty={patchLoyalty}
               highlight={highlight}

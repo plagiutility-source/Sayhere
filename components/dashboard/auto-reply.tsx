@@ -56,12 +56,12 @@ const secondaryButtonClass =
 // Shared content blocks (no outer card: the tab and the request page wrap them)
 // ---------------------------------------------------------------------------
 
-/** PRD.md 5.4.3: the exact Starter message, with no form and no Contact support. */
+/** PRD.md 5.4.3: the plan-gate message, with no form and no Contact support. */
 function UpgradePrompt({ scenario }: { scenario: DemoScenario }) {
   return (
     <div>
       <p className="text-[13px] text-ink">
-        {"Google review auto-reply is available on the Pro plan. Please upgrade your plan."}
+        {"Google review auto-reply is available on the Growth and Enterprise plans. Please upgrade your plan."}
       </p>
       <Link
         href={`/billing?demo=${scenario}`}
@@ -73,7 +73,7 @@ function UpgradePrompt({ scenario }: { scenario: DemoScenario }) {
   );
 }
 
-/** PRD.md 5.4.3: Free, Pro, Growth and Enterprise see this instead of a form. */
+/** PRD.md 5.4.3: Free, Growth and Enterprise see this instead of a form. */
 function ContactSupportPrompt({ scenario }: { scenario: DemoScenario }) {
   return (
     <div>
@@ -206,10 +206,14 @@ export function AutoReplyCard({
           {cardStatusText(plan, request)}
         </p>
         <Link
-          href={`/settings?demo=${scenario}&tab=auto-reply`}
+          href={
+            plan.google_auto_reply
+              ? `/settings?demo=${scenario}&tab=auto-reply`
+              : `/billing?demo=${scenario}`
+          }
           className={secondaryButtonClass}
         >
-          Manage auto-reply
+          {plan.google_auto_reply ? "Manage auto-reply" : "View plans"}
         </Link>
       </div>
     </Card>
@@ -432,8 +436,8 @@ export function AutoReplyRequestScreen({
 
       <div className="mt-5 rounded-card border border-black/10 bg-white p-5 shadow-soft">
         {!plan.google_auto_reply ? (
-          // PRD.md 5.4.3: Starter users opening this URL directly see the
-          // upgrade message, never the form (the server returns 403 in Stage 3).
+          // PRD.md 5.4.3: Starter and Pro users opening this URL directly see
+          // the upgrade message, never the form (the server returns 403 in Stage 3).
           <UpgradePrompt scenario={scenario} />
         ) : confirmed ? (
           <RequestConfirmation scenario={scenario} />

@@ -24,7 +24,7 @@ export default function Error({
       <Navbar
         productName={site.productName}
         links={publicNavLinks}
-        cta={{ label: "Start free", href: "/sign-up" }}
+        cta={{ label: "Start free", href: "/signup" }}
       />
 
       <main className="px-lg py-3xl sm:px-xl">

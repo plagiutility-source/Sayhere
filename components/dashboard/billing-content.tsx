@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Select } from "@/components/select";
 import { getBrandTheme } from "@/lib/brand/theme";
 import { formatLongDate } from "@/lib/dashboard/metrics";
@@ -58,6 +59,17 @@ const planRank: Record<PlanId, number> = {
   enterprise: 4,
 };
 
+/**
+ * The demo scenario that represents each self-serve plan. Upgrading switches
+ * to it so the shell and every feature gate re-read the new plan, and the plan
+ * survives a page reload instead of living only in an in-memory override.
+ */
+const DEMO_FOR_PLAN: Partial<Record<PlanId, DemoScenario>> = {
+  starter: "starter",
+  pro: "pro",
+  growth: "growth",
+};
+
 type PlanAction = "current" | "upgrade" | "downgrade" | "contact";
 
 function planAction(plan: Plan, current: PlanId): PlanAction {
@@ -95,7 +107,26 @@ function statusLabel(status: string): string {
   }
 }
 
+/**
+ * Pro includes loyalty plus ONE category feature. The comparison table must
+ * not imply that a Pro café also gets the CRM, or that a Pro salon also gets
+ * table ordering. Free currently includes ordering but not the CRM; Growth and
+ * Enterprise include both.
+ */
+function categoryFeatureLabel(
+  plan: Plan,
+  feature: "ordering" | "crm",
+): string {
+  if (feature === "ordering") {
+    if (!plan.table_ordering) return "No";
+    return plan.id === "pro" ? "Café/hotel only" : "Yes";
+  }
+  if (!plan.crm) return "No";
+  return plan.id === "pro" ? "Other types only" : "Yes";
+}
+
 export function BillingContent({ demo }: { demo: DemoScenario }) {
+  const router = useRouter();
   const [revision, setRevision] = useState(0);
   const [recovered, setRecovered] = useState(false);
   const mock = useMemo(() => getDashboardMock(demo), [demo, revision]);
@@ -142,10 +173,20 @@ export function BillingContent({ demo }: { demo: DemoScenario }) {
   function handleUpgrade() {
     if (!checkoutPlan) return;
     mockUpgradePlan(demo, checkoutPlan);
+    setCheckoutPlan(null);
+
+    // The demo scenario is the app-wide source of the plan. Move to the new
+    // plan's scenario so the sidebar, feature gates and dashboard all update
+    // immediately and stay on that plan after a reload.
+    const nextDemo = DEMO_FOR_PLAN[checkoutPlan];
+    if (nextDemo && nextDemo !== demo) {
+      router.replace(`/billing?demo=${nextDemo}`);
+      return;
+    }
+
     setStatus(
       `Your plan has been upgraded to ${plans[checkoutPlan].name} — here's what's new.`,
     );
-    setCheckoutPlan(null);
     refresh();
   }
 
@@ -369,6 +410,22 @@ export function BillingContent({ demo }: { demo: DemoScenario }) {
                     <dd>{limitLabel(row.monthly_scans)}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">Loyalty</dt>
+                    <dd>{row.loyalty ? "Yes" : "No"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">Ordering (café/hotel)</dt>
+                    <dd className="text-right">
+                      {categoryFeatureLabel(row, "ordering")}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">CRM (other types)</dt>
+                    <dd className="text-right">
+                      {categoryFeatureLabel(row, "crm")}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
                     <dt className="text-ink-muted">Google auto-reply</dt>
                     <dd>{row.google_auto_reply ? "Yes" : "No"}</dd>
                   </div>
@@ -414,6 +471,11 @@ export function BillingContent({ demo }: { demo: DemoScenario }) {
             );
           })}
         </div>
+        <p className="mt-3 text-[12px] leading-relaxed text-ink-muted">
+          Pro includes loyalty plus one category feature: ordering for cafés,
+          restaurants and hotels, or the CRM for salons, gyms, retail and other
+          businesses. Growth includes both, plus Google review auto-reply.
+        </p>
         <p className="mt-3 text-[12px] text-ink-muted">
           Enterprise is arranged with our team and is not bought at checkout.
         </p>

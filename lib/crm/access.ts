@@ -2,9 +2,10 @@
  * The CRM access gate.
  *
  * Approved scope (CRM_FEATURE.md): salon, gym, retail and other businesses on
- * Starter or above. Café, restaurant and hotel keep table/room ordering and are
- * false here in v1. Everything fails closed: unknown, missing or wrongly-cased
- * types and plans without a `crm` block get no access.
+ * Pro or above (2026-11-09 pricing restructure; Starter no longer includes the
+ * CRM). Café, restaurant and hotel keep table/room ordering and are false here
+ * in v1. Everything fails closed: unknown, missing or wrongly-cased types and
+ * plans without a `crm` block get no access.
  */
 
 import type { PlanId } from "@/lib/mock/plans";

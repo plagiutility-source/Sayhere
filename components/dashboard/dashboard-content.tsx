@@ -19,7 +19,7 @@ import {
   totalScans,
 } from "@/lib/dashboard/metrics";
 import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
-import type { DemoScenario } from "@/lib/mock/demo";
+import { withDemo, type DemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
 import { AutoReplyCard } from "./auto-reply";
 import { DashboardCrmSection } from "./crm-cards";
@@ -230,7 +230,11 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
               ) : isEmpty || mock.feedback.length === 0 ? (
                 <EmptyFeedback />
               ) : (
-                <FeedbackList rows={mock.feedback} max={5} viewAllHref="/feedback" />
+                <FeedbackList
+                  rows={mock.feedback}
+                  max={5}
+                  viewAllHref={withDemo("/feedback", demo)}
+                />
               )}
             </Card>
             {errored ? (
@@ -264,7 +268,7 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
       )}
 
       {/* Merge M9: table/room ordering, below the review content. */}
-      <DashboardOrderingSection />
+      <DashboardOrderingSection planId={mock.plan.id} />
 
       {/* CRM (salon/gym/retail/other on Starter+), below ordering. */}
       <DashboardCrmSection planId={mock.plan.id} />

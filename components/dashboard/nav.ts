@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import type { BusinessType } from "@/lib/brand/tokens";
-import { supportsTableOrdering } from "@/lib/category/ordering";
-import { supportsCrm } from "@/lib/crm/access";
+import { supportsCrm, supportsLoyalty, supportsOrdering } from "@/lib/plan-features";
 import type { PlanId } from "@/lib/mock/plans";
 import {
   AnalyticsIcon,
@@ -50,17 +49,22 @@ export const dashboardNav: readonly DashboardNavGroup[] = [
         label: "Orders",
         href: "/orders",
         icon: OrdersIcon,
-        requires: supportsTableOrdering,
+        requires: supportsOrdering,
       },
       {
         label: "Tables",
         href: "/rooms",
         icon: TablesIcon,
-        requires: supportsTableOrdering,
+        requires: supportsOrdering,
         labelByType: { hotel: "Rooms" },
       },
       { label: "Customer page", href: "/customer-page", icon: PageIcon },
-      { label: "Loyalty", href: "/loyalty", icon: LoyaltyIcon },
+      {
+        label: "Loyalty",
+        href: "/loyalty",
+        icon: LoyaltyIcon,
+        requires: (_businessType, planId) => supportsLoyalty(planId),
+      },
       {
         label: "CRM",
         href: "/crm",

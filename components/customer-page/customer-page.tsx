@@ -7,6 +7,7 @@ import type { MockBusiness, PageConfig } from "@/lib/mock/customer-page";
 import type { ReviewAnswers, ReviewGenMode } from "@/lib/mock/review";
 import { businessOwnsSlug } from "@/lib/mock/locations";
 import { displayableLogo, resolveStoredPage } from "@/lib/mock/store";
+import { supportsLoyalty } from "@/lib/plan-features";
 import { useBusiness, useStoredPageData } from "@/lib/use-business";
 import { useLoyaltyState } from "@/lib/use-loyalty";
 import {
@@ -125,7 +126,11 @@ export function CustomerPage(props: CustomerPageProps) {
   // Colours and page background come only from getBrandTheme (business-rules 10).
   const theme = getBrandTheme(effectiveBusiness);
   const [screen, setScreen] = useState<CustomerScreen>(
-    props.initialScreen ?? "home",
+    // `?screen=loyalty` is a dev deep link; a plan without loyalty cannot show
+    // the card, so it opens the normal home screen instead.
+    props.initialScreen === "loyalty" && !supportsLoyalty(business.plan)
+      ? "home"
+      : props.initialScreen ?? "home",
   );
   // The path drives the thank-you and feedback tones (Google vs private).
   const [path, setPath] = useState<"happy" | "unhappy" | null>(
@@ -150,7 +155,10 @@ export function CustomerPage(props: CustomerPageProps) {
   // The program is business-wide; each page decides whether its card shows.
   const loyaltyVisible = effectiveConfig?.loyalty?.on ?? true;
   const loyaltyOn =
-    ownsSlug && loyaltyVisible && loyaltyState?.program.enabled === true;
+    ownsSlug &&
+    supportsLoyalty(effectiveBusiness.plan) &&
+    loyaltyVisible &&
+    loyaltyState?.program.enabled === true;
   const buttons: CustomerButton[] = loyaltyOn
     ? [
         {

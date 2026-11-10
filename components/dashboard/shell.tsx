@@ -26,11 +26,11 @@ import {
 import { Logo } from "@/components/logo";
 import { LiveTopbarActions } from "@/components/rooms/owner/LiveTopbar";
 import type { BusinessType } from "@/lib/brand/tokens";
-import { supportsTableOrdering } from "@/lib/category/ordering";
 import { getDashboardMock } from "@/lib/mock/dashboard";
+import { supportsOrdering } from "@/lib/plan-features";
 import type { PlanId } from "@/lib/mock/plans";
 import { displayableLogo } from "@/lib/mock/store";
-import { resolveDemoScenario } from "@/lib/mock/demo";
+import { resolveDemoScenario, withDemo } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
 import { formatLongDate } from "@/lib/dashboard/metrics";
 import { dashboardNav } from "./nav";
@@ -61,10 +61,12 @@ function NavList({
   onNavigate,
   businessType,
   mockPlanId,
+  demo,
 }: {
   onNavigate?: () => void;
   businessType: BusinessType;
   mockPlanId: PlanId;
+  demo: string | null;
 }) {
   const pathname = usePathname();
   return (
@@ -87,7 +89,7 @@ function NavList({
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    href={withDemo(item.href, demo)}
                     onClick={onNavigate}
                     title={label}
                     aria-current={active ? "page" : undefined}
@@ -117,7 +119,7 @@ function NavList({
 }
 
 /** The single promo/upgrade card allowed at the bottom of the sidebar. */
-function UpgradeCard() {
+function UpgradeCard({ demo }: { demo: string | null }) {
   return (
     <div className="hidden rounded-card bg-white/10 p-3 xl:block">
       <p className="text-[12px] text-white/80">Need more scans?</p>
@@ -125,7 +127,7 @@ function UpgradeCard() {
         Upgrade your plan
       </p>
       <Link
-        href="/billing"
+        href={withDemo("/billing", demo)}
         className="mt-2 inline-flex h-8 items-center rounded-control bg-white px-3 text-[12px] font-medium text-brand-blue hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
         View plans
@@ -138,15 +140,17 @@ function SidebarChrome({
   onNavigate,
   businessType,
   mockPlanId,
+  demo,
 }: {
   onNavigate?: () => void;
   businessType: BusinessType;
   mockPlanId: PlanId;
+  demo: string | null;
 }) {
   return (
     <>
       <Link
-        href="/dashboard"
+        href={withDemo("/dashboard", demo)}
         onClick={onNavigate}
         aria-label="Syehere dashboard home"
         className="flex items-center justify-center rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white xl:justify-start"
@@ -164,15 +168,22 @@ function SidebarChrome({
         onNavigate={onNavigate}
         businessType={businessType}
         mockPlanId={mockPlanId}
+        demo={demo}
       />
       <div className="mt-auto">
-        <UpgradeCard />
+        <UpgradeCard demo={demo} />
       </div>
     </>
   );
 }
 
-function ScanLimitBanner({ resetAt }: { resetAt: string }) {
+function ScanLimitBanner({
+  resetAt,
+  demo,
+}: {
+  resetAt: string;
+  demo: string | null;
+}) {
   return (
     <div
       role="status"
@@ -184,7 +195,7 @@ function ScanLimitBanner({ resetAt }: { resetAt: string }) {
         on now.
       </p>
       <Link
-        href="/billing"
+        href={withDemo("/billing", demo)}
         className="inline-flex h-9 shrink-0 items-center justify-center rounded-control bg-brand-blue px-4 text-[13px] font-medium text-white hover:bg-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
       >
         Upgrade
@@ -195,7 +206,8 @@ function ScanLimitBanner({ resetAt }: { resetAt: string }) {
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
-  const scenario = resolveDemoScenario(searchParams.get("demo"));
+  const demoParam = searchParams.get("demo");
+  const scenario = resolveDemoScenario(demoParam);
   const mock = useMemo(() => getDashboardMock(scenario), [scenario]);
   // MOCK ONLY, removed in Stage 4: the shared business profile (localStorage)
   // drives the top bar. `long-name` keeps its own base so the overflow demo
@@ -248,6 +260,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <SidebarChrome
           businessType={business.business_type}
           mockPlanId={mock.plan.id}
+          demo={demoParam}
         />
       </aside>
 
@@ -280,6 +293,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               onNavigate={() => setDrawerOpen(false)}
               businessType={business.business_type}
               mockPlanId={mock.plan.id}
+              demo={demoParam}
             />
           </div>
         </div>
@@ -313,7 +327,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            {supportsTableOrdering(business.business_type) ? (
+            {supportsOrdering(business.business_type, mock.plan.id) ? (
               // Table/room ordering types get the live requests bell and the
               // order-bell sound toggle (mounted inside DashboardLive).
               <LiveTopbarActions />
@@ -365,7 +379,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 print:max-w-none print:p-0"
         >
           {limitReached ? (
-            <ScanLimitBanner resetAt={mock.status.scan_reset_at} />
+            <ScanLimitBanner
+              resetAt={mock.status.scan_reset_at}
+              demo={demoParam}
+            />
           ) : null}
           {children}
         </main>
