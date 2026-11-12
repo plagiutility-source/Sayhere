@@ -87,6 +87,87 @@ export { MOCK_REVIEW_SLUG };
 /** One versioned key; bump the version when the shape changes. */
 export const BUSINESS_STORAGE_KEY = "syehere.mock.business.v1";
 
+/**
+ * A compact mirror of the saved profile, readable by the SERVER.
+ *
+ * `localStorage` only exists in the browser, so without this every server
+ * render fell back to the static café demo (or to the type's demo page) and the
+ * owner's own name appeared only after hydration — a visible name flash on the
+ * dashboard, the customer page and every QR target. `saveBusiness` writes this
+ * cookie so the first HTML already belongs to the owner's business.
+ *
+ * Identity fields only: a logo is a data URL of up to ~200 KB and would blow
+ * the 4 KB cookie limit, so the first paint uses the business type's default
+ * vector logo until the stored profile (with the real logo) is read on mount.
+ */
+export const BUSINESS_COOKIE_NAME = "syehere_business_v1";
+
+/** The profile fields mirrored into the cookie (all small, all identity). */
+const BUSINESS_COOKIE_KEYS = [
+  "slug",
+  "name",
+  "business_type",
+  "tagline",
+  "primary_color",
+  "secondary_color",
+  "color_source",
+  "google_review_url",
+  "time_zone",
+  "business_category",
+  "category_confirm_text",
+  "category_confirmed_at",
+  "verification_status",
+] as const satisfies readonly (keyof BusinessProfile)[];
+
+/** The cookie value for one profile (URL-encoded JSON, safe as a cookie). */
+export function businessCookieValue(business: BusinessProfile): string {
+  const payload: Record<string, unknown> = {};
+  for (const key of BUSINESS_COOKIE_KEYS) payload[key] = business[key];
+  return encodeURIComponent(JSON.stringify(payload));
+}
+
+/**
+ * Parse a cookie value back into a full profile over the static fallback.
+ * Malformed or missing values return `null` (the caller then keeps the demo).
+ */
+export function parseBusinessCookie(
+  raw: string | undefined | null,
+): BusinessProfile | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw)) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    return sanitizeBusiness(parsed, defaultBusiness());
+  } catch {
+    return null;
+  }
+}
+
+function readBusinessCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${BUSINESS_COOKIE_NAME}=([^;]*)`),
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * Keep the server-readable cookie in step with the saved profile. Client only
+ * (a no-op during SSR and in the check scripts). Passing `null` clears it.
+ */
+export function syncBusinessCookie(business: BusinessProfile | null): void {
+  if (typeof document === "undefined") return;
+  const value = business ? businessCookieValue(business) : "";
+  if ((readBusinessCookie() ?? "") === value) return;
+  try {
+    document.cookie = business
+      ? `${BUSINESS_COOKIE_NAME}=${value}; path=/; max-age=31536000; samesite=lax`
+      : `${BUSINESS_COOKIE_NAME}=; path=/; max-age=0; samesite=lax`;
+  } catch {
+    // Cookies unavailable: the browser just keeps the post-mount read.
+  }
+}
+
 /** Cleary-fake uploaded-logo URL kept for backwards compatibility only. */
 const LEGACY_UPLOADED_LOGO_PREFIX = "mock://uploaded-logo/";
 
@@ -417,6 +498,9 @@ export function saveBusiness(
     emit();
     return { ok: false, business: next };
   }
+  // The server renders the business from this cookie, so write it before the
+  // page can be reloaded or a new tab opened.
+  syncBusinessCookie(next);
   try {
     window.localStorage.setItem(BUSINESS_STORAGE_KEY, JSON.stringify(next));
     memoryBusiness = null;
@@ -440,6 +524,8 @@ export function resetBusiness(): BusinessProfile {
       // Ignore: there was nothing readable anyway.
     }
   }
+  // The server must go back to the static demo on the next render too.
+  syncBusinessCookie(null);
   // Forget this session's mock location edits too, so everything returns to the
   // static café demo.
   resetMockLocations();

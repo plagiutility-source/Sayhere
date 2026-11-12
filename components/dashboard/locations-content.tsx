@@ -4,9 +4,9 @@
  * `/locations` (PRD.md 5 and 5.3, business-rules.md 1 and 9).
  *
  * FRONTEND ONLY (Stage 1): the locations list and the Review links panel run on
- * `lib/mock/locations.ts`. Real QR/PNG/PDF/SVG generation, real saves and real
- * uploads arrive in later stages — the QR here is a clearly labelled,
- * non-scannable placeholder and the download buttons are disabled.
+ * `lib/mock/locations.ts`. The reception QR is real and scannable for every
+ * business type and plan (it opens `/r/<slug>`); the PNG/PDF/SVG download
+ * buttons are still disabled until later stages.
  */
 
 import Link from "next/link";
@@ -20,13 +20,17 @@ import {
   mockAddLocation,
   mockRegenerateReviewLink,
   reviewUrlFor,
-  shortLink,
   type LocationOwner,
   type MockLocation,
 } from "@/lib/mock/locations";
+import type { BusinessProfile } from "@/lib/mock/store";
+import { absoluteUrl, spotPath } from "@/lib/rooms/links";
+import { useOrigin } from "@/lib/use-origin";
 import { limitLabel } from "@/lib/mock/plans";
 import { useMockBusiness, useMockLocations } from "@/lib/use-business";
 import { CategoryLockBadge } from "@/components/category/category-lock-badge";
+import { QrPrintDialog } from "./qr-print-dialog";
+import { ReceptionQr } from "./reception-qr";
 import { RoomsQrSection } from "@/components/rooms/owner/RoomsQrSection";
 import { normalizeCategory } from "@/lib/category/features";
 import { supportsOrdering } from "@/lib/plan-features";
@@ -44,6 +48,8 @@ const MAX_LOCATION_NAME_LENGTH = 100;
 
 export function LocationsContent() {
   const searchParams = useSearchParams();
+  // The public URL a real customer opens; `""` until the client knows the origin.
+  const origin = useOrigin();
   const scenario = resolveDemoScenario(searchParams.get("demo"));
   const mock = useMemo(() => getDashboardMock(scenario), [scenario]);
   const live = scenario !== "long-name";
@@ -157,8 +163,13 @@ export function LocationsContent() {
                       <p className="text-[13px] font-medium text-ink">
                         {location.location_name}
                       </p>
-                      <p className="mt-1 truncate text-[13px] text-ink-muted">
-                        {shortLink(location.slug)}
+                      <p className="mt-1 break-all text-[13px] text-ink-muted">
+                        {origin
+                          ? absoluteUrl(
+                              origin,
+                              spotPath(location.slug, "reception"),
+                            )
+                          : spotPath(location.slug, "reception")}
                       </p>
                       <p className="mt-1 text-[12px] text-ink-muted">
                         Scans this cycle: {location.scans_used}
@@ -210,6 +221,7 @@ export function LocationsContent() {
               key={selected.id}
               scenario={scenario}
               location={selected}
+              business={business}
               theme={theme}
               googleReviewUrl={business.google_review_url}
               onRegenerated={() => setVersion((value) => value + 1)}
@@ -240,12 +252,15 @@ export function LocationsContent() {
 function ReviewLinksPanel({
   scenario,
   location,
+  business,
   theme,
   googleReviewUrl,
   onRegenerated,
 }: {
   scenario: DemoScenario;
   location: MockLocation;
+  /** The owner's business: name, tagline and type go on the printed card. */
+  business: BusinessProfile;
   theme: BrandTheme;
   /** Business-level fallback link (the shared profile's Google review link). */
   googleReviewUrl: string;
@@ -256,8 +271,14 @@ function ReviewLinksPanel({
   );
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkStatus, setLinkStatus] = useState<string | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
 
-  const link = shortLink(location.slug);
+  // The absolute URL is what actually opens for a customer and what the QR
+  // encodes. The old `syehere.co/<slug>` text was display-only, so copying it
+  // handed owners a link that did not work.
+  const origin = useOrigin();
+  const publicPath = spotPath(location.slug, "reception");
+  const publicUrl = origin ? absoluteUrl(origin, publicPath) : publicPath;
 
   function handleRegenerate() {
     const trimmed = linkValue.trim();
@@ -308,18 +329,25 @@ function ReviewLinksPanel({
       </div>
 
       <div className="flex flex-col items-center gap-2 border-t border-black/10 pt-4">
+        {/* Every business type and plan gets a scannable code: the review page
+            is the core product, so this is not tied to table/room ordering. */}
         <div
-          aria-label="QR placeholder — not scannable"
-          className="flex h-40 w-40 items-center justify-center rounded-card border-2 border-dashed p-4 text-center"
-          style={{ borderColor: theme.primary, color: theme.primary }}
+          className="w-40 rounded-card border bg-white p-2"
+          style={{ borderColor: theme.primary }}
         >
-          <span className="text-[12px] font-medium">
-            QR code: built in a later stage
-          </span>
+          <ReceptionQr slug={location.slug} />
         </div>
-        <p className="text-[12px] text-ink-muted">
-          The QR stays the same after any edit — it points at the slug.
+        <p className="text-center text-[12px] text-ink-muted">
+          Scan to open your customer page. The QR stays the same after any
+          edit — it points at the slug.
         </p>
+        <button
+          type="button"
+          onClick={() => setPrintOpen(true)}
+          className="mt-1 inline-flex h-9 items-center rounded-control bg-brand-blue px-3 text-[13px] font-medium text-white hover:bg-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+        >
+          Print QR
+        </button>
       </div>
 
       <div className="flex flex-col gap-3 border-t border-black/10 pt-4">
@@ -328,9 +356,16 @@ function ReviewLinksPanel({
             <p className="text-[12px] text-ink-muted">
               Short link — for printed material
             </p>
-            <p className="truncate text-[13px] text-ink">{link}</p>
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block break-all text-[13px] font-medium text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+            >
+              {publicUrl}
+            </a>
           </div>
-          <CopyButton value={link} label="Copy short link" />
+          <CopyButton value={publicUrl} label="Copy short link" />
         </div>
         {/* No doc defines a separate NFC URL format; both rows show the same
             permanent link and are kept as distinct rows per PRD.md 5.3. Logged
@@ -340,11 +375,28 @@ function ReviewLinksPanel({
             <p className="text-[12px] text-ink-muted">
               NFC tap link — written to your NFC tag
             </p>
-            <p className="truncate text-[13px] text-ink">{link}</p>
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block break-all text-[13px] font-medium text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+            >
+              {publicUrl}
+            </a>
           </div>
-          <CopyButton value={link} label="Copy NFC tap link" />
+          <CopyButton value={publicUrl} label="Copy NFC tap link" />
         </div>
       </div>
+
+      <QrPrintDialog
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+        businessName={business.name}
+        tagline={business.tagline}
+        businessType={business.business_type}
+        theme={theme}
+        url={origin ? absoluteUrl(origin, publicPath) : ""}
+      />
 
       <div className="border-t border-black/10 pt-4">
         <p className="text-[12px] text-ink-muted">Download</p>

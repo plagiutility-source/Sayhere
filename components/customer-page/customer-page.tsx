@@ -95,15 +95,17 @@ export function CustomerPage(props: CustomerPageProps) {
     customHidden = false,
     liveData = true,
   } = props;
-  // MOCK ONLY, removed in Stage 4: the post-mount read of the shared business
-  // profile (localStorage). It applies ONLY to the slug the current mock
-  // business owns (the default café owns cafe01, a new gym owns gym001, ...);
-  // every other demo slug (full01, salon1, pause1) keeps its own static data,
-  // and the server-rendered HTML still uses the static mock.
+  // MOCK ONLY, removed in Stage 4: the shared business profile. It applies
+  // ONLY to the slug the current mock business owns (the default café owns
+  // cafe01, a new gym owns gym001, ...); every other demo slug (full01, salon1,
+  // pause1) keeps its own static data. On the server and during hydration
+  // `stored` is the cookie mirror of the saved profile (see
+  // lib/mock/server-business.ts), so the first HTML already shows the owner's
+  // own business name instead of the demo one.
   const stored = useBusiness();
-  // Pure + profile-based: on the server and during hydration `stored` is the
-  // static default profile, and the saved one arrives after mount, so the HTML
-  // never disagrees with the first client render.
+  // Pure + profile-based: the provider seeds `stored` from the server read, and
+  // the post-mount localStorage read only adds fields the cookie cannot carry
+  // (the logo), so the HTML never disagrees with the first client render.
   const ownsSlug = businessOwnsSlug(stored, slug);
   const baseBusiness = ownsSlug ? { ...business, ...stored } : business;
   // MOCK ONLY, removed in Stage 4: the customer-page content the editor saved

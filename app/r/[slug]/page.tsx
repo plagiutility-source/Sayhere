@@ -9,8 +9,16 @@ import {
   isValidSlug,
   visibleAnnouncementText,
 } from "@/lib/customer-page";
-import { getMockReviewPage } from "@/lib/mock/customer-page";
+import { BusinessProvider } from "@/lib/business-provider";
+import {
+  getMockReviewPage,
+  type MockBusiness,
+  type MockReviewPage,
+} from "@/lib/mock/customer-page";
+import { businessOwnsSlug } from "@/lib/mock/locations";
 import { plans } from "@/lib/mock/plans";
+import { getServerBusiness } from "@/lib/mock/server-business";
+import type { BusinessProfile } from "@/lib/mock/store";
 import type { ReviewGenMode } from "@/lib/mock/review";
 import { validateGoogleReviewUrl } from "@/lib/validation";
 
@@ -71,7 +79,19 @@ export default async function ReviewRoute({
   // (^[a-z0-9]{6}$) before looking anything up.
   if (!isValidSlug(slug)) notFound();
 
-  const page = getMockReviewPage(slug);
+  // The saved profile lives in the browser, so the server reads its cookie
+  // mirror (lib/mock/server-business.ts).
+  const savedBusiness = await getServerBusiness();
+  const ownsSlug = savedBusiness
+    ? businessOwnsSlug(savedBusiness, slug)
+    : false;
+  // A static demo page exists for the demo slugs and for the slug every type is
+  // issued, but not for a SECOND location (Enterprise adds one). Those slugs
+  // still belong to the saved business, so their QR gets a page built from it
+  // instead of a 404.
+  const page =
+    getMockReviewPage(slug) ??
+    (savedBusiness && ownsSlug ? pageFromProfile(savedBusiness, slug) : null);
   if (!page) notFound();
 
   // Suspended business or scan limit reached -> neutral "temporarily
@@ -79,7 +99,24 @@ export default async function ReviewRoute({
   // never a reason (security 5A).
   if (!page.is_active) return <UnavailablePage />;
 
-  const { business } = page;
+  // When this slug belongs to the saved business, the owner's own identity
+  // replaces the static demo one — otherwise the first paint would show the
+  // café (or the type's demo name, e.g. "Glow Studio") and swap afterwards.
+  const business: MockBusiness =
+    savedBusiness && ownsSlug
+      ? {
+          ...page.business,
+          name: savedBusiness.name,
+          tagline: savedBusiness.tagline,
+          logo_url: savedBusiness.logo_url,
+          business_type: savedBusiness.business_type,
+          primary_color: savedBusiness.primary_color,
+          secondary_color: savedBusiness.secondary_color,
+          color_source: savedBusiness.color_source,
+          google_review_url: savedBusiness.google_review_url,
+          time_zone: savedBusiness.time_zone,
+        }
+      : page.business;
   // NOTE: `theme` is derived inside the client page component so the
   // post-mount read of the shared business profile can re-theme it (T3).
   // page_custom_hidden = admin hid the content -> fall back to the default page.
@@ -106,23 +143,62 @@ export default async function ReviewRoute({
   const reviewUrlValid = validateGoogleReviewUrl(reviewUrl) === undefined;
 
   return (
-    <CustomerPage
-      slug={slug}
-      initialScreen={parseInitialScreen(query.screen)}
-      business={business}
-      config={config}
-      customHidden={page.page_custom_hidden}
-      reviewUrl={reviewUrl}
-      reviewUrlValid={reviewUrlValid}
-      mockMode={mockMode}
-      announcementText={announcementText}
-      openNow={openNow}
-      // business-rules.md 11 rule 5: after a downgrade the public page shows
-      // only the first N named menu items. Plan limits come from the mock
-      // `plans` row only (never typed into a component).
-      menuItemLimit={plans[business.plan].page.menu_items}
-    />
+    <BusinessProvider initial={savedBusiness}>
+      <CustomerPage
+        slug={slug}
+        initialScreen={parseInitialScreen(query.screen)}
+        business={business}
+        config={config}
+        customHidden={page.page_custom_hidden}
+        reviewUrl={reviewUrl}
+        reviewUrlValid={reviewUrlValid}
+        mockMode={mockMode}
+        announcementText={announcementText}
+        openNow={openNow}
+        // business-rules.md 11 rule 5: after a downgrade the public page shows
+        // only the first N named menu items. Plan limits come from the mock
+        // `plans` row only (never typed into a component).
+        menuItemLimit={plans[business.plan].page.menu_items}
+      />
+    </BusinessProvider>
   );
+}
+
+/**
+ * A public page for a slug that belongs to the saved business but has no static
+ * demo page (a second location added after sign-up). Content is the default
+ * page; the owner's saved page config is applied on mount, as everywhere else.
+ */
+function pageFromProfile(
+  business: BusinessProfile,
+  slug: string,
+): MockReviewPage {
+  return {
+    id: `page_${slug}`,
+    business_id: `biz_${slug}`,
+    slug,
+    location_name: null,
+    google_review_url: null,
+    is_active: true,
+    page_custom_hidden: false,
+    page_config: null,
+    business: {
+      id: `biz_${slug}`,
+      name: business.name,
+      business_type: business.business_type,
+      tagline: business.tagline,
+      logo_url: business.logo_url,
+      primary_color: business.primary_color,
+      secondary_color: business.secondary_color,
+      color_source: business.color_source,
+      google_review_url: business.google_review_url,
+      social_links: {},
+      // The mock keeps no plan on the profile, so this page uses the same
+      // default as every type demo page.
+      plan: "starter",
+      time_zone: business.time_zone,
+    },
+  };
 }
 
 /**

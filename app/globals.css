@@ -40,7 +40,18 @@ body {
   }
 }
 
-/* Print: only the active invoice or patient report paper. */
+/* Print: only the active invoice, patient report or QR card paper. */
+
+/* The QR card sheet lives off-screen while the owner designs it and is moved
+   into place only for printing. Background colours must print as-is. */
+.qr-print-area {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 @media print {
   body {
     background: white;
@@ -53,7 +64,9 @@ body {
   .invoice-print-area,
   .invoice-print-area *,
   .report-print-area,
-  .report-print-area * {
+  .report-print-area *,
+  .qr-print-area,
+  .qr-print-area * {
     visibility: visible;
   }
 
@@ -66,5 +79,20 @@ body {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  /* The sheet already carries its own @page size, so it sits flush at 0,0. */
+  .qr-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  /* Printing a QR card removes the app from the layout entirely, so the job is
+     exactly one sheet instead of the tall dashboard split over blank pages.
+     Scoped to `body.qr-printing`, which the dialog sets only around
+     `window.print()`, so invoice and report printing are untouched. */
+  body.qr-printing > *:not(.qr-print-area) {
+    display: none !important;
   }
 }

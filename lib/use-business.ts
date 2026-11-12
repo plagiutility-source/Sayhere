@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useProvidedBusiness } from "@/lib/business-provider";
 import type { ColorSource } from "@/lib/brand/theme";
 import type { BusinessType } from "@/lib/brand/tokens";
 import type { DemoScenario } from "@/lib/mock/demo";
@@ -44,19 +45,27 @@ type BusinessLike = {
   color_source: ColorSource;
 };
 
-/** The shared profile; always usable (static mock until the post-mount read). */
+/**
+ * The shared profile; always usable. Inside a `BusinessProvider` (the dashboard
+ * and the customer page) the value starts as the SERVER's copy — the cookie
+ * mirror of the saved profile — so the first paint already shows the owner's
+ * business instead of the static café demo. The post-mount read then swaps in
+ * the full localStorage record (which also carries the logo).
+ */
 export function useBusiness(): BusinessProfile {
+  const provided = useProvidedBusiness();
   const [business, setBusiness] = useState<BusinessProfile>(() =>
     defaultBusiness(),
   );
 
   useEffect(() => {
+    if (provided) return;
     const sync = () => setBusiness(getBusiness());
     sync();
     return subscribeBusiness(sync);
-  }, []);
+  }, [provided]);
 
-  return business;
+  return provided ?? business;
 }
 
 /**
@@ -67,9 +76,13 @@ export function useMockSettings(
   scenario: DemoScenario,
   revision = 0,
 ): MockSettings {
-  const [settings, setSettings] = useState<MockSettings>(() =>
-    staticMockSettings(scenario),
-  );
+  const provided = useProvidedBusiness();
+  // Same first-paint rule as `useBusiness`: the server's cookie profile wins
+  // over the static café settings, so Settings never flashes another business.
+  const [settings, setSettings] = useState<MockSettings>(() => ({
+    ...staticMockSettings(scenario),
+    ...(provided ?? {}),
+  }));
 
   useEffect(() => {
     const sync = () => setSettings(getMockSettings(scenario));

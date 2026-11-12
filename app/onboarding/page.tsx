@@ -8,6 +8,7 @@ import { CategoryLockBadge } from "@/components/category/category-lock-badge";
 import { CategoryPicker } from "@/components/category/category-picker";
 import { CategoryWarningPopup } from "@/components/category/category-warning-popup";
 import { Input } from "@/components/input";
+import { ReceptionQr } from "@/components/dashboard/reception-qr";
 import { Logo } from "@/components/logo";
 import {
   BusinessDetailsForm,
@@ -812,10 +813,18 @@ function CompletionScreen({
         </div>
       </div>
 
-      {/* QR placeholder — the real QR is generated in a later stage. */}
-      <div className="mt-2xl rounded-control border-2 border-dashed border-black/15 bg-surface-muted p-2xl text-center">
-        <p className="text-[13px] font-medium text-ink-muted">
-          QR code: built in a later stage
+      {/* The real, scannable code for this business's review page. Every type
+          and plan gets it — the review funnel is the core product. */}
+      <div className="mt-2xl flex flex-col items-center gap-sm rounded-control border border-black/10 bg-surface-muted p-lg">
+        <div
+          className="w-40 rounded-card border bg-white p-2"
+          style={{ borderColor: theme.primary }}
+        >
+          <ReceptionQr slug={slug} />
+        </div>
+        <p className="text-center text-[12px] text-ink-muted">
+          Scan to open your review page. This code never changes — it points at
+          your slug.
         </p>
       </div>
 
