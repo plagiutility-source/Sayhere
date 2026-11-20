@@ -20,14 +20,6 @@ import { useDashboardSearch } from "./shell";
  */
 const FEEDBACK_PAGE_SIZE = 10;
 
-type FilterId = "all" | "positive" | "needs_reply";
-
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "positive", label: "Positive" },
-  { id: "needs_reply", label: "Needs reply" },
-];
-
 function previewOf(row: MockFeedback): string {
   if (row.message) return row.message;
   return row.google_review_left === 1
@@ -142,7 +134,6 @@ export function FeedbackContent({ demo }: { demo: DemoScenario }) {
   const mock = useMemo(() => getDashboardMock(demo), [demo]);
   const { query } = useDashboardSearch();
 
-  const [filter, setFilter] = useState<FilterId>("all");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [marked, setMarked] = useState<Set<string>>(new Set());
@@ -150,36 +141,34 @@ export function FeedbackContent({ demo }: { demo: DemoScenario }) {
 
   const loading = mock.loading;
   const errored = mock.error && !recovered;
-  const isEmpty = demo === "empty" || mock.feedback.length === 0;
+  // The manager/owner box only: customers who wrote to the business instead of
+  // leaving a Google review. Customers who posted on Google are counted in the
+  // analytics stats but never listed on this page.
+  const inboxRows = useMemo(
+    () => mock.feedback.filter((row) => row.google_review_left === 0),
+    [mock.feedback],
+  );
+  const isEmpty = demo === "empty" || inboxRows.length === 0;
 
-  // Reset to the first page whenever the filter or search changes.
+  // Reset to the first page whenever the search changes.
   useEffect(() => {
     setPage(1);
-  }, [filter, query]);
+  }, [query]);
 
   const isReplied = (row: MockFeedback) =>
     row.owner_replied === 1 || marked.has(row.id);
 
   const searched = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mock.feedback;
-    return mock.feedback.filter((row) =>
+    if (!q) return inboxRows;
+    return inboxRows.filter((row) =>
       (row.message ?? "").toLowerCase().includes(q),
     );
-  }, [mock.feedback, query]);
+  }, [inboxRows, query]);
 
-  const filtered = useMemo(() => {
-    return searched.filter((row) => {
-      if (filter === "all") return true;
-      if (filter === "positive") return row.sentiment === "positive";
-      return row.sentiment === "negative" && !isReplied(row);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searched, filter, marked]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / FEEDBACK_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(searched.length / FEEDBACK_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice(
+  const pageRows = searched.slice(
     (safePage - 1) * FEEDBACK_PAGE_SIZE,
     safePage * FEEDBACK_PAGE_SIZE,
   );
@@ -191,30 +180,10 @@ export function FeedbackContent({ demo }: { demo: DemoScenario }) {
           Feedback
         </h1>
         <p className="mt-1 text-[13px] text-ink-muted">
-          Everything customers told you, newest first.
+          Only feedback customers sent to your manager and owner box — Google
+          reviews are not listed here.
         </p>
       </header>
-
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter feedback">
-        {FILTERS.map((item) => {
-          const active = filter === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter(item.id)}
-              className={`inline-flex h-9 items-center rounded-pill border px-3 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue ${
-                active
-                  ? "border-brand-blue bg-brand-blue text-white"
-                  : "border-black/15 bg-white text-ink hover:bg-surface-muted"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
 
       <Card>
         {loading ? (
@@ -223,20 +192,11 @@ export function FeedbackContent({ demo }: { demo: DemoScenario }) {
           <SectionError onRetry={() => setRecovered(true)} label="feedback" />
         ) : isEmpty ? (
           <EmptyFeedback />
-        ) : filtered.length === 0 ? (
+        ) : searched.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <p className="text-[13px] font-medium text-ink">
               No feedback matches your search.
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setFilter("all");
-              }}
-              className="text-[13px] font-medium text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
-            >
-              Clear filters
-            </button>
           </div>
         ) : (
           <>

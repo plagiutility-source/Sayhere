@@ -194,26 +194,6 @@ export function formatPointsDelta(week: RateWeekOverWeek): {
   };
 }
 
-export type ScanSourceCounts = {
-  qr: number;
-  nfc: number;
-  link: number;
-  total: number;
-};
-
-/** Scan source split (qr / nfc / link) for the analytics screen. */
-export function scanSourceCounts(
-  scans: readonly MockScanEvent[],
-): ScanSourceCounts {
-  const counts: ScanSourceCounts = { qr: 0, nfc: 0, link: 0, total: scans.length };
-  for (const scan of scans){
-    if (scan.source === "qr") counts.qr += 1;
-    else if (scan.source === "nfc") counts.nfc += 1;
-    else counts.link += 1;
-  }
-  return counts;
-}
-
 /**
  * Delta label for a stat card. Reads "No data yet" when both weeks are empty
  * (the empty state in PRD 5.2), otherwise a signed percentage (or an absolute
@@ -243,24 +223,81 @@ export function formatDelta(week: WeekOverWeek): {
 }
 
 // ---------------------------------------------------------------------------
-// Weekly scan activity
+// Scan activity chart (daily / weekly / monthly)
 // ---------------------------------------------------------------------------
 
+/** Chart period on the dashboard and analytics screens. */
+export type ScanRange = "daily" | "weekly" | "monthly";
+
+export const SCAN_RANGES: readonly { id: ScanRange; label: string }[] = [
+  { id: "daily", label: "Daily" },
+  { id: "weekly", label: "Weekly" },
+  { id: "monthly", label: "Monthly" },
+];
+
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const WEEKDAY_FULL = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 export type ScanDayBucket = {
-  /** Short weekday label, e.g. "Thu". */
+  /** Short axis label, e.g. "Thu", "22 Sep" or "Sep". */
   label: string;
-  /** ISO date (UTC) of the bucket. */
+  /** Full label for the screen-reader summary, e.g. "Thursday, 24 Sep". */
+  fullLabel?: string;
+  /** ISO date (UTC) of the START of the bucket. */
   date: string;
   count: number;
   isBusiest: boolean;
 };
 
-/**
- * Seven daily buckets ending today (oldest first). Exactly one bucket is marked
- * busiest; ties keep the earliest.
- */
+function countScansBetween(
+  scans: readonly MockScanEvent[],
+  start: number,
+  end: number,
+): number {
+  return scans.filter((s) => {
+    const t = new Date(s.created_at).getTime();
+    return t >= start && t < end;
+  }).length;
+}
+
+/** Marks the busiest bucket; ties keep the earliest. */
+function markBusiest(buckets: ScanDayBucket[]): ScanDayBucket[] {
+  const max = Math.max(...buckets.map((b) => b.count));
+  if (max > 0) {
+    const first = buckets.find((b) => b.count === max);
+    if (first) first.isBusiest = true;
+  }
+  return buckets;
+}
+
+function shortDay(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
+}
+
+/** Seven daily buckets ending today (oldest first). */
 export function dailyScanBuckets(
   scans: readonly MockScanEvent[],
   now: Date,
@@ -274,41 +311,101 @@ export function dailyScanBuckets(
       dayStart.getUTCDate(),
     );
     const end = start + DAY_MS;
-    const count = scans.filter((s) => {
-      const t = new Date(s.created_at).getTime();
-      return t >= start && t < end;
-    }).length;
+    const weekday = new Date(start).getUTCDay();
     buckets.push({
-      label: WEEKDAY_LABELS[new Date(start).getUTCDay()],
+      label: WEEKDAY_LABELS[weekday],
+      fullLabel: `${WEEKDAY_FULL[weekday]}, ${shortDay(start)}`,
       date: new Date(start).toISOString(),
-      count,
+      count: countScansBetween(scans, start, end),
       isBusiest: false,
     });
   }
-
-  const max = Math.max(...buckets.map((b) => b.count));
-  if (max > 0) {
-    const first = buckets.find((b) => b.count === max);
-    if (first) first.isBusiest = true;
-  }
-  return buckets;
+  return markBusiest(buckets);
 }
 
-/** Screen-reader summary, e.g. "Busiest day: Thursday, 42 scans". */
-export function busiestDaySummary(buckets: readonly ScanDayBucket[]): string {
+/** Eight rolling seven-day buckets ending today (oldest first). */
+export function weeklyScanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+): ScanDayBucket[] {
+  const buckets: ScanDayBucket[] = [];
+  for (let offset = 7; offset >= 0; offset--) {
+    const end = now.getTime() - offset * 7 * DAY_MS;
+    const start = end - 7 * DAY_MS;
+    buckets.push({
+      label: shortDay(start),
+      fullLabel: shortDay(start),
+      date: new Date(start).toISOString(),
+      count: countScansBetween(scans, start, end),
+      isBusiest: false,
+    });
+  }
+  return markBusiest(buckets);
+}
+
+/** Six calendar months including the current one (oldest first). */
+export function monthlyScanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+): ScanDayBucket[] {
+  const buckets: ScanDayBucket[] = [];
+  for (let offset = 5; offset >= 0; offset--) {
+    const start = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth() - offset,
+      1,
+    );
+    const end = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth() - offset + 1,
+      1,
+    );
+    const startDate = new Date(start);
+    const month = startDate.getUTCMonth();
+    buckets.push({
+      label: MONTHS_SHORT[month],
+      fullLabel: `${MONTHS[month]} ${startDate.getUTCFullYear()}`,
+      date: startDate.toISOString(),
+      count: countScansBetween(scans, start, end),
+      isBusiest: false,
+    });
+  }
+  return markBusiest(buckets);
+}
+
+/** The chart buckets for the selected period. */
+export function scanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+  range: ScanRange,
+): ScanDayBucket[] {
+  if (range === "weekly") return weeklyScanBuckets(scans, now);
+  if (range === "monthly") return monthlyScanBuckets(scans, now);
+  return dailyScanBuckets(scans, now);
+}
+
+const RANGE_NOUN: Record<ScanRange, string> = {
+  daily: "day",
+  weekly: "week",
+  monthly: "month",
+};
+
+const RANGE_EMPTY: Record<ScanRange, string> = {
+  daily: "No scans in the last 7 days.",
+  weekly: "No scans in the last 8 weeks.",
+  monthly: "No scans in the last 6 months.",
+};
+
+/** Screen-reader summary, e.g. "Busiest week: 24 Sep, 210 scans." */
+export function busiestBucketSummary(
+  buckets: readonly ScanDayBucket[],
+  range: ScanRange,
+): string {
   const busiest = buckets.find((b) => b.isBusiest);
-  if (!busiest || busiest.count === 0) return "No scans in the last 7 days.";
-  const full: Record<string, string> = {
-    Sun: "Sunday",
-    Mon: "Monday",
-    Tue: "Tuesday",
-    Wed: "Wednesday",
-    Thu: "Thursday",
-    Fri: "Friday",
-    Sat: "Saturday",
-  };
+  if (!busiest || busiest.count === 0) return RANGE_EMPTY[range];
+  const label = busiest.fullLabel ?? busiest.label;
   const scans = busiest.count === 1 ? "1 scan" : `${busiest.count} scans`;
-  return `Busiest day: ${full[busiest.label]}, ${scans}.`;
+  return `Busiest ${RANGE_NOUN[range]}: ${label}, ${scans}.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -336,19 +433,6 @@ export function streakDaysWithoutNegative(
     f.created_at > max.created_at ? f : max,
   );
   return Math.max(0, Math.floor((now.getTime() - new Date(latest.created_at).getTime()) / DAY_MS));
-}
-
-/**
- * "Review of the week": the most recent positive feedback that became a Google
- * review. Returns null when there is none, so the callout can hide itself.
- */
-export function reviewOfTheWeek(
-  feedback: readonly MockFeedback[],
-): MockFeedback | null {
-  const candidates = feedback
-    .filter((f) => f.sentiment === "positive" && f.google_review_left === 1)
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  return candidates[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------

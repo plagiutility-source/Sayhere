@@ -5,13 +5,10 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/card";
 import { getBrandTheme } from "@/lib/brand/theme";
 import {
-  busiestDaySummary,
-  dailyScanBuckets,
   pendingFeedback,
   pendingWeekOverWeek,
   positiveCount,
   positiveRate,
-  reviewOfTheWeek,
   reviewsCollected,
   reviewsWeekOverWeek,
   scanWeekOverWeek,
@@ -19,18 +16,17 @@ import {
   totalScans,
 } from "@/lib/dashboard/metrics";
 import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
-import { withDemo, type DemoScenario } from "@/lib/mock/demo";
+import type { DemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
 import { AutoReplyCard } from "./auto-reply";
 import { DashboardCrmSection } from "./crm-cards";
-import { BarChart } from "./bar-chart";
-import { EmptyFeedback, ShareQrPlaceholder } from "./empty-state";
-import { FeedbackList, feedbackDisplayName } from "./feedback-list";
+import { ShareQrPlaceholder } from "./empty-state";
 import { Gauge } from "./gauge";
 import { DownloadIcon, PlusIcon } from "./icons";
+import { ManagerInbox } from "./manager-inbox";
 import { DashboardOrderingSection } from "./ordering-cards";
 import { PlanWidget } from "./plan-widget";
-import { ReviewOfTheWeek } from "./review-of-the-week";
+import { ScanActivity } from "./scan-activity";
 import { SectionError } from "./section-error";
 import {
   CardSkeleton,
@@ -136,14 +132,8 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
   const errored = mock.error && !recovered;
   const isEmpty = demo === "empty";
 
-  const buckets = useMemo(
-    () => dailyScanBuckets(mock.scans, now),
-    [mock.scans, now],
-  );
-  const summary = busiestDaySummary(buckets);
   const rate = positiveRate(mock.feedback);
   const streak = streakDaysWithoutNegative(mock.feedback, now);
-  const review = reviewOfTheWeek(mock.feedback);
   const showExtras = !loading && !errored && !isEmpty;
 
   return (
@@ -182,7 +172,7 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
           {/* Chart + gauge (empty -> share-QR placeholder; error -> per-card retry) */}
           {errored ? (
             <div className="grid gap-3 lg:grid-cols-5">
-              <Card title="Weekly scan activity" className="h-full lg:col-span-3">
+              <Card title="Scans" className="h-full lg:col-span-3">
                 <SectionError
                   onRetry={() => setRecovered(true)}
                   label="your scan activity"
@@ -199,9 +189,12 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
             <ShareQrPlaceholder />
           ) : (
             <div className="grid gap-3 lg:grid-cols-5">
-              <Card title="Weekly scan activity" className="h-full lg:col-span-3">
-                <BarChart buckets={buckets} color={theme.primary} summary={summary} />
-              </Card>
+              <ScanActivity
+                scans={mock.scans}
+                now={now}
+                color={theme.primary}
+                className="h-full lg:col-span-3"
+              />
               <Card title="Positive rate" className="h-full lg:col-span-2">
                 <div className="flex h-full flex-col items-center justify-center gap-3 py-2">
                   <Gauge value={rate} color={theme.primary} />
@@ -219,24 +212,15 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
             <StreakBanner days={streak} color={theme.primary} />
           ) : null}
 
-          {/* Recent feedback + plan */}
+          {/* Manager inbox + current plan */}
           <div className="grid gap-3 lg:grid-cols-3">
-            <Card title="Recent feedback" className="lg:col-span-2">
-              {errored ? (
-                <SectionError
-                  onRetry={() => setRecovered(true)}
-                  label="recent feedback"
-                />
-              ) : isEmpty || mock.feedback.length === 0 ? (
-                <EmptyFeedback />
-              ) : (
-                <FeedbackList
-                  rows={mock.feedback}
-                  max={5}
-                  viewAllHref={withDemo("/feedback", demo)}
-                />
-              )}
-            </Card>
+            <ManagerInbox
+              feedback={mock.feedback}
+              demo={demo}
+              errored={errored}
+              onRetry={() => setRecovered(true)}
+              className="lg:col-span-2"
+            />
             {errored ? (
               <Card title="Plan" className="h-full">
                 <SectionError
@@ -255,15 +239,6 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
 
           {/* Auto-reply entry point (PRD.md 5.4.3). */}
           <AutoReplyCard scenario={demo} plan={mock.plan} />
-
-          {/* Review of the week extra */}
-          {showExtras && review ? (
-            <ReviewOfTheWeek
-              businessName={business.name}
-              customer={feedbackDisplayName(review)}
-              color={theme.primary}
-            />
-          ) : null}
         </>
       )}
 

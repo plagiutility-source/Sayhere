@@ -6,15 +6,22 @@ type BarChartProps = {
   color: string;
   /** Screen-reader summary, e.g. "Busiest day: Thursday, 42 scans". */
   summary: string;
+  /** Caption for the screen-reader data table, e.g. "Scans per month". */
+  caption?: string;
 };
 
 /**
- * Weekly scan activity: 7 bars, 160px container, bars capped at 24px wide with
- * 4px rounded top corners and a flush baseline (PRD.md 5.2). The busiest day
- * uses the full business colour; the rest use it at 30%. A screen-reader
+ * Scan activity: one bar per bucket, 160px container, bars capped at 24px wide
+ * with 4px rounded top corners and a flush baseline (PRD.md 5.2). The busiest
+ * bucket uses the full business colour; the rest use it at 30%. A screen-reader
  * summary and a data table expose the same numbers.
  */
-export function BarChart({ buckets, color, summary }: BarChartProps) {
+export function BarChart({
+  buckets,
+  color,
+  summary,
+  caption = "Scans per day in the last 7 days",
+}: BarChartProps) {
   const max = Math.max(...buckets.map((b) => b.count), 1);
 
   return (
@@ -50,7 +57,7 @@ export function BarChart({ buckets, color, summary }: BarChartProps) {
         ))}
       </div>
       <table className="sr-only">
-        <caption>Scans per day in the last 7 days</caption>
+        <caption>{caption}</caption>
         <thead>
           <tr>
             <th scope="col">Day</th>

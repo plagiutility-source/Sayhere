@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/card";
 import { getBrandTheme } from "@/lib/brand/theme";
 import {
-  busiestDaySummary,
-  dailyScanBuckets,
   feedbackIntercepted,
   formatPercent,
   formatPointsDelta,
@@ -13,70 +11,20 @@ import {
   positiveCount,
   positiveRate,
   positiveRateWeekOverWeek,
-  scanSourceCounts,
   scanWeekOverWeek,
   totalScans,
 } from "@/lib/dashboard/metrics";
 import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
 import type { DemoScenario } from "@/lib/mock/demo";
 import { useMockBusiness } from "@/lib/use-business";
-import { BarChart } from "./bar-chart";
 import { AnalyticsCrmSection } from "./crm-cards";
 import { ShareQrPlaceholder } from "./empty-state";
 import { Gauge } from "./gauge";
 import { AnalyticsOrderingSection } from "./ordering-cards";
+import { ScanActivity } from "./scan-activity";
 import { SectionError } from "./section-error";
 import { CardSkeleton, StatCardSkeleton } from "./skeletons";
 import { StatCard } from "./stat-card";
-
-/** Scan source split (qr / nfc / link) — a labelled segmented bar + legend. */
-function ScanSourceSplit({
-  counts,
-  color,
-}: {
-  counts: { qr: number; nfc: number; link: number; total: number };
-  color: string;
-}) {
-  const pct = (n: number) => (counts.total > 0 ? (n / counts.total) * 100 : 0);
-  const rows: { key: string; label: string; value: number; opacity: string }[] = [
-    { key: "qr", label: "QR", value: counts.qr, opacity: "FF" },
-    { key: "nfc", label: "NFC", value: counts.nfc, opacity: "B3" },
-    { key: "link", label: "Link", value: counts.link, opacity: "66" },
-  ];
-
-  return (
-    <div className="mt-4">
-      <p className="text-[12px] text-ink-muted">Scan source</p>
-      <div
-        className="mt-2 flex h-2 overflow-hidden rounded-pill bg-surface-muted"
-        aria-hidden="true"
-      >
-        {rows.map((row) => (
-          <div
-            key={row.key}
-            style={{
-              width: `${pct(row.value)}%`,
-              backgroundColor: `${color}${row.opacity}`,
-            }}
-          />
-        ))}
-      </div>
-      <ul className="mt-3 flex flex-wrap gap-4">
-        {rows.map((row) => (
-          <li key={row.key} className="flex items-center gap-2 text-[12px]">
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: `${color}${row.opacity}` }}
-            />
-            <span className="text-ink-muted">{row.label}</span>
-            <span className="tabular-nums text-ink">{row.value}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 function LoadingSections() {
   return (
@@ -110,12 +58,6 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
   const errored = mock.error && !recovered;
   const isEmpty = demo === "empty" || mock.scans.length === 0;
 
-  const buckets = useMemo(
-    () => dailyScanBuckets(mock.scans, now),
-    [mock.scans, now],
-  );
-  const summary = busiestDaySummary(buckets);
-  const sources = useMemo(() => scanSourceCounts(mock.scans), [mock.scans]);
   const rate = positiveRate(mock.feedback);
 
   return (
@@ -137,7 +79,7 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
             <SectionError onRetry={() => setRecovered(true)} label="your metrics" />
           </Card>
           <div className="grid gap-3 lg:grid-cols-5">
-            <Card title="Weekly scan activity" className="h-full lg:col-span-3">
+            <Card title="Scans" className="h-full lg:col-span-3">
               <SectionError
                 onRetry={() => setRecovered(true)}
                 label="your scan activity"
@@ -175,10 +117,12 @@ export function AnalyticsContent({ demo }: { demo: DemoScenario }) {
             <ShareQrPlaceholder />
           ) : (
             <div className="grid gap-3 lg:grid-cols-5">
-              <Card title="Weekly scan activity" className="h-full lg:col-span-3">
-                <BarChart buckets={buckets} color={theme.primary} summary={summary} />
-                <ScanSourceSplit counts={sources} color={theme.primary} />
-              </Card>
+              <ScanActivity
+                scans={mock.scans}
+                now={now}
+                color={theme.primary}
+                className="h-full lg:col-span-3"
+              />
               <Card title="Positive rate" className="h-full lg:col-span-2">
                 <div className="flex h-full flex-col items-center justify-center gap-3 py-2">
                   <Gauge value={rate} color={theme.primary} />
