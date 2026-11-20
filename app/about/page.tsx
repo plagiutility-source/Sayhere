@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 const pillars = [
   {
     title: "A review funnel",
-    body: "A QR code or NFC tag opens one page. Customers choose between continuing to Google with a review written from their answers, or sending the owner a private message — two equally clear options.",
+    body: "A QR code opens one page. Customers choose between continuing to Google with a review written from their answers, or sending the owner a private message — two equally clear options.",
   },
   {
-    title: "QR and NFC, printed once",
+    title: "QR codes, printed once",
     body: "Codes point at a permanent short link, so changing what is behind them never means reprinting the code on your tables and counters.",
   },
   {
@@ -53,7 +53,7 @@ export default function AboutPage() {
             <p className="mt-lg text-[16px] leading-relaxed text-ink-muted">
               Syehere is a review funnel for local businesses — cafés,
               restaurants, salons, gyms, retail shops and more. A customer scans
-              the QR code on the table or taps the NFC tag at the counter, chooses
+              the QR code on the table, chooses
               whether they are happy, and Syehere routes them either to a Google
               review or to a private message to the owner. No app, no login, one
               tap.

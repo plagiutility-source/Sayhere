@@ -748,7 +748,6 @@ const adapterLocation = {
   slug: "cafe01",
   location_name: "Test Cafe",
   google_review_url: null,
-  nfc_enabled: 1 as const,
   is_active: 1 as const,
   created_at: iso(NOW),
   scans_used: 0,

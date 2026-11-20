@@ -57,7 +57,7 @@ setting (admin `/admin/plans`).
   (set `scans_used = 0`, move `scan_reset_at` forward one month, clear `scan_limit_notified_at`), so a paused
   business is back the moment its reset time passes, not up to a day later. The daily cron does the same as a backstop.
 - **When a business uses all its scans (`scans_used >= scan_limit`), the customer side stops working until the
-  count resets or the owner upgrades.** This includes the QR code, the NFC tag and the short link:
+  count resets or the owner upgrades.** This includes the QR code and the short link:
   - The public review page, AI review text, Post to Google and the feedback form all show the same neutral
     "temporarily unavailable" page used for suspended businesses (rule in section 4). It never shows an error
     and never mentions the scan limit, so the owner's customers are not told why.
@@ -294,12 +294,12 @@ Because a finalized cancellation moves the owner to Free (5.4), most data simply
   Full session, cookie and re-authentication rules are in security-and-reliability.md.
 
 ## 9. Review Link / QR Regeneration
-- The QR/NFC code always encodes a permanent `review_pages.slug` — never the
+- The QR code always encodes a permanent `review_pages.slug` — never the
   raw Google review URL. This is what makes it "dynamic."
 - Clicking "Regenerate" after pasting a new Google review link updates
   `google_review_url` in place on the existing `review_pages` row. It must
   NOT create a new slug or a new QR code — any already-printed QR code,
-  table tent, or NFC tag must keep working without reprinting.
+  table tent must keep working without reprinting.
 - A brand-new slug (and therefore a new QR code) is only ever issued when the
   owner explicitly adds a new location. Never issue one silently as a side
   effect of editing an existing location's link.
@@ -495,7 +495,7 @@ Spec: PRD.md section 5.8. Code: `lib/rooms/rules.ts` (the ONE place these rules 
    Tables/Rooms nav item, no ordering page, no dashboard/analytics section and no QR panel. Reception (the normal
    `/r/<slug>` page) never has ordering.
 2. **Spots.** One location has at most 12 tables/rooms. A spot has a name (max 40), a permanent code and its own
-   QR/NFC link `/r/<slug>/<code>`. Adding is refused at 12; renaming changes the name only; pausing keeps the code
+   QR link `/r/<slug>/<code>`. Adding is refused at 12; renaming changes the name only; pausing keeps the code
    reserved and shows "not available" to customers; deleting is not offered. A per-spot scan is counted at most once
    per device per 30 minutes and is display-only — it never counts toward `scans_used` or the plan limit.
 3. **Menu.** Ordering reuses the location's saved Customer page menu and its plan item limit. Only items with a

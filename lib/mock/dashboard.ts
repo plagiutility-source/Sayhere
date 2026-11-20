@@ -7,7 +7,7 @@
  * - `feedback`: sentiment (positive|negative), message, customer_email,
  *   google_review_left, owner_replied, created_at (plus id / business_id /
  *   review_page_id, which are not displayed).
- * - `scan_events`: source (qr|nfc|link), created_at.
+ * - `scan_events`: source (qr|link), created_at.
  *
  * The 4th dashboard metric from PRD.md 5.1 ("avg rating") is intentionally NOT
  * built for v1: no doc defines where a star rating comes from and schema.sql has
@@ -25,7 +25,7 @@ import { plans, type PlanId } from "@/lib/mock/plans";
 import type { DemoScenario } from "@/lib/mock/demo";
 
 export type FeedbackSentiment = "positive" | "negative";
-export type ScanSource = "qr" | "nfc" | "link";
+export type ScanSource = "qr" | "link";
 
 export type MockFeedback = {
   id: string;
@@ -141,9 +141,7 @@ function dayStart(offsetDays: number): number {
 
 function pickSource(rng: () => number): ScanSource {
   const roll = rng();
-  if (roll < 0.68) return "qr";
-  if (roll < 0.88) return "nfc";
-  return "link";
+  return roll < 0.85 ? "qr" : "link";
 }
 
 function generateScans(rng: () => number): MockScanEvent[] {

@@ -16,6 +16,7 @@ import {
   type CrmContact,
   type CrmServiceEntry,
 } from "@/lib/crm/rules";
+import { displayableLogo } from "@/lib/mock/store";
 import { useBusiness } from "@/lib/use-business";
 import { formatCrmDate, formatCrmMoney } from "./crm-utils";
 import { PaymentBadge } from "./crm-ui";
@@ -36,6 +37,7 @@ export function InvoiceDialog({
   onEdit?: (entry: CrmServiceEntry) => void;
 }) {
   const business = useBusiness();
+  const businessLogo = displayableLogo(business.logo_url);
   const invoice = entry?.invoice ?? null;
   const totals = invoice
     ? invoiceTotals(invoice.lines, invoice.discount, invoice.tax_percent)
@@ -70,6 +72,14 @@ export function InvoiceDialog({
       <div className="invoice-print-area rounded-card border border-black/10 bg-white p-5 text-ink">
         <div className="flex flex-col justify-between gap-4 border-b border-black/10 pb-4 sm:flex-row sm:items-start">
           <div className="min-w-0">
+            {businessLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL logo
+              <img
+                src={businessLogo}
+                alt=""
+                className="mb-2 h-10 w-10 object-contain"
+              />
+            ) : null}
             <p className="text-[17px] font-medium leading-tight">{business.name}</p>
             {billing.address ? (
               <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-ink-muted">

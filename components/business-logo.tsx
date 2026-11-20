@@ -65,15 +65,33 @@ type BusinessLogoProps = {
   /** Any CSS colour; defaults to `currentColor`. */
   color?: string;
   className?: string;
+  /**
+   * The owner's uploaded logo. When present it replaces the default vector
+   * mark, so a logo added or changed in Settings appears here straight away.
+   */
+  logoUrl?: string | null;
 };
 
-/** Default vector logo for a business type (used when no logo is uploaded). */
+/** The owner's uploaded logo when there is one, else the type's default mark. */
 export function BusinessLogo({
   type,
   size = 40,
   color,
   className = "",
+  logoUrl = null,
 }: BusinessLogoProps) {
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- data URLs can't go through next/image
+      <img
+        src={logoUrl}
+        alt={`${businessTypeLabels[type]} logo`}
+        width={size}
+        height={size}
+        className={`object-contain ${className}`}
+      />
+    );
+  }
   return (
     <svg
       viewBox="0 0 24 24"

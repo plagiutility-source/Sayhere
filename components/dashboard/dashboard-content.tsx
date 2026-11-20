@@ -9,11 +9,9 @@ import {
   pendingWeekOverWeek,
   positiveCount,
   positiveRate,
-  reviewsCollected,
-  reviewsWeekOverWeek,
-  scanWeekOverWeek,
-  streakDaysWithoutNegative,
-  totalScans,
+  SCAN_RANGE_WINDOW,
+  scanTotalForRange,
+  type ScanRange,
 } from "@/lib/dashboard/metrics";
 import { getDashboardMock, MOCK_NOW } from "@/lib/mock/dashboard";
 import type { DemoScenario } from "@/lib/mock/demo";
@@ -35,7 +33,6 @@ import {
   StatCardSkeleton,
 } from "./skeletons";
 import { StatCard } from "./stat-card";
-import { StreakBanner } from "./streak-banner";
 
 /** Header block: title + subtitle on the left; Export + Add location on the right. */
 function DashboardHeader({ businessName }: { businessName: string }) {
@@ -128,13 +125,17 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
 
   // Error state: Retry re-renders the normal mock data (no refetch).
   const [recovered, setRecovered] = useState(false);
+  // One period shared by the total-scans stat and the scan chart.
+  const [scanRange, setScanRange] = useState<ScanRange>("daily");
   const loading = mock.loading;
   const errored = mock.error && !recovered;
   const isEmpty = demo === "empty";
 
   const rate = positiveRate(mock.feedback);
-  const streak = streakDaysWithoutNegative(mock.feedback, now);
-  const showExtras = !loading && !errored && !isEmpty;
+  const scanTotal = useMemo(
+    () => scanTotalForRange(mock.scans, now, scanRange),
+    [mock.scans, now, scanRange],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -150,16 +151,11 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
               <SectionError onRetry={() => setRecovered(true)} label="your stats" />
             </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <StatCard
                 label="Total scans"
-                value={String(totalScans(mock.scans))}
-                week={scanWeekOverWeek(mock.scans, now)}
-              />
-              <StatCard
-                label="Reviews collected"
-                value={String(reviewsCollected(mock.feedback))}
-                week={reviewsWeekOverWeek(mock.feedback, now)}
+                value={String(scanTotal)}
+                delta={{ text: SCAN_RANGE_WINDOW[scanRange], direction: "none" }}
               />
               <StatCard
                 label="Pending feedback"
@@ -193,6 +189,8 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
                 scans={mock.scans}
                 now={now}
                 color={theme.primary}
+                range={scanRange}
+                onRangeChange={setScanRange}
                 className="h-full lg:col-span-3"
               />
               <Card title="Positive rate" className="h-full lg:col-span-2">
@@ -206,11 +204,6 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
               </Card>
             </div>
           )}
-
-          {/* Streak extra */}
-          {showExtras && streak > 0 ? (
-            <StreakBanner days={streak} color={theme.primary} />
-          ) : null}
 
           {/* Manager inbox + current plan */}
           <div className="grid gap-3 lg:grid-cols-3">

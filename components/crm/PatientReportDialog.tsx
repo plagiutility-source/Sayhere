@@ -23,6 +23,7 @@ import type {
   CrmContact,
   CrmServiceEntry,
 } from "@/lib/crm/rules";
+import { displayableLogo } from "@/lib/mock/store";
 import { useBusiness } from "@/lib/use-business";
 import { formatCrmDate } from "./crm-utils";
 
@@ -81,6 +82,7 @@ function PatientReport({
   config: CrmConfig;
 }) {
   const business = useBusiness();
+  const businessLogo = displayableLogo(business.logo_url);
   const billing = config.billing;
   const settings = config.report;
   const signature = settings.provider_signature || report.doctor_name;
@@ -100,6 +102,14 @@ function PatientReport({
     <div className="report-print-area rounded-card border border-black/10 bg-white p-5 text-ink sm:p-7">
       <header className="flex flex-col justify-between gap-4 border-b-2 border-brand-blue pb-4 sm:flex-row sm:items-start">
         <div className="min-w-0">
+          {businessLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- data URL logo
+            <img
+              src={businessLogo}
+              alt=""
+              className="mb-2 h-10 w-10 object-contain"
+            />
+          ) : null}
           <p className="text-[18px] font-medium leading-tight">{business.name}</p>
           {billing.address ? (
             <p className="mt-1 whitespace-pre-line text-[10px] leading-relaxed text-ink-muted">

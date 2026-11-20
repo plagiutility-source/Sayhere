@@ -205,7 +205,7 @@ QR codes.
 Hi {{owner_name}},
 
 {{business_name}} has used all {{scan_limit}} scans on the {{plan_name}} plan this month. Your QR code,
-NFC tag, review page, Google auto-replies and weekly reports are paused, and your customers
+review page, Google auto-replies and weekly reports are paused, and your customers
 see a "temporarily unavailable" message. Your dashboard and feedback are still available.
 
 Your scans reset on **{{reset_date}}**, or you can upgrade now to turn everything back on

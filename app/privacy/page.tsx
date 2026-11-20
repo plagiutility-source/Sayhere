@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-ink">Customers</strong> of those businesses
-            who scan a QR code or tap an NFC tag and use a business&apos;s review
+            who scan a QR code and use a business&apos;s review
             page or leave private feedback. For customer data, the business owner
             decides why it is collected; we process it for them to provide the
             service.
@@ -169,7 +169,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="how-we-use-data" heading="5. How we use data">
         <ul className="grid gap-md">
           <li>
-            To provide the service: review pages, QR/NFC links, dashboard,
+            To provide the service: review pages, QR links, dashboard,
             feedback notifications, weekly reports, auto-replies.
           </li>
           <li>

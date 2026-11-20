@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/card";
 import {
   busiestBucketSummary,
@@ -28,31 +28,40 @@ const CAPTIONS: Record<ScanRange, { table: string; note: string }> = {
 
 /**
  * Scan-only chart: the total number of scans per day, week or month. There is
- * no QR/NFC/link split — every scan is one count — and the same component is
+ * no QR/link split — every scan is one count — and the same component is
  * used on the dashboard and the analytics page.
  */
 export function ScanActivity({
   scans,
   now,
   color,
+  range,
+  onRangeChange,
   title = "Scans",
-  description = "Only scans, counted once.",
+  description = "Only scans, counted once. Tap a bar for its exact count.",
   className = "",
 }: {
   scans: readonly MockScanEvent[];
   now: Date;
   color: string;
+  /** Controlled period, shared with the page's total-scans stat card. */
+  range: ScanRange;
+  onRangeChange: (range: ScanRange) => void;
   title?: string;
   description?: string;
   className?: string;
 }) {
-  const [range, setRange] = useState<ScanRange>("daily");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // A new period has different buckets, so clear any bar picked in the old one.
+  useEffect(() => setSelectedDate(null), [range]);
+
   const buckets = useMemo(
     () => scanBuckets(scans, now, range),
     [scans, now, range],
   );
   const summary = busiestBucketSummary(buckets, range);
   const caption = CAPTIONS[range];
+  const selected = buckets.find((bucket) => bucket.date === selectedDate) ?? null;
 
   return (
     <Card
@@ -72,7 +81,7 @@ export function ScanActivity({
                 key={item.id}
                 type="button"
                 aria-pressed={active}
-                onClick={() => setRange(item.id)}
+                onClick={() => onRangeChange(item.id)}
                 className={`inline-flex h-7 items-center rounded-pill px-2.5 text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue ${
                   active
                     ? "bg-white font-medium text-ink shadow-sm"
@@ -91,10 +100,23 @@ export function ScanActivity({
         color={color}
         summary={summary}
         caption={caption.table}
+        selectedDate={selectedDate}
+        onSelect={(date) =>
+          setSelectedDate((current) => (current === date ? null : date))
+        }
       />
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[12px] text-ink-muted">{summary}</p>
-        <p className="text-[11px] text-ink-muted">{caption.note}</p>
+        {selected ? (
+          <p role="status" className="text-[12px] font-medium text-ink">
+            {selected.fullLabel ?? selected.label}: {selected.count}{" "}
+            {selected.count === 1 ? "scan" : "scans"}
+          </p>
+        ) : (
+          <p className="text-[12px] text-ink-muted">{summary}</p>
+        )}
+        <p className="text-[11px] text-ink-muted">
+          {selected ? "Tap the bar again to clear." : caption.note}
+        </p>
       </div>
     </Card>
   );

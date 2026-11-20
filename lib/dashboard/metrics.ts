@@ -26,11 +26,6 @@ export function totalScans(scans: readonly MockScanEvent[]): number {
   return scans.length;
 }
 
-/** Reviews collected = feedback where the customer left a Google review. */
-export function reviewsCollected(feedback: readonly MockFeedback[]): number {
-  return feedback.filter((row) => row.google_review_left === 1).length;
-}
-
 /** Pending feedback = negative and not yet replied to by the owner. */
 export function pendingFeedback(feedback: readonly MockFeedback[]): number {
   return feedback.filter(
@@ -105,18 +100,6 @@ export function scanWeekOverWeek(
   now: Date,
 ): WeekOverWeek {
   return weekOverWeek(scans, now, (s) => s.created_at);
-}
-
-export function reviewsWeekOverWeek(
-  feedback: readonly MockFeedback[],
-  now: Date,
-): WeekOverWeek {
-  return weekOverWeek(
-    feedback,
-    now,
-    (f) => f.created_at,
-    (f) => f.google_review_left === 1,
-  );
 }
 
 export function pendingWeekOverWeek(
@@ -390,6 +373,25 @@ const RANGE_NOUN: Record<ScanRange, string> = {
   monthly: "month",
 };
 
+/** The window each chart range covers, for the total-scans stat card. */
+export const SCAN_RANGE_WINDOW: Record<ScanRange, string> = {
+  daily: "Last 7 days",
+  weekly: "Last 8 weeks",
+  monthly: "Last 6 months",
+};
+
+/** Total scans inside the selected window (the sum of its chart buckets). */
+export function scanTotalForRange(
+  scans: readonly MockScanEvent[],
+  now: Date,
+  range: ScanRange,
+): number {
+  return scanBuckets(scans, now, range).reduce(
+    (sum, bucket) => sum + bucket.count,
+    0,
+  );
+}
+
 const RANGE_EMPTY: Record<ScanRange, string> = {
   daily: "No scans in the last 7 days.",
   weekly: "No scans in the last 8 weeks.",
@@ -411,29 +413,6 @@ export function busiestBucketSummary(
 // ---------------------------------------------------------------------------
 // Engagement extras (PRD 5.1)
 // ---------------------------------------------------------------------------
-
-/**
- * Days since the most recent negative feedback. When there has never been a
- * negative, the streak runs from the earliest feedback row; with no feedback at
- * all the streak is 0 (and the banner is hidden).
- */
-export function streakDaysWithoutNegative(
-  feedback: readonly MockFeedback[],
-  now: Date,
-): number {
-  if (feedback.length === 0) return 0;
-  const negatives = feedback.filter((f) => f.sentiment === "negative");
-  if (negatives.length === 0) {
-    const earliest = feedback.reduce((min, f) =>
-      f.created_at < min.created_at ? f : min,
-    );
-    return Math.max(0, Math.floor((now.getTime() - new Date(earliest.created_at).getTime()) / DAY_MS));
-  }
-  const latest = negatives.reduce((max, f) =>
-    f.created_at > max.created_at ? f : max,
-  );
-  return Math.max(0, Math.floor((now.getTime() - new Date(latest.created_at).getTime()) / DAY_MS));
-}
 
 // ---------------------------------------------------------------------------
 // Formatting

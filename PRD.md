@@ -38,15 +38,15 @@ international coverage is confirmed or a second payment provider is added.
    - Step 2: Business name, business type (only the types inside the locked category), tagline, address, city, PIN code, business phone, and a category proof (FSSAI for food, rooms plus GSTIN or licence for hotel)
    - Step 3: Upload logo OR auto-assign a default vector logo + color theme by business type
    - Step 4: Paste Google Review URL → system auto-generates the review funnel link
-3. System auto-generates: QR code (with logo overlay) + short review link + NFC-compatible link
+3. System auto-generates: QR code (with logo overlay) + short review link
 4. Dashboard is live immediately — no manual setup, no waiting on support
 
-**QR code behavior (dynamic, not static):** the QR/NFC code encodes a permanent
+**QR code behavior (dynamic, not static):** the QR code encodes a permanent
 redirect slug (`review_pages.slug`, e.g. `r/abc123`) — never the raw Google
 review URL directly. The Google link, branding, and the review flow
 behind that slug can change at any time without invalidating or requiring a
 reprint of already-printed QR codes/table tents. This also enables
-`scan_events.source` tracking (qr / nfc / link), which a static QR pointing
+`scan_events.source` tracking (qr / link), which a static QR pointing
 straight at Google would not allow.
 - Open decision: when an owner hits "Regenerate" after changing their Google
   link, does it update the redirect target in place (recommended — keeps
@@ -56,7 +56,7 @@ straight at Google would not allow.
 
 ### 3.2 Customer Flow ("the magic moment")
 ```
-Customer taps NFC / scans QR
+Customer scans QR
         ↓
 "How was your experience?"   👍 Great        👎 Not great
         ↓                              ↓
@@ -117,7 +117,7 @@ The review block always stays first.
 | Growth | $9.99 / ₹499 | 1 | 25,000 | Yes | Café/restaurant/hotel | Salon/gym/retail/other | Yes |
 | Enterprise | Custom | Unlimited | Unlimited | Yes | Yes | Yes | Yes |
 
-**When a business uses all its monthly scans, everything pauses: its QR code, NFC tag and review page (customers see a
+**When a business uses all its monthly scans, everything pauses: its QR code and review page (customers see a
 neutral "temporarily unavailable" page), Google auto-reply and the weekly report, until the count resets on the billing
 date or the owner upgrades.** Only the owner's dashboard and billing stay open. See business-rules.md section 1.
 
@@ -146,7 +146,7 @@ not to run a real business on.
   On Free, Starter and Pro (limit 1) it is disabled with "Extra locations are available on the Enterprise plan" and a **Contact us** link
   (Enterprise is arranged by an admin, it cannot be bought at checkout). Enforced on the server too (business-rules.md section 1).
 - Recent feedback feed (real-time), each item tagged Positive / Needs reply
-- Review links: QR code, NFC link, direct link — downloadable/shareable
+- Review links: QR code and direct link — downloadable/shareable
 - Analytics: rating average, % positive, scan count, feedback intercepted count
 - Billing section: current plan, upgrade/downgrade, cancel option, invoice history
 
@@ -279,10 +279,8 @@ values are intentionally excluded (see section 8.1).
 ### 5.3 Review Link / QR Setup Screen
 _See `dashboard-ui-qr-setup.png` for the reference mockup._
 - Owner pastes their Google review link once; "Generate"/"Regenerate" produces:
-  a QR code (logo overlay in the business's brand color), a short link
-  (`syehere.co/{slug}`), and a separate NFC tap link.
-  - Short link and NFC link are kept distinct: the short link is for printed
-    material, the NFC link is what's written to the physical NFC tag.
+  a QR code (logo overlay in the business's brand color) and a short link
+  (`syehere.co/{slug}`).
 - Download options: PNG (digital use), PDF (print-shop ready), SVG (embeddable
   in the owner's own signage design).
 
@@ -403,7 +401,7 @@ Change email and change password (re-authentication required); **Log out of all 
 show what will be deleted and require typing the business name to confirm).
 
 ### 5.5 Customer Page (owner-customizable landing page)
-The page a customer lands on after scanning the QR or tapping the NFC tag is the **Customer
+The page a customer lands on after scanning the QR is the **Customer
 page**. It has a default (the review flow) and the owner may extend it, optionally, with
 **tap-to-open buttons** (menu or price list, Wi-Fi, hours and contact, call, WhatsApp, directions)
 and **social icons**. The home page stays short: each button opens its own screen, or its own
@@ -429,7 +427,7 @@ required. Exact screens and wireframes: `customer-page-ui-spec.md`.
    is deleted within 24 hours, and is never shown, linked or served to customers. The images are the
    business logo (Settings) and the AI-generated dish photos on menu items that WE generate and store
    (5.5.6, AI_MENU_PHOTOS.md). Owners never upload photos or paste image links.
-7. **Same QR and NFC, always.** Editing the page never changes the slug (business-rules.md 9).
+7. **Same QR, always.** Editing the page never changes the slug (business-rules.md 9).
 8. **Quantity limits by plan, not feature locks.** Every plan can use every block type; plans differ
    only in how much they can add (business-rules.md section 1 and 11). The one plan-gated feature in the
    product is Google review auto-reply (PRD.md section 4).
@@ -650,7 +648,7 @@ security caps (security-and-reliability.md 4C) apply on every plan, including En
 ### 5.6 Public marketing site (required for Google OAuth verification)
 Public pages on the production domain, no login needed, HTTPS:
 - `/` **Homepage**: Syehere name and logo (same as the Google consent screen), a clear description of what the product does
-  (review funnel, QR/NFC, AI review text, auto-reply to Google reviews), pricing summary, links to Privacy Policy and Terms in the header or footer, and a support email.
+  (review funnel, QR, AI review text, auto-reply to Google reviews), pricing summary, links to Privacy Policy and Terms in the header or footer, and a support email.
   It must not be only a login page.
 - A short **"How we use your Google data"** block on the homepage (or a clearly linked section of `/privacy`): what we access (account and location names, reviews of the chosen location), why (show reviews, post replies the owner enabled), that we do not sell it or use it for ads or AI training, that owners can disconnect or revoke any time, and where to send deletion requests (support email). Must match the Privacy Policy and the consent screen wording.
 - **Cashfree activation pages (see cashfree-approval.md):** `/about` (what Syehere is, registered business name), `/contact` (one support email + one valid phone number + registered address), `/pricing` (Free, Starter and Pro with price in INR, locations, monthly scans, auto-reply availability, billing cycle and taxes; Enterprise shown as "Contact us" with no price. Values come from `getPlans()`, so the page always matches what Cashfree charges), `/refund-policy` (built from legal-pages.md Payment and Cancellation policies, plus "digital service, no physical delivery"). The **registered business name, support email and phone** appear in the footer of every public page.

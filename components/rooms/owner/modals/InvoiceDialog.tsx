@@ -16,6 +16,7 @@ import {
 } from "@/lib/rooms/rules";
 import type { Order, PaymentMode, RoundVia } from "@/lib/rooms/types";
 import { useRoomsPage } from "@/lib/rooms/adapter";
+import { displayableLogo } from "@/lib/mock/store";
 import { useBusiness } from "@/lib/use-business";
 import { useOwner } from "../OwnerProvider";
 
@@ -37,6 +38,7 @@ function roundViaLabel(via: RoundVia): string {
 export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () => void }) {
   const { state, save, toast, businessType } = useOwner();
   const business = useBusiness();
+  const businessLogo = displayableLogo(business.logo_url);
   const location = state.locations.find((item) => item.id === order.locId) ?? null;
   const page = useRoomsPage(location ? location.slug : null, "normal");
   const address =
@@ -130,6 +132,14 @@ export function InvoiceDialog({ order, onClose }: { order: Order; onClose: () =>
       <div className="invoice-print-area mt-4 rounded-[10px] border border-black/10 bg-white p-4">
         <div className="flex items-start justify-between gap-3 border-b border-black/10 pb-3">
           <div>
+            {businessLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL logo
+              <img
+                src={businessLogo}
+                alt=""
+                className="mb-1.5 h-9 w-9 object-contain"
+              />
+            ) : null}
             <strong className="block text-[13px] font-medium">{business.name}</strong>
             {address ? (
               <span className="block text-[10.5px] text-ink-muted">{address}</span>

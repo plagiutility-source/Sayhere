@@ -206,7 +206,7 @@ index 3f4e6dc..470ad89 100644
 +6. **No owner uploads and no galleries on the customer page.** The images are the business logo
 +   (Settings) and the AI-generated dish photos on menu items that WE generate and store
 +   (5.5.6, AI_MENU_PHOTOS.md). Owners never upload photos or paste image links.
- 7. **Same QR and NFC, always.** Editing the page never changes the slug (business-rules.md 9).
+ 7. **Same QR, always.** Editing the page never changes the slug (business-rules.md 9).
  8. **Quantity limits by plan, not feature locks.** Every plan can use every block type; plans differ
     only in how much they can add (business-rules.md section 1 and 11). The one plan-gated feature in the
 @@ -495,8 +496,8 @@ button grid, social icon row.

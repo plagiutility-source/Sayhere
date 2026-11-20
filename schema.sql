@@ -68,12 +68,12 @@ CREATE TABLE businesses (
 CREATE INDEX idx_businesses_firebase_uid ON businesses(firebase_uid);
 
 -- ============================================================
--- REVIEW PAGES (QR / NFC targets — one per location)
+-- REVIEW PAGES (QR targets — one per location)
 -- ============================================================
 -- IMPORTANT — dynamic QR behavior: `slug` is the ONLY value ever encoded in
--- the printed/exported QR code or written to an NFC tag. It must never
+-- the printed/exported QR code. It must never
 -- change once generated. Every other column here (google_review_url,
--- is_active, location_name) can be edited freely at any time — the QR/NFC
+-- is_active, location_name) can be edited freely at any time — the QR
 -- code keeps working because it only points at the slug, not at the data
 -- behind it. "Regenerate" in the UI updates google_review_url in place; it
 -- must NOT issue a new slug unless the owner is explicitly adding a new
@@ -86,7 +86,6 @@ CREATE TABLE review_pages (
   google_review_url TEXT,               -- per-location override; falls back to businesses.google_review_url if null
   gbp_location_name TEXT,               -- Business Profile location resource name mapped to this location for auto-reply; UNIQUE across businesses (see index below)
   qr_code_url TEXT,
-  nfc_enabled INTEGER NOT NULL DEFAULT 1,
   is_active INTEGER NOT NULL DEFAULT 1,
   deactivated_at TEXT,                  -- set when switched off after a paid plan ends; drives the retention purge (business-rules.md 5B)
   page_config TEXT,                     -- this is the Counter page for hotel and food businesses: JSON customer page content for this location (buttons with on flags and values, manual menu); NULL = default page. Max 100 KB, validated by one shared module
@@ -127,7 +126,7 @@ CREATE TABLE scan_events (
   id TEXT PRIMARY KEY,
   business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   review_page_id TEXT REFERENCES review_pages(id) ON DELETE SET NULL,
-  source TEXT,                          -- qr, nfc, link
+  source TEXT,                          -- qr, link
   visitor_hash TEXT,                    -- SHA-256(ip + user-agent + daily salt); never store raw IP.
                                         -- Used to dedupe repeat scans (see security-and-reliability.md section 4)
   created_at TEXT NOT NULL DEFAULT (datetime('now'))

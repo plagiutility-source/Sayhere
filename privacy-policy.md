@@ -11,7 +11,7 @@ Contact for privacy questions and requests: [SUPPORT EMAIL].
 
 ## 2. Who this covers
 - **Business owners** who sign up to Syehere ("you").
-- **Customers** of those businesses who scan a QR code or tap an NFC tag and use a business's review page or leave private feedback.
+- **Customers** of those businesses who scan a QR code and use a business's review page or leave private feedback.
 For customer data, the business owner decides why it is collected; we process it for them to provide the service.
 
 ## 3. What we collect
@@ -37,7 +37,7 @@ We do not sell personal data. We do not use it for advertising.
 In short: if you connect Google, we read the names of your Business Profile accounts and locations, and the reviews of the location you choose, and post replies you have enabled, using the `business.manage` permission. Syehere's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. Access tokens are stored encrypted and deleted when you disconnect or delete your account. You can also revoke access any time at https://myaccount.google.com/permissions.
 
 ## 5. How we use data
-- To provide the service: review pages, QR/NFC links, dashboard, feedback notifications, weekly reports, auto-replies.
+- To provide the service: review pages, QR links, dashboard, feedback notifications, weekly reports, auto-replies.
 - To generate text with AI: AI-written review suggestions use only the business type/name and star context. AI-written replies to Google reviews use the review's star rating, reviewer first name and review text.
 - To read a menu PDF and create dish photos: the uploaded PDF (which may contain business information) is sent to our PDF-capable AI provider only to extract the menu. Dish photos are generated from the item name and description. We do not use this data to train models. The PDF is deleted immediately after extraction and in any case within 24 hours. We do **not** send customers' private feedback or owner account/personal data to AI providers for these tasks.
 - To bill you, prevent abuse and fraud, secure the service, and meet legal duties.

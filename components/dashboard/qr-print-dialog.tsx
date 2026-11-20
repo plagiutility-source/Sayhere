@@ -18,8 +18,12 @@ import { Modal } from "./modal";
 import {
   QrCard,
   QR_CARD_DESIGNS,
+  QR_CARD_MAX_MM,
+  QR_CARD_MIN_MM,
   QR_CARD_SIZES,
   readableOn,
+  resolveCardDimensions,
+  type QrCardCustomSize,
   type QrCardDesign,
   type QrCardSize,
 } from "./qr-card";
@@ -49,6 +53,7 @@ export function QrPrintDialog({
   businessName,
   tagline,
   businessType,
+  logoUrl = null,
   theme,
   url,
 }: {
@@ -57,13 +62,19 @@ export function QrPrintDialog({
   businessName: string;
   tagline: string;
   businessType: BusinessType;
+  /** The owner's uploaded logo; the type's default mark when absent. */
+  logoUrl?: string | null;
   theme: BrandTheme;
   /** Absolute URL of the customer page (`<origin>/r/<slug>`). */
   url: string;
 }) {
   const [design, setDesign] = useState<QrCardDesign>("classic");
-  const [size, setSize] = useState<QrCardSize>("a6");
+  const [size, setSize] = useState<QrCardSize | "custom">("a6");
+  const [customWidth, setCustomWidth] = useState(105);
+  const [customHeight, setCustomHeight] = useState(148);
   const [background, setBackground] = useState(theme.primary);
+  /** Identity logo size as a percentage of the preset size (60–160%). */
+  const [logoScale, setLogoScale] = useState(100);
 
   const swatches = useMemo(() => {
     const all = [theme.primary, theme.secondary, ...EXTRA_SWATCHES];
@@ -72,15 +83,23 @@ export function QrPrintDialog({
       .filter((color, index, list) => list.indexOf(color) === index);
   }, [theme.primary, theme.secondary]);
 
-  const dim = QR_CARD_SIZES[size];
+  const customSize: QrCardCustomSize | null =
+    size === "custom" ? { width: customWidth, height: customHeight } : null;
+  const dim = resolveCardDimensions(
+    size === "custom" ? "a6" : size,
+    customSize,
+  );
   const card = (
     <QrCard
       design={design}
-      size={size}
+      size={size === "custom" ? "a6" : size}
+      customSize={customSize}
       background={background}
       businessName={businessName}
       tagline={tagline}
       businessType={businessType}
+      logoUrl={logoUrl}
+      logoScale={logoScale / 100}
       qrUrl={url}
     />
   );
@@ -213,6 +232,31 @@ export function QrPrintDialog({
             </fieldset>
 
             <fieldset>
+              <legend className="text-[12px] font-medium text-ink">
+                Logo size
+              </legend>
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={60}
+                  max={160}
+                  step={5}
+                  value={logoScale}
+                  onChange={(event) => setLogoScale(Number(event.target.value))}
+                  aria-label="Logo size on the QR card"
+                  className="h-1.5 w-full cursor-pointer accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+                />
+                <span className="w-11 shrink-0 text-right text-[11.5px] tabular-nums text-ink-muted">
+                  {logoScale}%
+                </span>
+              </div>
+              <p className="mt-1.5 text-[11.5px] text-ink-muted">
+                Slide right to make the logo bigger on the card, left to make it
+                smaller.
+              </p>
+            </fieldset>
+
+            <fieldset>
               <legend className="text-[12px] font-medium text-ink">Size</legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Object.keys(QR_CARD_SIZES) as QrCardSize[]).map((key) => (
@@ -228,7 +272,60 @@ export function QrPrintDialog({
                     {QR_CARD_SIZES[key].label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  aria-pressed={size === "custom"}
+                  onClick={() => setSize("custom")}
+                  className={`${OPTION_BUTTON} ${
+                    size === "custom" ? ACTIVE_OPTION : IDLE_OPTION
+                  }`}
+                >
+                  Custom size
+                </button>
               </div>
+
+              {size === "custom" ? (
+                <div className="mt-3 rounded-control border border-black/10 bg-surface-muted/60 p-3">
+                  <p className="text-[11.5px] font-medium text-ink">
+                    Custom size (mm)
+                  </p>
+                  <div className="mt-2 grid max-w-[280px] grid-cols-2 gap-2">
+                    <label className="text-[11px] text-ink-muted">
+                      Width
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={QR_CARD_MIN_MM}
+                        max={QR_CARD_MAX_MM}
+                        value={customWidth}
+                        onChange={(event) =>
+                          setCustomWidth(Number(event.target.value))
+                        }
+                        className="mt-1 h-9 w-full rounded-control border border-black/15 bg-white px-2 text-[13px] tabular-nums text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+                      />
+                    </label>
+                    <label className="text-[11px] text-ink-muted">
+                      Height
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={QR_CARD_MIN_MM}
+                        max={QR_CARD_MAX_MM}
+                        value={customHeight}
+                        onChange={(event) =>
+                          setCustomHeight(Number(event.target.value))
+                        }
+                        className="mt-1 h-9 w-full rounded-control border border-black/15 bg-white px-2 text-[13px] tabular-nums text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+                      />
+                    </label>
+                  </div>
+                  <p className="mt-2 text-[11px] text-ink-muted">
+                    {QR_CARD_MIN_MM}–{QR_CARD_MAX_MM} mm. The QR stays at least
+                    40 mm wide so it scans reliably.
+                  </p>
+                </div>
+              ) : null}
+
               <p className="mt-2 text-[11.5px] text-ink-muted">
                 Print at 100% scale (no “fit to page”) for the exact size.
               </p>

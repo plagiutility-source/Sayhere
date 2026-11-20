@@ -116,7 +116,7 @@ business's quota by hammering its public URL.
 - Do NOT count a scan if the same `visitor_hash` already has a `scan_events` row for that
   review page in the last 30 minutes.
 - Do NOT count requests with obvious bot/crawler/link-preview user agents, or HEAD/prefetch requests.
-- Reaching the scan limit **pauses the whole customer side** (QR, NFC, short link, AI text, feedback) with the
+- Reaching the scan limit **pauses the whole customer side** (QR, short link, AI text, feedback) with the
   neutral "temporarily unavailable" page until the count resets or the plan is upgraded (business-rules.md section 1).
   Because a paused page is the cost of a burned quota, the protections above matter more: the count is an atomic
   conditional update, and a counted visitor can finish their flow.

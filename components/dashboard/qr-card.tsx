@@ -6,9 +6,8 @@
  *
  * Layout: logo and business name sit in the MIDDLE of the card, with the QR
  * under them. The business-type motif (coffee cup for café, scissors for salon,
- * dumbbell for gym, …) is a large, clearly visible watermark behind the card
- * and is repeated as a badge on the QR frame, so each trade gets its own
- * looking code instead of a plain white block.
+ * dumbbell for gym, …) is a large, clearly visible watermark behind the card,
+ * so each trade gets its own look instead of a plain white block.
  *
  * The QR data itself is always black on white with a quiet zone and untouched
  * modules: colours or artwork over the modules are what breaks scanning at the
@@ -20,6 +19,7 @@
 import { BusinessLogo } from "@/components/business-logo";
 import { QrArt } from "@/components/rooms/shared/QrArt";
 import type { BusinessType } from "@/lib/brand/tokens";
+import { displayableLogo } from "@/lib/mock/store";
 
 export type QrCardDesign = "classic" | "bold" | "minimal";
 export type QrCardSize = "a6" | "a5" | "a4";
@@ -40,6 +40,38 @@ export const QR_CARD_SIZES: Record<QrCardSize, QrCardDimensions> = {
   a5: { label: "Poster · A5", width: 148, height: 210, qr: 68 },
   a4: { label: "Poster · A4", width: 210, height: 297, qr: 96 },
 };
+
+/** A custom card size in millimetres (print designer). */
+export type QrCardCustomSize = { width: number; height: number };
+
+/** Printable bounds for a custom card, in millimetres. */
+export const QR_CARD_MIN_MM = 60;
+export const QR_CARD_MAX_MM = 297;
+
+function clampMm(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(QR_CARD_MAX_MM, Math.max(QR_CARD_MIN_MM, Math.round(value)));
+}
+
+/**
+ * The card's real dimensions: a standard preset, or the owner's custom size.
+ * The QR never drops below 40 mm, the usual reliable scan minimum.
+ */
+export function resolveCardDimensions(
+  size: QrCardSize,
+  custom?: QrCardCustomSize | null,
+): QrCardDimensions {
+  const preset = QR_CARD_SIZES[size];
+  if (!custom) return preset;
+  const width = clampMm(custom.width, preset.width);
+  const height = clampMm(custom.height, preset.height);
+  return {
+    label: `Custom · ${width} × ${height} mm`,
+    width,
+    height,
+    qr: Math.max(40, Math.round(Math.min(width, height) * 0.42)),
+  };
+}
 
 export const QR_CARD_DESIGNS: {
   id: QrCardDesign;
@@ -93,13 +125,23 @@ const TYPE_SCALE: Record<
     logo: number;
     pad: number;
     frame: number;
-    badge: number;
   }
 > = {
-  a6: { name: 5.4, tagline: 3, cta: 3.8, logo: 15, pad: 8, frame: 5, badge: 9 },
-  a5: { name: 6.6, tagline: 3.6, cta: 4.4, logo: 19, pad: 11, frame: 6, badge: 11 },
-  a4: { name: 8.6, tagline: 4.6, cta: 5.6, logo: 26, pad: 15, frame: 8, badge: 15 },
+  a6: { name: 6.2, tagline: 3.2, cta: 3.8, logo: 18, pad: 8, frame: 5 },
+  a5: { name: 7.4, tagline: 3.8, cta: 4.4, logo: 22, pad: 11, frame: 6 },
+  a4: { name: 9.4, tagline: 4.8, cta: 5.6, logo: 30, pad: 15, frame: 8 },
 };
+
+/** Type scale for a custom width, scaled from the A6 base. */
+function scaleFor(dim: QrCardDimensions) {
+  const base = TYPE_SCALE.a6;
+  const factor = dim.width / QR_CARD_SIZES.a6.width;
+  const scaled = {} as typeof base;
+  for (const key of Object.keys(base) as (keyof typeof base)[]) {
+    scaled[key] = Math.round(base[key] * factor * 10) / 10;
+  }
+  return scaled;
+}
 
 export function QrCard({
   design,
@@ -108,6 +150,9 @@ export function QrCard({
   businessName,
   tagline,
   businessType,
+  logoUrl = null,
+  logoScale = 1,
+  customSize = null,
   qrUrl,
 }: {
   design: QrCardDesign;
@@ -117,11 +162,18 @@ export function QrCard({
   businessName: string;
   tagline: string;
   businessType: BusinessType;
+  /** The owner's uploaded logo; the type's default mark when absent. */
+  logoUrl?: string | null;
+  /** Multiplier for the identity logo size (1 = the preset default). */
+  logoScale?: number;
+  /** A custom width/height in mm; overrides the preset's dimensions. */
+  customSize?: QrCardCustomSize | null;
   /** Absolute URL the QR encodes (`<origin>/r/<slug>`). */
   qrUrl: string;
 }) {
-  const dim = QR_CARD_SIZES[size];
-  const scale = TYPE_SCALE[size];
+  const logo = displayableLogo(logoUrl);
+  const dim = resolveCardDimensions(size, customSize);
+  const scale = customSize ? scaleFor(dim) : TYPE_SCALE[size];
   const onBackground = readableOn(background);
   const minimal = design === "minimal";
   const bold = design === "bold";
@@ -186,8 +238,8 @@ export function QrCard({
         <span
           className="grid place-items-center rounded-full"
           style={{
-            width: `${scale.logo}mm`,
-            height: `${scale.logo}mm`,
+            width: `${scale.logo * logoScale}mm`,
+            height: `${scale.logo * logoScale}mm`,
             backgroundColor: minimal ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.2)",
             border: minimal ? `0.5mm solid ${background}` : undefined,
           }}
@@ -197,6 +249,7 @@ export function QrCard({
             size={48}
             color={textColor}
             className="h-[62%] w-[62%]"
+            logoUrl={logo}
           />
         </span>
         <span
@@ -215,8 +268,8 @@ export function QrCard({
         ) : null}
       </div>
 
-      {/* Framed QR: one clean white panel with a single motif badge on its top
-          edge. No artwork around the sides of the code. */}
+      {/* Framed QR: one clean white panel. No logo sits above the code — the
+          identity block above is the only place the brand mark appears. */}
       <div
         className="relative z-10 mt-[6mm] rounded-[3mm] bg-white"
         style={{
@@ -225,26 +278,6 @@ export function QrCard({
           boxShadow: `0 0 0 1.2mm ${minimal ? "#FFFFFF" : background}`,
         }}
       >
-        {/* Badge sits on the frame edge, outside the code's quiet zone. */}
-        <span
-          aria-hidden="true"
-          className="absolute left-1/2 grid -translate-x-1/2 place-items-center rounded-full"
-          style={{
-            top: `-${scale.badge / 2 + 0.4}mm`,
-            width: `${scale.badge}mm`,
-            height: `${scale.badge}mm`,
-            backgroundColor: minimal ? "#FFFFFF" : background,
-            border: `0.6mm solid ${panelBorder}`,
-          }}
-        >
-          <BusinessLogo
-            type={businessType}
-            size={32}
-            color={minimal ? background : onBackground}
-            className="h-[62%] w-[62%]"
-          />
-        </span>
-
         <span
           className="block"
           style={{ width: `${dim.qr}mm`, height: `${dim.qr}mm` }}

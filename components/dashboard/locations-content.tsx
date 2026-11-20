@@ -354,7 +354,7 @@ function ReviewLinksPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[12px] text-ink-muted">
-              Short link — for printed material
+              Your review link — share it anywhere
             </p>
             <a
               href={publicUrl}
@@ -365,26 +365,7 @@ function ReviewLinksPanel({
               {publicUrl}
             </a>
           </div>
-          <CopyButton value={publicUrl} label="Copy short link" />
-        </div>
-        {/* No doc defines a separate NFC URL format; both rows show the same
-            permanent link and are kept as distinct rows per PRD.md 5.3. Logged
-            as an open question. */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[12px] text-ink-muted">
-              NFC tap link — written to your NFC tag
-            </p>
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="block break-all text-[13px] font-medium text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
-            >
-              {publicUrl}
-            </a>
-          </div>
-          <CopyButton value={publicUrl} label="Copy NFC tap link" />
+          <CopyButton value={publicUrl} label="Copy review link" />
         </div>
       </div>
 
@@ -394,6 +375,7 @@ function ReviewLinksPanel({
         businessName={business.name}
         tagline={business.tagline}
         businessType={business.business_type}
+        logoUrl={business.logo_url}
         theme={theme}
         url={origin ? absoluteUrl(origin, publicPath) : ""}
       />

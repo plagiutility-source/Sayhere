@@ -32,7 +32,7 @@ const navLinks = [
 const steps = [
   {
     title: "The customer scans or taps",
-    body: "A QR code on the table or an NFC tag at the counter opens your page. No app to install, no login, nothing to download.",
+    body: "A QR code on the table opens your page. No app to install, no login, nothing to download.",
   },
   {
     title: "Thumbs up, or thumbs down?",
@@ -50,7 +50,7 @@ const features = [
     body: "Every customer gets two fair choices — continue to Google, or write to you privately. Nothing is hidden, and the review block always stays first.",
   },
   {
-    title: "QR and NFC that keep working",
+    title: "QR codes that keep working",
     body: "The printed code points at a permanent short link, so you can change what is behind it any time without reprinting anything.",
   },
   {

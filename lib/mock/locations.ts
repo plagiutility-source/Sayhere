@@ -3,8 +3,8 @@
  *
  * Locations + review links for the `/locations` screen and the customer-page
  * editor. Field names match the `review_pages` table in schema.sql (`slug`,
- * `location_name`, `google_review_url`, `nfc_enabled`, `is_active`) so Stage 4
- * can swap this for real queries with no renaming. `scans_used` is a
+ * `location_name`, `google_review_url`, `is_active`) so Stage 4 can swap this
+ * for real queries with no renaming. `scans_used` is a
  * display-only extra (the real per-location count is derived from `scan_events`
  * in Stage 4).
  *
@@ -26,12 +26,11 @@ import { type DemoScenario } from "@/lib/mock/demo";
 export type MockLocation = {
   id: string;
   business_id: string;
-  /** Permanent `^[a-z0-9]{6}$` slug; the only value a QR/NFC ever encodes. */
+  /** Permanent `^[a-z0-9]{6}$` slug; the only value a QR ever encodes. */
   slug: string;
   location_name: string;
   /** Per-location override; falls back to the business link when null (rules 9). */
   google_review_url: string | null;
-  nfc_enabled: 0 | 1;
   is_active: 0 | 1;
   created_at: string;
   /** MOCK display only — Stage 4 derives it from `scan_events`. */
@@ -101,7 +100,6 @@ function baseLocations(
     slug: owner.slug,
     location_name: owner.name,
     google_review_url: null, // uses the business-level fallback
-    nfc_enabled: 1,
     is_active: 1,
     created_at: "2026-09-12T09:00:00.000Z",
     scans_used: demoNumbers ? 955 : 0,
@@ -118,7 +116,6 @@ function baseLocations(
       google_review_url: demoNumbers
         ? "https://g.page/r/mock-lower-parel/review"
         : null,
-      nfc_enabled: 1,
       is_active: 1,
       created_at: "2026-09-28T09:00:00.000Z",
       scans_used: demoNumbers ? 312 : 0,
@@ -171,7 +168,6 @@ export function mockAddLocation(
     slug,
     location_name: input.location_name,
     google_review_url: input.google_review_url,
-    nfc_enabled: 1,
     is_active: 1,
     created_at: new Date().toISOString(),
     scans_used: 0,
@@ -184,7 +180,7 @@ export function mockAddLocation(
 
 /**
  * Regenerates the review link IN PLACE — the slug (and therefore every printed
- * QR and written NFC tag) stays the same (business-rules.md 9).
+ * QR) stays the same (business-rules.md 9).
  */
 export function mockRegenerateReviewLink(
   scenario: DemoScenario,

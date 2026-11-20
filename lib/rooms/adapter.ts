@@ -124,7 +124,6 @@ function demoLocationFrom(page: MockReviewPage): MockLocation {
     slug: page.slug,
     location_name: page.location_name ?? page.business.name,
     google_review_url: page.google_review_url,
-    nfc_enabled: 1,
     is_active: 1,
     created_at: "2026-09-12T09:00:00.000Z",
     scans_used: 0,

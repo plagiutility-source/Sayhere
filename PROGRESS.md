@@ -512,7 +512,7 @@ Build order is layered, NOT the Phase order below. Frontier order:
       renders intact; empty/loading/error states present.
 - [x] T5. `/analytics` page + end-to-end pass: rating average, % positive, scan
       count and feedback intercepted as cards with deltas, the 7-day chart with the
-      qr/nfc/link source split and the positive-rate gauge (reuse T2), empty /
+      qr/link source split and the positive-rate gauge (reuse T2), empty /
       loading / error states; then the full click-through and the Phase 4 tracker
       annotations "(UI done with mock data, backend pending)".
       Note: added `components/dashboard/analytics-content.tsx` and wired
@@ -522,7 +522,7 @@ Build order is layered, NOT the Phase order below. Frontier order:
       intercepted (sentiment = negative + WoW delta; "intercepted" meaning
       derived from sentiment since the docs do not define it — logged), %
       positive (rate + points delta). Reused the T2 BarChart (7-day) with a
-      qr/nfc/link source split (segmented bar + labelled legend) and the Gauge;
+      qr/link source split (segmented bar + labelled legend) and the Gauge;
       empty/loading/error states mirror T3. Verified: dashboard AND analytics
       both show 54% (20 of 37), scan count 2,565, busiest day Saturday 47;
       /analytics empty shows 3× "No data yet" + the share-QR placeholder;
@@ -543,8 +543,7 @@ T3–T7 not started. This checklist was added by the 1F run on 2026-10-02.
       review link validated with validateGoogleReviewUrl) creating a NEW mock slug
       and its own review link; Review links panel: Google review link + Regenerate
       (updates google_review_url in place; slug and printed QR stay the same, with
-      a one-line note), non-scannable QR placeholder in the brand color, Short link
-      and NFC tap link rows (distinct) each with Copy + "Copied" status; PNG/PDF/SVG
+      a one-line note), non-scannable QR placeholder in the brand color and a single review link row with Copy + "Copied" status; PNG/PDF/SVG
       download buttons disabled with "Coming in a later stage"; invalid URL shows a
       plain-language error and changes nothing. Free/Starter/Pro show 1 location;
       `enterprise` shows 2. Stub text removed from this route.
@@ -557,8 +556,8 @@ T3–T7 not started. This checklist was added by the 1F run on 2026-10-02.
       over HTTP: starter/free/pro show the disabled Add location with the exact
       message + Contact us and 1 location; enterprise shows 2 locations, the
       button enabled and no limit message; the 1F stub text is gone. Open questions
-      logged: no NFC-specific URL format exists in the docs (both rows show the
-      same permanent link, kept as distinct rows); the location-name limit is
+      logged: one review link is shown once (no separate tap-target link); the
+      location-name limit is
       undefined (used 4A's 100).
 - [x] T2. Customer page editor shell, Activate control, preview, location selector.
       components/dashboard/activate-button.tsx (PRD 5.5.3: off white fill + 1.5px
@@ -1029,7 +1028,7 @@ correct; the tenant-isolation test passes; missing env var stops the app;
 - [ ] Business signup form
 - [ ] 3-step onboarding wizard (business info → logo/theme → Google review link)
 - [ ] Auto-generate QR code (logo overlay via sharp, see provider-reference.md)
-      + permanent slug + short review link + NFC link — QR must encode ONLY
+      + permanent slug + short review link — QR must encode ONLY
       the slug, never the raw Google URL (see business-rules.md section 9)
 - [ ] Default logo/color assignment by business type (see brand-guide.md);
       set `businesses.color_source = 'preset'` on assignment
@@ -1215,7 +1214,7 @@ and the success URL without payment unlocks nothing.
 - [ ] Weekly email report (Vercel cron, daily trigger is fine — batch by day-of-week)
 - [ ] Google Review auto-reply job (Vercel cron, daily; see business-rules.md
       cron cadence note re: Hobby tier limits)
-- [ ] Scan-limit pause (business-rules.md section 1): atomic conditional increment; at the limit the QR/NFC/short link, AI text
+- [ ] Scan-limit pause (business-rules.md section 1): atomic conditional increment; at the limit the QR/short link, AI text
       and feedback form show the neutral unavailable page; counted visitors can finish; lazy reset at `scan_reset_at`
       (cron backstop); dashboard banner; one email per cycle (template 12); upgrade restores instantly and keeps `scans_used`;
       auto-reply and weekly report also skipped while at the limit and resume after reset/upgrade; per-IP quota-burn cap; admin Reset scan count. Tests: 10th scan works, 11th sees unavailable, two simultaneous
@@ -1402,7 +1401,7 @@ the merge.
 
 - 2026-09-30 — Spec update (no code): Pro USD price set to $13.99 (was $19.99), keeping the same roughly 50 INR per USD ratio as Starter ($9.99 / ₹499). USD is display only until international billing is built. Files changed: PRD.md (section 4), PROGRESS.md.
 
-- 2026-09-30 — Spec update (no code): when a business uses all its monthly scans, the customer side (QR, NFC, short link,
+- 2026-09-30 — Spec update (no code): when a business uses all its monthly scans, the customer side (QR, short link,
   AI text, feedback) now pauses with the neutral unavailable page until the count resets or the owner upgrades; previously the
   page kept working. Added lazy reset (`scan_reset_at`), one email per cycle (template 12), admin Reset scan count, and a
   per-IP quota-burn cap (proposal). Files changed: business-rules.md (section 1, rule 8), security-and-reliability.md
@@ -1622,7 +1621,7 @@ the merge.
   escaped plain text; `tsc` + build pass. Next: T5 (/analytics + end-to-end).
 
 - 2026-10-01 — Stage 1E T5 done: `/analytics` (Scan count, Feedback intercepted,
-  % positive cards with deltas; 7-day chart with the qr/nfc/link source split;
+  % positive cards with deltas; 7-day chart with the qr/link source split;
   positive-rate gauge) reusing the T2 components, plus empty/loading/error
   states. End-to-end pass: every dashboard route returns 200 in normal and limit,
   the limit banner persists, and View all → /feedback. Phase 4 UI-only items
@@ -1639,7 +1638,7 @@ the merge.
   locations in `enterprise`), the Add location form (name + validateGoogleReviewUrl)
   issuing a new mock slug, and the Review links panel (Google link + Regenerate
   in place with the slug/QR note, non-scannable QR placeholder in the brand
-  colour, distinct Short link / NFC tap link rows with Copy + "Copied", disabled
+  colour, a single review link row with Copy + "Copied", disabled
   PNG/PDF/SVG downloads). `tsc` + build pass; verified over HTTP for
   starter/free/pro/enterprise. Next: T2 (editor shell + preview).
 
