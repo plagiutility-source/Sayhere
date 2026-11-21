@@ -33,25 +33,6 @@ export function pendingFeedback(feedback: readonly MockFeedback[]): number {
   ).length;
 }
 
-/**
- * Feedback intercepted = negative feedback kept private (never posted to
- * Google). The docs only name the metric (PRD 5); deriving it from
- * `sentiment = negative` is logged as an assumption in PROGRESS.md.
- */
-export function feedbackIntercepted(feedback: readonly MockFeedback[]): number {
-  return feedback.filter((row) => row.sentiment === "negative").length;
-}
-
-export function positiveCount(feedback: readonly MockFeedback[]): number {
-  return feedback.filter((row) => row.sentiment === "positive").length;
-}
-
-/** Positive rate as a 0..1 fraction (0 when there is no feedback yet). */
-export function positiveRate(feedback: readonly MockFeedback[]): number {
-  if (feedback.length === 0) return 0;
-  return positiveCount(feedback) / feedback.length;
-}
-
 // ---------------------------------------------------------------------------
 // Window helpers
 // ---------------------------------------------------------------------------
@@ -112,69 +93,6 @@ export function pendingWeekOverWeek(
     (f) => f.created_at,
     (f) => f.sentiment === "negative" && f.owner_replied === 0,
   );
-}
-
-/** Intercepted (negative) feedback per week, for the analytic delta. */
-export function interceptedWeekOverWeek(
-  feedback: readonly MockFeedback[],
-  now: Date,
-): WeekOverWeek {
-  return weekOverWeek(
-    feedback,
-    now,
-    (f) => f.created_at,
-    (f) => f.sentiment === "negative",
-  );
-}
-
-/** Positive rate within a window, or null when the window has no feedback. */
-function rateInWindow(
-  feedback: readonly MockFeedback[],
-  now: Date,
-  fromDaysAgo: number,
-  toDaysAgo: number,
-): number | null {
-  const rows = feedback.filter((f) =>
-    inWindow(f.created_at, now, fromDaysAgo, toDaysAgo),
-  );
-  if (rows.length === 0) return null;
-  return positiveCount(rows) / rows.length;
-}
-
-export type RateWeekOverWeek = {
-  current: number | null;
-  previous: number | null;
-};
-
-export function positiveRateWeekOverWeek(
-  feedback: readonly MockFeedback[],
-  now: Date,
-): RateWeekOverWeek {
-  return {
-    current: rateInWindow(feedback, now, 7, 0),
-    previous: rateInWindow(feedback, now, 14, 7),
-  };
-}
-
-/** Delta label for a rate, e.g. "+4pts vs last week". */
-export function formatPointsDelta(week: RateWeekOverWeek): {
-  text: string;
-  direction: "up" | "down" | "flat" | "none";
-} {
-  const { current, previous } = week;
-  if (current === null) return { text: "No data yet", direction: "none" };
-  if (previous === null) {
-    return {
-      text: `${Math.round(current * 100)}% this week`,
-      direction: current > 0 ? "up" : "flat",
-    };
-  }
-  const diff = Math.round((current - previous) * 100);
-  if (diff === 0) return { text: "Same as last week", direction: "flat" };
-  return {
-    text: `${diff > 0 ? "+" : "−"}${Math.abs(diff)}pts vs last week`,
-    direction: diff > 0 ? "up" : "down",
-  };
 }
 
 /**
@@ -254,16 +172,22 @@ export type ScanDayBucket = {
   isBusiest: boolean;
 };
 
-function countScansBetween(
-  scans: readonly MockScanEvent[],
+type TimedRow = { created_at: string };
+
+function countBetween<T extends TimedRow>(
+  rows: readonly T[],
   start: number,
   end: number,
+  matches: (row: T) => boolean = () => true,
 ): number {
-  return scans.filter((s) => {
-    const t = new Date(s.created_at).getTime();
-    return t >= start && t < end;
+  return rows.filter((row) => {
+    const t = new Date(row.created_at).getTime();
+    return t >= start && t < end && matches(row);
   }).length;
 }
+
+/** Intercepted = negative feedback kept private. */
+const isIntercepted = (row: MockFeedback) => row.sentiment === "negative";
 
 /** Marks the busiest bucket; ties keep the earliest. */
 function markBusiest(buckets: ScanDayBucket[]): ScanDayBucket[] {
@@ -280,10 +204,10 @@ function shortDay(ms: number): string {
   return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
 }
 
-/** Seven daily buckets ending today (oldest first). */
-export function dailyScanBuckets(
-  scans: readonly MockScanEvent[],
+function dailyBuckets<T extends TimedRow>(
+  rows: readonly T[],
   now: Date,
+  matches?: (row: T) => boolean,
 ): ScanDayBucket[] {
   const buckets: ScanDayBucket[] = [];
   for (let offset = 6; offset >= 0; offset--) {
@@ -299,17 +223,17 @@ export function dailyScanBuckets(
       label: WEEKDAY_LABELS[weekday],
       fullLabel: `${WEEKDAY_FULL[weekday]}, ${shortDay(start)}`,
       date: new Date(start).toISOString(),
-      count: countScansBetween(scans, start, end),
+      count: countBetween(rows, start, end, matches),
       isBusiest: false,
     });
   }
   return markBusiest(buckets);
 }
 
-/** Eight rolling seven-day buckets ending today (oldest first). */
-export function weeklyScanBuckets(
-  scans: readonly MockScanEvent[],
+function weeklyBuckets<T extends TimedRow>(
+  rows: readonly T[],
   now: Date,
+  matches?: (row: T) => boolean,
 ): ScanDayBucket[] {
   const buckets: ScanDayBucket[] = [];
   for (let offset = 7; offset >= 0; offset--) {
@@ -319,17 +243,17 @@ export function weeklyScanBuckets(
       label: shortDay(start),
       fullLabel: shortDay(start),
       date: new Date(start).toISOString(),
-      count: countScansBetween(scans, start, end),
+      count: countBetween(rows, start, end, matches),
       isBusiest: false,
     });
   }
   return markBusiest(buckets);
 }
 
-/** Six calendar months including the current one (oldest first). */
-export function monthlyScanBuckets(
-  scans: readonly MockScanEvent[],
+function monthlyBuckets<T extends TimedRow>(
+  rows: readonly T[],
   now: Date,
+  matches?: (row: T) => boolean,
 ): ScanDayBucket[] {
   const buckets: ScanDayBucket[] = [];
   for (let offset = 5; offset >= 0; offset--) {
@@ -349,22 +273,57 @@ export function monthlyScanBuckets(
       label: MONTHS_SHORT[month],
       fullLabel: `${MONTHS[month]} ${startDate.getUTCFullYear()}`,
       date: startDate.toISOString(),
-      count: countScansBetween(scans, start, end),
+      count: countBetween(rows, start, end, matches),
       isBusiest: false,
     });
   }
   return markBusiest(buckets);
 }
 
-/** The chart buckets for the selected period. */
+/** Seven daily buckets ending today (oldest first). */
+export function dailyScanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+): ScanDayBucket[] {
+  return dailyBuckets(scans, now);
+}
+
+/** Eight rolling seven-day buckets ending today (oldest first). */
+export function weeklyScanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+): ScanDayBucket[] {
+  return weeklyBuckets(scans, now);
+}
+
+/** Six calendar months including the current one (oldest first). */
+export function monthlyScanBuckets(
+  scans: readonly MockScanEvent[],
+  now: Date,
+): ScanDayBucket[] {
+  return monthlyBuckets(scans, now);
+}
+
+/** The scan chart buckets for the selected period. */
 export function scanBuckets(
   scans: readonly MockScanEvent[],
   now: Date,
   range: ScanRange,
 ): ScanDayBucket[] {
-  if (range === "weekly") return weeklyScanBuckets(scans, now);
-  if (range === "monthly") return monthlyScanBuckets(scans, now);
-  return dailyScanBuckets(scans, now);
+  if (range === "weekly") return weeklyBuckets(scans, now);
+  if (range === "monthly") return monthlyBuckets(scans, now);
+  return dailyBuckets(scans, now);
+}
+
+/** The intercepted-feedback chart buckets for the selected period. */
+export function feedbackBuckets(
+  feedback: readonly MockFeedback[],
+  now: Date,
+  range: ScanRange,
+): ScanDayBucket[] {
+  if (range === "weekly") return weeklyBuckets(feedback, now, isIntercepted);
+  if (range === "monthly") return monthlyBuckets(feedback, now, isIntercepted);
+  return dailyBuckets(feedback, now, isIntercepted);
 }
 
 const RANGE_NOUN: Record<ScanRange, string> = {
@@ -380,6 +339,9 @@ export const SCAN_RANGE_WINDOW: Record<ScanRange, string> = {
   monthly: "Last 6 months",
 };
 
+/** The two period-aware metrics shown in the activity charts. */
+export type ActivityMetric = "scans" | "intercepted";
+
 /** Total scans inside the selected window (the sum of its chart buckets). */
 export function scanTotalForRange(
   scans: readonly MockScanEvent[],
@@ -392,22 +354,45 @@ export function scanTotalForRange(
   );
 }
 
-const RANGE_EMPTY: Record<ScanRange, string> = {
-  daily: "No scans in the last 7 days.",
-  weekly: "No scans in the last 8 weeks.",
-  monthly: "No scans in the last 6 months.",
+/** Intercepted feedback inside the selected window (the sum of its buckets). */
+export function interceptedTotalForRange(
+  feedback: readonly MockFeedback[],
+  now: Date,
+  range: ScanRange,
+): number {
+  return feedbackBuckets(feedback, now, range).reduce(
+    (sum, bucket) => sum + bucket.count,
+    0,
+  );
+}
+
+const RANGE_EMPTY: Record<ActivityMetric, Record<ScanRange, string>> = {
+  scans: {
+    daily: "No scans in the last 7 days.",
+    weekly: "No scans in the last 8 weeks.",
+    monthly: "No scans in the last 6 months.",
+  },
+  intercepted: {
+    daily: "No intercepted feedback in the last 7 days.",
+    weekly: "No intercepted feedback in the last 8 weeks.",
+    monthly: "No intercepted feedback in the last 6 months.",
+  },
 };
 
 /** Screen-reader summary, e.g. "Busiest week: 24 Sep, 210 scans." */
 export function busiestBucketSummary(
   buckets: readonly ScanDayBucket[],
   range: ScanRange,
+  metric: ActivityMetric = "scans",
 ): string {
   const busiest = buckets.find((b) => b.isBusiest);
-  if (!busiest || busiest.count === 0) return RANGE_EMPTY[range];
+  if (!busiest || busiest.count === 0) return RANGE_EMPTY[metric][range];
   const label = busiest.fullLabel ?? busiest.label;
-  const scans = busiest.count === 1 ? "1 scan" : `${busiest.count} scans`;
-  return `Busiest ${RANGE_NOUN[range]}: ${label}, ${scans}.`;
+  const count =
+    metric === "scans"
+      ? `${busiest.count} ${busiest.count === 1 ? "scan" : "scans"}`
+      : `${busiest.count} intercepted`;
+  return `Busiest ${RANGE_NOUN[range]}: ${label}, ${count}.`;
 }
 
 // ---------------------------------------------------------------------------

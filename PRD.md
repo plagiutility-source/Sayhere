@@ -147,7 +147,7 @@ not to run a real business on.
   (Enterprise is arranged by an admin, it cannot be bought at checkout). Enforced on the server too (business-rules.md section 1).
 - Recent feedback feed (real-time), each item tagged Positive / Needs reply
 - Review links: QR code and direct link — downloadable/shareable
-- Analytics: rating average, % positive, scan count, feedback intercepted count
+- Analytics: rating average, scan count, feedback intercepted count
 - Billing section: current plan, upgrade/downgrade, cancel option, invoice history
 
 ### 5.1 Layout & Visual Design
@@ -168,7 +168,6 @@ actual blue-green/yellow treatment before handing to design)._
 - Stat cards (4-up grid): total scans, reviews collected, avg rating, pending
   feedback — each with a week-over-week delta, not just a raw number.
 - Weekly scan activity: 7-day bar chart, one day highlighted (busiest day).
-- Positive rate: circular gauge (ring + %), not a bar, for at-a-glance scannability.
 - Recent feedback: avatar-initial rows with a colored status pill (Positive /
   Needs reply), not a plain table.
 - Engagement extras: streak banner (e.g. "14-day streak with no negative
@@ -221,10 +220,7 @@ values are intentionally excluded (see section 8.1).
 **Charts & gauges**
 - Weekly bar chart: fixed height 160–180px container; bars capped at 24px
   width, 4px rounded top corners, flush baseline (no rounding at bottom).
-- Gauge (positive rate): fixed 80–96px diameter ring, 8–10px stroke width,
-  percentage centered in 15–16px medium weight text.
-- Both chart and gauge live in equal-height cards side by side on desktop
-  (roughly 60/40 width split); stack vertically on mobile.
+- The scan chart spans the full content width on desktop and mobile.
 
 **Feedback list rows**
 - Row height: 44–48px including padding.

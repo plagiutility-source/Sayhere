@@ -10,6 +10,11 @@ type BarChartProps = {
   summary: string;
   /** Caption for the screen-reader data table, e.g. "Scans per month". */
   caption?: string;
+  /** Singular/plural unit for labels, e.g. "scan" / "scans". */
+  unitOne?: string;
+  unitMany?: string;
+  /** Column header for the screen-reader data table. */
+  tableHead?: string;
   /** When set, every bar becomes a button that reports its ISO date. */
   onSelect?: (date: string) => void;
   /** ISO date of the bar drawn in full colour (the clicked bar). */
@@ -29,6 +34,9 @@ export function BarChart({
   color,
   summary,
   caption = "Scans per day in the last 7 days",
+  unitOne = "scan",
+  unitMany = "scans",
+  tableHead = "Scans",
   onSelect,
   selectedDate = null,
 }: BarChartProps) {
@@ -47,8 +55,8 @@ export function BarChart({
           const height = `${(bucket.count / max) * 100}%`;
           const minHeight = bucket.count > 0 ? 4 : 0;
           const background = bucket.isBusiest || selected ? color : `${color}4D`;
-          const label = `${bucket.fullLabel ?? bucket.label}: ${bucket.count} scan${
-            bucket.count === 1 ? "" : "s"
+          const label = `${bucket.fullLabel ?? bucket.label}: ${bucket.count} ${
+            bucket.count === 1 ? unitOne : unitMany
           }`;
 
           if (!interactive) {
@@ -108,7 +116,7 @@ export function BarChart({
         <thead>
           <tr>
             <th scope="col">Period</th>
-            <th scope="col">Scans</th>
+            <th scope="col">{tableHead}</th>
           </tr>
         </thead>
         <tbody>

@@ -5,10 +5,9 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/card";
 import { getBrandTheme } from "@/lib/brand/theme";
 import {
+  interceptedTotalForRange,
   pendingFeedback,
   pendingWeekOverWeek,
-  positiveCount,
-  positiveRate,
   SCAN_RANGE_WINDOW,
   scanTotalForRange,
   type ScanRange,
@@ -19,12 +18,11 @@ import { useMockBusiness } from "@/lib/use-business";
 import { AutoReplyCard } from "./auto-reply";
 import { DashboardCrmSection } from "./crm-cards";
 import { ShareQrPlaceholder } from "./empty-state";
-import { Gauge } from "./gauge";
 import { DownloadIcon, PlusIcon } from "./icons";
 import { ManagerInbox } from "./manager-inbox";
 import { DashboardOrderingSection } from "./ordering-cards";
 import { PlanWidget } from "./plan-widget";
-import { ScanActivity } from "./scan-activity";
+import { ActivityChart } from "./activity-chart";
 import { SectionError } from "./section-error";
 import {
   CardSkeleton,
@@ -91,13 +89,9 @@ function LoadingSections() {
         <StatCardSkeleton />
         <StatCardSkeleton />
       </div>
-      <div className="grid gap-3 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <CardSkeleton bodyHeight={160} />
-        </div>
-        <div className="lg:col-span-2">
-          <CardSkeleton circle />
-        </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <CardSkeleton bodyHeight={160} />
+        <CardSkeleton bodyHeight={160} />
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="rounded-card border border-black/10 bg-white p-lg shadow-soft lg:col-span-2">
@@ -125,16 +119,20 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
 
   // Error state: Retry re-renders the normal mock data (no refetch).
   const [recovered, setRecovered] = useState(false);
-  // One period shared by the total-scans stat and the scan chart.
+  // Each metric's stat card and chart share one period.
   const [scanRange, setScanRange] = useState<ScanRange>("daily");
+  const [feedbackRange, setFeedbackRange] = useState<ScanRange>("daily");
   const loading = mock.loading;
   const errored = mock.error && !recovered;
   const isEmpty = demo === "empty";
 
-  const rate = positiveRate(mock.feedback);
   const scanTotal = useMemo(
     () => scanTotalForRange(mock.scans, now, scanRange),
     [mock.scans, now, scanRange],
+  );
+  const interceptedTotal = useMemo(
+    () => interceptedTotalForRange(mock.feedback, now, feedbackRange),
+    [mock.feedback, now, feedbackRange],
   );
 
   return (
@@ -151,11 +149,19 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
               <SectionError onRetry={() => setRecovered(true)} label="your stats" />
             </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <StatCard
                 label="Total scans"
                 value={String(scanTotal)}
                 delta={{ text: SCAN_RANGE_WINDOW[scanRange], direction: "none" }}
+              />
+              <StatCard
+                label="Feedback intercepted"
+                value={String(interceptedTotal)}
+                delta={{
+                  text: SCAN_RANGE_WINDOW[feedbackRange],
+                  direction: "none",
+                }}
               />
               <StatCard
                 label="Pending feedback"
@@ -165,43 +171,41 @@ export function DashboardContent({ demo }: { demo: DemoScenario }) {
             </div>
           )}
 
-          {/* Chart + gauge (empty -> share-QR placeholder; error -> per-card retry) */}
+          {/* Period charts (empty -> share-QR placeholder; error -> retry) */}
           {errored ? (
-            <div className="grid gap-3 lg:grid-cols-5">
-              <Card title="Scans" className="h-full lg:col-span-3">
+            <div className="grid gap-3 lg:grid-cols-2">
+              <Card title="Scans">
                 <SectionError
                   onRetry={() => setRecovered(true)}
                   label="your scan activity"
                 />
               </Card>
-              <Card title="Positive rate" className="h-full lg:col-span-2">
+              <Card title="Feedback intercepted">
                 <SectionError
                   onRetry={() => setRecovered(true)}
-                  label="the positive rate"
+                  label="your intercepted feedback"
                 />
               </Card>
             </div>
           ) : isEmpty ? (
             <ShareQrPlaceholder />
           ) : (
-            <div className="grid gap-3 lg:grid-cols-5">
-              <ScanActivity
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ActivityChart
                 scans={mock.scans}
                 now={now}
                 color={theme.primary}
                 range={scanRange}
                 onRangeChange={setScanRange}
-                className="h-full lg:col-span-3"
               />
-              <Card title="Positive rate" className="h-full lg:col-span-2">
-                <div className="flex h-full flex-col items-center justify-center gap-3 py-2">
-                  <Gauge value={rate} color={theme.primary} />
-                  <p className="text-[12px] text-ink-muted">
-                    {positiveCount(mock.feedback)} of {mock.feedback.length}{" "}
-                    feedback positive
-                  </p>
-                </div>
-              </Card>
+              <ActivityChart
+                metric="intercepted"
+                feedback={mock.feedback}
+                now={now}
+                color={theme.primary}
+                range={feedbackRange}
+                onRangeChange={setFeedbackRange}
+              />
             </div>
           )}
 

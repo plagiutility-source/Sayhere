@@ -33,7 +33,6 @@ Hi {{owner_name}},
 Here's how {{business_name}} did this week:
 
 - 📱 {{scan_count}} Scans ({{scan_change}}% from last week)
-- ⭐ {{positive_percent}}% Positive Reviews
 - 🔴 {{negative_count}} Feedback Received ({{responded_count}} responded)
 - ⭐ {{new_google_reviews}} New Google Reviews
 {{#if streak_days}}
